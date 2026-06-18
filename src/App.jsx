@@ -34,7 +34,7 @@ export default function App() {
             <AdminDashboard />
           </Suspense>
         } />
-        <Route path="products" element={
+        <Route path="productos" element={
           <Suspense fallback={<AdminFallback />}>
             <AdminProducts />
           </Suspense>
