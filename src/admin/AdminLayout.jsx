@@ -5,13 +5,14 @@ const LINKS = [
   { to: '/admin/productos', label: 'Productos' },
   { to: '/admin/textiles', label: 'Tejidos' },
   { to: '/admin/leads', label: 'Leads' },
+  { to: '/admin/distribuidores', label: 'Distribuidores' },
 ]
 
 export default function AdminLayout() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'var(--sans)' }}>
-      <aside style={{ width: 220, background: 'var(--ink)', padding: '36px 24px', display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-        <div style={{ fontFamily: 'var(--serif)', fontSize: 22, color: '#fff', letterSpacing: '.2em', marginBottom: 32 }}>
+      <aside style={{ width: 220, background: 'var(--warm)', borderRight: '1px solid var(--sand)', padding: '36px 24px', display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
+        <div style={{ fontFamily: 'var(--serif)', fontSize: 22, color: 'var(--ink)', letterSpacing: '.2em', marginBottom: 32 }}>
           Maison<span style={{ color: 'var(--gold)' }}>.</span>
         </div>
         {LINKS.map(l => (
@@ -22,16 +23,16 @@ export default function AdminLayout() {
               fontSize: 11,
               letterSpacing: '.15em',
               textTransform: 'uppercase',
-              borderRadius: 2,
-              background: isActive ? 'rgba(184,151,106,.18)' : 'transparent',
-              color: isActive ? 'var(--gold-l)' : 'rgba(255,255,255,.42)',
+              background: isActive ? 'var(--sand)' : 'transparent',
+              color: isActive ? 'var(--charcoal)' : 'var(--taupe)',
+              borderLeft: isActive ? '2px solid var(--gold)' : '2px solid transparent',
               transition: 'all .2s',
             })}>
             {l.label}
           </NavLink>
         ))}
-        <div style={{ marginTop: 'auto', paddingTop: 24 }}>
-          <NavLink to="/" style={{ fontSize: 11, color: 'rgba(255,255,255,.22)', textDecoration: 'none' }}>
+        <div style={{ marginTop: 'auto', paddingTop: 24, borderTop: '1px solid var(--sand)' }}>
+          <NavLink to="/" style={{ fontSize: 11, color: 'var(--taupe)', textDecoration: 'none', letterSpacing: '.1em' }}>
             ← Volver al sitio
           </NavLink>
         </div>
