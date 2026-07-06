@@ -1,41 +1,45 @@
+import { useNavigate } from 'react-router-dom'
+
 export default function Footer() {
+  const navigate = useNavigate()
   return (
     <footer>
       <div className="fg">
         <div>
-          <div className="fl">Maison<b>.</b></div>
-          <p className="ft">Alta tapicería artesanal. Diseñamos y fabricamos piezas únicas para espacios singulares desde 2006.</p>
+          <p className="fl">Maison<b>.</b></p>
+          <p className="ft">Alta tapicería mexicana con alma italiana. Diseño modular para espacios que merecen lo mejor.</p>
         </div>
         <div>
-          <div className="fct">Colecciones</div>
+          <p className="fct">Colecciones</p>
           <ul className="fll">
-            <li><a href="#cl">Sofás</a></li>
-            <li><a href="#cl">Camas</a></li>
-            <li><a href="#cl">Cabeceros</a></li>
-            <li><a href="#cl">Sillas</a></li>
+            <li><a href="#" onClick={e => e.preventDefault()}>Sofás Modulares</a></li>
+            <li><a href="#" onClick={e => e.preventDefault()}>Camas Tapizadas</a></li>
+            <li><a href="#" onClick={e => e.preventDefault()}>Butacas</a></li>
+            <li><a href="#" onClick={e => e.preventDefault()}>Sillones</a></li>
           </ul>
         </div>
         <div>
-          <div className="fct">Servicios</div>
+          <p className="fct">Empresa</p>
           <ul className="fll">
-            <li><a href="#ph">Diseño</a></li>
-            <li><a href="#mt">Materiales</a></li>
-            <li><a href="#ct">Presupuesto</a></li>
-            <li><a href="#ct">Visita domicilio</a></li>
+            <li><a href="#" onClick={e => e.preventDefault()}>Nosotros</a></li>
+            <li><a href="#" onClick={e => e.preventDefault()}>Showroom</a></li>
+            <li><a href="/distribuidores" onClick={e => { e.preventDefault(); navigate('/distribuidores') }}>Distribuidores</a></li>
+            <li><a href="#" onClick={e => e.preventDefault()}>Prensa</a></li>
           </ul>
         </div>
         <div>
-          <div className="fct">Contacto</div>
+          <p className="fct">Contacto</p>
           <ul className="fll">
-            <li><a href="mailto:hola@maison.es">hola@maison.es</a></li>
-            <li><a href="tel:+34910000000">+34 910 000 000</a></li>
-            <li><a href="#ct">Madrid, España</a></li>
+            <li><a href="#" onClick={e => e.preventDefault()}>Puebla, México</a></li>
+            <li><a href="#" onClick={e => e.preventDefault()}>hola@maison.mx</a></li>
+            <li><a href="#" onClick={e => e.preventDefault()}>+52 222 000 0000</a></li>
+            <li><a href="#" onClick={e => e.preventDefault()}>@maison.mx</a></li>
           </ul>
         </div>
       </div>
       <div className="fb">
-        <span className="fc">© 2026 Maison. Todos los derechos reservados.</span>
-        <a href="/admin" className="fc" style={{ textDecoration: 'none', opacity: .6 }}>Admin</a>
+        <p className="fc">© 2025 Maison Alta Tapicería. Todos los derechos reservados.</p>
+        <p className="fc">Diseñado y fabricado en México.</p>
       </div>
     </footer>
   )

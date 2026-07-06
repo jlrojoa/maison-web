@@ -15,7 +15,7 @@ export default function ProductCard({ product, onClick }) {
         </div>
         {product.badge && <span className="pbg">{product.badge}</span>}
         <div className="pov">
-          <span className="pct">Ver Producto</span>
+          <span className="pct">Ver Pieza</span>
         </div>
       </div>
       <div className="ptg">{product.categoria?.nombre ?? 'Colección'}</div>
@@ -24,7 +24,7 @@ export default function ProductCard({ product, onClick }) {
       <div className="ppr">
         {price
           ? <>
-              {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(price)}
+              {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price)}
               <small> · desde</small>
             </>
           : <span style={{ color: 'var(--taupe)', fontSize: 12 }}>Consultar precio</span>

@@ -1,85 +1,72 @@
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
-
-const DEFAULT_ICON = (
-  <svg className="mico" viewBox="0 0 42 42">
-    <path d="M4 14h34M4 21h34M4 28h34" strokeLinecap="round"/>
-  </svg>
-)
-
-function TextileVisual({ textile }) {
-  if (textile.imagen_url) {
-    return (
-      <img
-        src={textile.imagen_url}
-        alt={textile.nombre}
-        style={{ width: 42, height: 42, objectFit: 'cover', marginBottom: 20, opacity: .8 }}
-      />
-    )
-  }
-  if (textile.color_hex) {
-    return (
-      <div style={{
-        width: 42, height: 42, borderRadius: '50%',
-        background: textile.color_hex,
-        marginBottom: 20,
-        border: '1px solid rgba(255,255,255,.15)'
-      }} />
-    )
-  }
-  return DEFAULT_ICON
-}
+const TILES = [
+  {
+    id: 1,
+    nombre: 'Lino Belga',
+    descripcion: 'Tejido natural de fibra larga, transpirable. Se vuelve más suave con cada lavado.',
+    animClass: 'rv',
+    icon: (
+      <svg className="mico" viewBox="0 0 48 48">
+        <path d="M8 24 Q16 12 24 24 Q32 36 40 24" />
+        <path d="M8 32 Q16 20 24 32 Q32 44 40 32" />
+      </svg>
+    ),
+  },
+  {
+    id: 2,
+    nombre: 'Bouclé Italiano',
+    descripcion: 'Tela estructurada de alta textura importada de Milán. Resistente al uso diario.',
+    animClass: 'rv d1',
+    icon: (
+      <svg className="mico" viewBox="0 0 48 48">
+        <circle cx="24" cy="24" r="14" />
+        <circle cx="24" cy="24" r="7" />
+        <circle cx="24" cy="24" r="2" />
+      </svg>
+    ),
+  },
+  {
+    id: 3,
+    nombre: 'Espuma HR 45 kg',
+    descripcion: 'Alta resiliencia. Mantiene su forma original por más de 10 años de uso diario.',
+    animClass: 'rv d2',
+    icon: (
+      <svg className="mico" viewBox="0 0 48 48">
+        <rect x="10" y="18" width="28" height="16" rx="2" />
+        <path d="M16 18V14a8 8 0 0116 0v4" />
+      </svg>
+    ),
+  },
+  {
+    id: 4,
+    nombre: 'Madera de Fresno',
+    descripcion: 'Estructura en fresno macizo con refuerzo metálico. Garantía estructural 10 años.',
+    animClass: 'rv d3',
+    icon: (
+      <svg className="mico" viewBox="0 0 48 48">
+        <path d="M12 36 L24 12 L36 36" />
+        <path d="M16 28 h16" />
+      </svg>
+    ),
+  },
+]
 
 export default function Materials() {
-  const [textiles, setTextiles] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    supabase
-      .from('textiles')
-      .select('*')
-      .eq('activo', true)
-      .order('orden')
-      .then(({ data }) => {
-        setTextiles(data ?? [])
-        setLoading(false)
-      })
-  }, [])
-
   return (
     <section className="mts" id="mt">
-      <div className="mh">
-        <p className="sl rv">Materiales</p>
-        <h2 className="st rv d1">Selección <em>excepcional</em></h2>
-        <p className="sb rv d2">Trabajamos exclusivamente con proveedores europeos certificados.</p>
+      <div className="mh rv">
+        <p className="sl">Lo que nos diferencia</p>
+        <h2 className="st">Materiales que <em>se sienten</em></h2>
+        <p className="sb">Seleccionamos telas de Italia y Bélgica, espumas de alta recuperación y maderas de primera calidad.</p>
       </div>
-      {!loading && (
-        <div className="mg">
-          {textiles.length === 0 ? (
-            // Fallback static tiles when DB is empty
-            [
-              { id: 1, nombre: 'Lino Belga', descripcion: 'Tejido natural de alta densidad con caída excepcional.', color_hex: '#C4B5A5' },
-              { id: 2, nombre: 'Terciopelo Italiano', descripcion: 'Terciopelo de seda y algodón con lustre profundo.', color_hex: '#2C2825' },
-              { id: 3, nombre: 'Bouclé Francés', descripcion: 'Tejido texturizado de lana merino con hilos rizados.', color_hex: '#E8DDD0' },
-              { id: 4, nombre: 'Cuero Napa', descripcion: 'Cuero plena flor de curtido vegetal. Mejora con el uso.', color_hex: '#8C7B6B' },
-            ].map(t => (
-              <div key={t.id} className="mitem rv">
-                <TextileVisual textile={t} />
-                <div className="mnm">{t.nombre}</div>
-                <div className="mds">{t.descripcion}</div>
-              </div>
-            ))
-          ) : (
-            textiles.map(t => (
-              <div key={t.id} className="mitem rv">
-                <TextileVisual textile={t} />
-                <div className="mnm">{t.nombre}</div>
-                <div className="mds">{t.descripcion}</div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
+      <div className="mg">
+        {TILES.map(t => (
+          <div key={t.id} className={`mitem ${t.animClass}`}>
+            {t.icon}
+            <p className="mnm">{t.nombre}</p>
+            <p className="mds">{t.descripcion}</p>
+          </div>
+        ))}
+      </div>
     </section>
   )
 }

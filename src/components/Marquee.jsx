@@ -1,6 +1,9 @@
 const ITEMS = [
-  'Tapicería Artesanal', 'Diseño Exclusivo', 'Materiales Premium',
-  'Hecho a Medida', 'Alta Costura del Hogar', 'Proyectos Singulares',
+  'Tapicería de Alta Gama',
+  'Diseño Modular',
+  'Telas Importadas de Europa',
+  'Fabricación Artesanal',
+  'Atelier Puebla · México',
 ]
 
 export default function Marquee() {
@@ -10,7 +13,7 @@ export default function Marquee() {
       <div className="mq-t">
         {repeated.map((item, i) => (
           <span key={i} className="mi">
-            {item} <span className="ms">✦</span>
+            {item} <span className="ms">·</span>
           </span>
         ))}
       </div>

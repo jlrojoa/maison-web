@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useReveal } from '../hooks/useReveal'
 import Nav from '../components/Nav'
 import Hero from '../components/Hero'
@@ -10,20 +9,9 @@ import Editorial from '../components/Editorial'
 import Kit from '../components/Kit'
 import LeadForm from '../components/LeadForm'
 import Footer from '../components/Footer'
-import ProductDetail from './ProductDetail'
 
 export default function Home() {
   useReveal()
-  const [selectedProduct, setSelectedProduct] = useState(null)
-
-  if (selectedProduct) {
-    return (
-      <>
-        <Nav />
-        <ProductDetail product={selectedProduct} onBack={() => setSelectedProduct(null)} />
-      </>
-    )
-  }
 
   return (
     <div id="mp">
@@ -31,7 +19,7 @@ export default function Home() {
       <Hero />
       <Marquee />
       <Philosophy />
-      <Collections onProductClick={setSelectedProduct} />
+      <Collections />
       <Materials />
       <Editorial />
       <Kit />

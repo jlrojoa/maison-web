@@ -1,59 +1,64 @@
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
-import ProductCard from './ProductCard'
+import { useNavigate } from 'react-router-dom'
 
-export default function Collections({ onProductClick }) {
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
+const PRODUCTS = [
+  {
+    id: 'sofa',
+    nombre: 'Olivia',
+    subtitulo: 'Sofá modular de lino belga. Relleno pluma + HR foam 45 kg/m³.',
+    badge: 'Nuevo',
+    categoria: { nombre: 'Sofás Modulares' },
+    imagen_principal: { url: '/images/product-sofa.png', alt: 'Olivia' },
+    precio_texto: 'desde $62,000 MXN',
+    animClass: 'rv',
+  },
+  {
+    id: 'cama',
+    nombre: 'Nordic',
+    subtitulo: 'Base tapizada con cabecero doble panel acolchado. Tela técnica Riviera.',
+    badge: null,
+    categoria: { nombre: 'Camas Tapizadas' },
+    imagen_principal: { url: '/images/product-cama.png', alt: 'Nordic' },
+    precio_texto: 'desde $38,000 MXN',
+    animClass: 'rv d1',
+  },
+  {
+    id: 'luna',
+    nombre: 'Luna',
+    subtitulo: 'Butaca giratoria en bouclé perla. Forma orgánica escultórica.',
+    badge: 'Bestseller',
+    categoria: { nombre: 'Butacas & Sillones' },
+    imagen_principal: { url: '/images/product-luna.png', alt: 'Luna' },
+    precio_texto: '$28,500 MXN',
+    animClass: 'rv d2',
+  },
+]
 
-  useEffect(() => {
-    async function load() {
-      const { data, error } = await supabase
-        .from('productos')
-        .select(`
-          *,
-          categoria:categorias(id, nombre, slug),
-          imagenes:producto_imagenes(id, url, alt, orden, es_principal)
-        `)
-        .eq('activo', true)
-        .order('orden')
-
-      if (!error && data) {
-        const enriched = data.map(p => ({
-          ...p,
-          imagen_principal: p.imagenes?.find(i => i.es_principal) ?? p.imagenes?.[0] ?? null
-        }))
-        setProducts(enriched)
-      }
-      setLoading(false)
-    }
-    load()
-  }, [])
-
+export default function Collections() {
+  const navigate = useNavigate()
   return (
     <section className="coll" id="cl">
       <div className="ch">
         <div>
-          <p className="sl rv">Colecciones</p>
-          <h2 className="st rv d1">Piezas que <em>definen</em> el espacio</h2>
+          <p className="sl">Catálogo 2025</p>
+          <h2 className="st" style={{ marginBottom: 0 }}>Nuestras <em>Colecciones</em></h2>
         </div>
-        <a href="#cl" className="la rv d2">Ver todo</a>
+        <a href="/colecciones" className="la" onClick={e => { e.preventDefault(); navigate('/colecciones') }}>Ver catálogo completo →</a>
       </div>
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px 0', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--taupe)', letterSpacing: '.2em' }}>
-          CARGANDO…
-        </div>
-      ) : products.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 0', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--taupe)', letterSpacing: '.2em' }}>
-          PRÓXIMAMENTE
-        </div>
-      ) : (
-        <div className="pg">
-          {products.map(p => (
-            <ProductCard key={p.id} product={p} onClick={onProductClick} />
-          ))}
-        </div>
-      )}
+      <div className="pg">
+        {PRODUCTS.map(p => (
+          <div key={p.id} className={`pc ${p.animClass}`} style={{ cursor: 'default' }}>
+            <div className="pci">
+              <div className="pci-bg">
+                <img src={p.imagen_principal.url} alt={p.imagen_principal.alt} />
+              </div>
+              {p.badge && <span className="pbg">{p.badge}</span>}
+            </div>
+            <div className="ptg">{p.categoria.nombre}</div>
+            <div className="pnm">{p.nombre}</div>
+            <div className="pds">{p.subtitulo}</div>
+          </div>
+        ))}
+      </div>
     </section>
   )
 }

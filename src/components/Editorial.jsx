@@ -3,22 +3,22 @@ export default function Editorial() {
     <section className="edit">
       <div className="edit-l">
         <div className="edit-block rv">
-          <div className="edit-tag">Proceso</div>
-          <h3 className="edit-title">Del boceto a la <em>pieza final</em></h3>
-          <p className="edit-desc">Cada encargo comienza con una visita al espacio. Medimos, fotografiamos y escuchamos hasta entender cada detalle.</p>
+          <p className="edit-tag">Materia Prima</p>
+          <h2 className="edit-title">Telas que <em>respiran</em></h2>
+          <p className="edit-desc">Seleccionamos lino belga de fibra larga y bouclé italiano importado directamente de Milán. Cada metro de tela pasa por un control de calidad antes de llegar a nuestro taller en Puebla.</p>
         </div>
         <div className="edit-block rv d1">
-          <div className="edit-tag">Materiales</div>
-          <h3 className="edit-title">Selección <em>sin concesiones</em></h3>
-          <p className="edit-desc">Viajamos a las mejores fábricas textiles de Europa para seleccionar materiales que solo nosotros ofrecemos.</p>
+          <p className="edit-tag">Ingeniería del Descanso</p>
+          <h2 className="edit-title">Comodidad <em>sin concesiones</em></h2>
+          <p className="edit-desc">Espuma HR de 45 kg/m³ combinada con pluma canadiense. Una fórmula que mantiene su forma original después de 10 años de uso diario — porque el lujo verdadero se mide en décadas.</p>
         </div>
         <div className="edit-block rv d2">
-          <div className="edit-tag">Entrega</div>
-          <h3 className="edit-title">Instalación <em>incluida</em></h3>
-          <p className="edit-desc">Nuestro equipo se encarga de la entrega e instalación de cada pieza en tu espacio.</p>
+          <p className="edit-tag">Estética Funcional</p>
+          <h2 className="edit-title">Diseño que <em>perdura</em></h2>
+          <p className="edit-desc">Líneas atemporales inspiradas en el racionalismo italiano. Cada pieza está pensada para integrarse a tu espacio hoy y seguir siendo relevante en veinte años.</p>
         </div>
       </div>
-      <div className="edit-r">
+      <div className="edit-r rv">
         <img src="/images/editorial.png" alt="Proceso editorial Maison" />
       </div>
     </section>
