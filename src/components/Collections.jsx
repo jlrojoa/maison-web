@@ -43,7 +43,7 @@ export default function Collections() {
       </div>
       <div className="pg">
         {PRODUCTS.map(p => (
-          <div key={p.id} className={`pc ${p.animClass}`} style={{ cursor: 'default' }}>
+          <div key={p.id} className={`pc ${p.animClass}`} style={{ cursor: 'pointer' }} onClick={() => navigate('/colecciones')}>
             <div className="pci">
               <div className="pci-bg">
                 <img src={p.imagen_principal.url} alt={p.imagen_principal.alt} />
