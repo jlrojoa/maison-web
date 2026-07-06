@@ -8,7 +8,6 @@ const PRODUCTS = [
     badge: 'Nuevo',
     categoria: { nombre: 'Sofás Modulares' },
     imagen_principal: { url: '/images/product-sofa.png', alt: 'Olivia' },
-    precio_texto: 'desde $62,000 MXN',
     animClass: 'rv',
   },
   {
@@ -18,7 +17,6 @@ const PRODUCTS = [
     badge: null,
     categoria: { nombre: 'Camas Tapizadas' },
     imagen_principal: { url: '/images/product-cama.png', alt: 'Nordic' },
-    precio_texto: 'desde $38,000 MXN',
     animClass: 'rv d1',
   },
   {
@@ -28,7 +26,6 @@ const PRODUCTS = [
     badge: 'Bestseller',
     categoria: { nombre: 'Butacas & Sillones' },
     imagen_principal: { url: '/images/product-luna.png', alt: 'Luna' },
-    precio_texto: '$28,500 MXN',
     animClass: 'rv d2',
   },
 ]
