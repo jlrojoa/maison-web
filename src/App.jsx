@@ -17,6 +17,7 @@ function ScrollToTop() {
 const AdminLayout = lazy(() => import('./admin/AdminLayout'))
 const AdminDashboard = lazy(() => import('./admin/AdminDashboard'))
 const AdminProducts = lazy(() => import('./admin/AdminProducts'))
+const AdminTelas = lazy(() => import('./admin/AdminTelas'))
 const AdminTextiles = lazy(() => import('./admin/AdminTextiles'))
 const AdminLeads = lazy(() => import('./admin/AdminLeads'))
 const AdminDistribuidores = lazy(() => import('./admin/AdminDistribuidores'))
@@ -48,6 +49,7 @@ export default function App() {
         >
           <Route index element={<Suspense fallback={<AdminFallback />}><AdminDashboard /></Suspense>} />
           <Route path="productos" element={<Suspense fallback={<AdminFallback />}><AdminProducts /></Suspense>} />
+          <Route path="telas" element={<Suspense fallback={<AdminFallback />}><AdminTelas /></Suspense>} />
           <Route path="textiles" element={<Suspense fallback={<AdminFallback />}><AdminTextiles /></Suspense>} />
           <Route path="leads" element={<Suspense fallback={<AdminFallback />}><AdminLeads /></Suspense>} />
           <Route path="distribuidores" element={<Suspense fallback={<AdminFallback />}><AdminDistribuidores /></Suspense>} />

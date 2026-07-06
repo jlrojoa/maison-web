@@ -8,127 +8,120 @@ export default function ProductDetail({ product, onBack }) {
   const [detail, setDetail] = useState(null)
   const [activeImg, setActiveImg] = useState(0)
   const [selectedConfig, setSelectedConfig] = useState(null)
-  const [selectedTextile, setSelectedTextile] = useState(null)
-  const [selectedOrientacion, setSelectedOrientacion] = useState(null)
-  const [textileModal, setTextileModal] = useState(null)
+  const [selectedGrado, setSelectedGrado] = useState(null)
+  const [selectedFamilia, setSelectedFamilia] = useState(null)
+  const [selectedColor, setSelectedColor] = useState(null)
   const [openAccordion, setOpenAccordion] = useState(null)
   const [quoteStatus, setQuoteStatus] = useState(null)
 
-  // Distribuidor price state
   const ctx = useDistribuidor()
   const distribuidor = ctx?.distribuidor ?? null
-  const [precioBase, setPrecioBase] = useState(null)
-  const [configPrecios, setConfigPrecios] = useState([])
-  const [gradoPrecios, setGradoPrecios] = useState([])
 
   useEffect(() => {
     if (!product?.id) return
+
+    // Reset all state on product change
+    setDetail(null)
     setActiveImg(0)
     setSelectedConfig(null)
-    setSelectedTextile(null)
-    setSelectedOrientacion(null)
-    setTextileModal(null)
+    setSelectedGrado(null)
+    setSelectedFamilia(null)
+    setSelectedColor(null)
     setOpenAccordion(null)
     setQuoteStatus(null)
-    setPrecioBase(null)
-    setConfigPrecios([])
-    setGradoPrecios([])
 
     async function loadDetail() {
-      // Fetch product-specific textiles; fall back to all active if none assigned
-      const [imgRes, specRes, configRes, orientRes, texAssigedRes] = await Promise.all([
+      const [imgRes, cfgRes, texAsignadoRes] = await Promise.all([
         supabase.from('producto_imagenes').select('*').eq('producto_id', product.id).order('orden'),
-        supabase.from('producto_specs').select('*').eq('producto_id', product.id).order('orden'),
-        supabase.from('producto_configuraciones').select('*').eq('producto_id', product.id).order('orden'),
-        supabase.from('producto_orientaciones').select('*').eq('producto_id', product.id).order('orden'),
-        supabase.from('producto_textiles').select('textil:textiles(*)').eq('producto_id', product.id),
+        supabase.from('producto_configuraciones').select('*')
+          .eq('producto_id', product.id).eq('activo', true).order('orden'),
+        supabase.from('producto_telas').select('tela_id').eq('producto_id', product.id),
       ])
 
-      let textilesList = (texAssigedRes.data ?? []).map(r => r.textil).filter(Boolean)
-      if (textilesList.length === 0) {
-        const { data: allTex } = await supabase.from('textiles').select('*').eq('activo', true).order('orden')
-        textilesList = allTex ?? []
+      // Determine which telas apply
+      let telaIds = (texAsignadoRes.data ?? []).map(r => r.tela_id)
+      let telasQuery = supabase.from('telas').select('*, colores:tela_colores(*)')
+        .eq('activo', true).order('grado').order('orden')
+      if (telaIds.length > 0) telasQuery = telasQuery.in('id', telaIds)
+      const { data: telasData } = await telasQuery
+
+      // Filter colores to activo only
+      const telas = (telasData ?? []).map(t => ({
+        ...t,
+        colores: (t.colores ?? []).filter(c => c.activo).sort((a, b) => a.orden - b.orden),
+      }))
+
+      // For distribuidor: load price matrix
+      let precioMatrix = {}
+      if (distribuidor) {
+        const { data: precios } = await supabase.from('producto_precios')
+          .select('configuracion_id, grado, precio')
+          .eq('producto_id', product.id)
+        ;(precios ?? []).forEach(r => {
+          if (!precioMatrix[r.configuracion_id]) precioMatrix[r.configuracion_id] = {}
+          precioMatrix[r.configuracion_id][r.grado] = r.precio
+        })
       }
 
       setDetail({
         imagenes: imgRes.data ?? [],
-        specs: specRes.data ?? [],
-        configuraciones: configRes.data ?? [],
-        orientaciones: orientRes.data ?? [],
-        textiles: textilesList,
+        configuraciones: cfgRes.data ?? [],
+        telas,
+        precioMatrix,
       })
 
-      if (distribuidor) {
-        const [precioRes, cfgPrecioRes, gradoPrecioRes] = await Promise.all([
-          supabase.from('producto_precios').select('precio').eq('producto_id', product.id).single(),
-          supabase.from('producto_config_precios').select('config_id, precio_extra'),
-          supabase.from('producto_grado_precios').select('grado, precio_extra').eq('producto_id', product.id),
-        ])
-        setPrecioBase(precioRes.data?.precio ?? null)
-        setConfigPrecios(cfgPrecioRes.data ?? [])
-        setGradoPrecios(gradoPrecioRes.data ?? [])
-      }
+      // Preselect first configuracion
+      if (cfgRes.data?.length > 0) setSelectedConfig(cfgRes.data[0])
     }
+
     loadDetail()
   }, [product?.id, distribuidor])
-
-  // Close textile modal on Escape
-  useEffect(() => {
-    if (!textileModal) return
-    const onKey = e => { if (e.key === 'Escape') setTextileModal(null) }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [textileModal])
 
   if (!product) return null
 
   const imagenes = detail?.imagenes ?? (product.imagenes ?? [])
-  const specs = detail?.specs ?? []
-  const configuraciones = detail?.configuraciones ?? []
-  const orientaciones = detail?.orientaciones ?? []
-  const textiles = detail?.textiles ?? []
   const activeImage = imagenes[activeImg]
 
-  // Textiles grouped by category
-  const textilesGrouped = textiles.reduce((acc, t) => {
-    const cat = t.categoria ?? 'Telas'
-    if (!acc[cat]) acc[cat] = []
-    acc[cat].push(t)
-    return acc
-  }, {})
+  // Price logic (derived)
+  const grado = selectedColor
+    ? detail?.telas?.find(t => t.id === selectedColor.tela_id)?.grado ?? null
+    : null
+  const precioMatrix = detail?.precioMatrix ?? {}
 
-  // Live price calculation (distribuidor only)
-  const configExtra = selectedConfig
-    ? (configPrecios.find(cp => cp.config_id === selectedConfig.id)?.precio_extra ?? 0)
-    : 0
-  const gradoKey = selectedTextile?.grado
-  const gradoExtra = gradoKey
-    ? (gradoPrecios.find(gp => gp.grado === gradoKey)?.precio_extra ?? 0)
-    : 0
-  const totalPrice = distribuidor && precioBase != null
-    ? precioBase + configExtra + gradoExtra
+  const livePrice = distribuidor && selectedConfig && grado
+    ? precioMatrix[selectedConfig.id]?.[grado] ?? null
     : null
 
-  // Isometric: prefer selected config's, fall back to product-level
-  const isometricoUrl = selectedConfig?.isometrico_url ?? product?.isometrico_url ?? null
+  const lowestPrice = distribuidor && selectedConfig
+    ? Object.values(precioMatrix[selectedConfig.id] ?? {}).reduce(
+        (min, v) => (min === null || v < min) ? v : min,
+        null
+      )
+    : null
 
   const requestQuote = async () => {
     setQuoteStatus('loading')
+    const telaFamilia = selectedColor
+      ? detail?.telas?.find(t => t.id === selectedColor.tela_id)
+      : null
     const { error } = await supabase.from('leads').insert({
       nombre: 'Consulta web',
       email: 'pendiente@maison.mx',
       producto_interes: product.nombre,
-      mensaje: `Interés en ${product.nombre}${selectedConfig ? ` · Config: ${selectedConfig.nombre}` : ''}${selectedTextile ? ` · Tela: ${selectedTextile.nombre}` : ''}${selectedOrientacion ? ` · Orientación: ${selectedOrientacion.nombre}` : ''}`,
+      mensaje: `Interés en ${product.nombre}${selectedConfig ? ` · Tamaño: ${selectedConfig.nombre}` : ''}${telaFamilia ? ` · Tela: ${telaFamilia.nombre}` : ''}${selectedColor ? ` · Color: ${selectedColor.nombre}` : ''}`,
     })
     setQuoteStatus(error ? 'error' : 'ok')
   }
 
+  // Accordion items
   const accordions = [
-    { title: 'Descripción', content: product.descripcion },
-    ...specs.map(s => ({ title: s.titulo, content: Array.isArray(s.contenido) ? s.contenido.join(' · ') : JSON.stringify(s.contenido) })),
-    { title: 'Cuidados', content: 'Limpiar con paño seco. Evitar exposición directa al sol prolongada.' },
-    { title: 'Entrega e instalación', content: 'Plazo de fabricación: 6–8 semanas. Entrega e instalación incluidas en Puebla y CDMX.' },
-  ].filter(a => a.content)
+    selectedConfig?.dimensiones
+      ? { title: 'Dimensiones', content: selectedConfig.dimensiones }
+      : null,
+    product.descripcion
+      ? { title: 'Materiales', content: product.descripcion }
+      : null,
+  ].filter(Boolean)
 
   return (
     <div id="pp" className="on">
@@ -145,9 +138,34 @@ export default function ProductDetail({ product, onBack }) {
       </div>
 
       <div className="pl">
-        {/* Gallery */}
-        <div className="pgal">
-          <div className="gm">
+        {/* Gallery — Nordic vertical thumbnails layout */}
+        <div className="pgal" style={{ flexDirection: 'row', gap: 0 }}>
+          {/* Vertical thumbnail strip */}
+          {imagenes.length > 1 && (
+            <div style={{
+              display: 'flex', flexDirection: 'column', gap: 4,
+              padding: '8px 8px 8px 0', width: 72, overflowY: 'auto', flexShrink: 0,
+            }}>
+              {imagenes.map((img, i) => (
+                <div
+                  key={img.id}
+                  onClick={() => setActiveImg(i)}
+                  style={{
+                    width: 64, height: 64, flexShrink: 0,
+                    border: `2px solid ${i === activeImg ? 'var(--charcoal)' : 'transparent'}`,
+                    cursor: 'pointer', overflow: 'hidden',
+                    opacity: i === activeImg ? 1 : 0.55,
+                    transition: 'all .25s',
+                  }}
+                >
+                  <img src={img.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Main image */}
+          <div className="gm" style={{ flex: 1 }}>
             <div className="gm-bg">
               {activeImage
                 ? <img src={activeImage.url} alt={activeImage.alt || product.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -155,134 +173,236 @@ export default function ProductDetail({ product, onBack }) {
               }
             </div>
           </div>
-          {imagenes.length > 1 && (
-            <div className="gths">
-              {imagenes.map((img, i) => (
-                <div key={img.id} className={`gt ${i === activeImg ? 'on' : ''}`} onClick={() => setActiveImg(i)}>
-                  <img src={img.url} alt={img.alt || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
-        {/* Info */}
+        {/* Info column */}
         <div className="pd">
           <div className="p-tag">{product.categoria?.nombre ?? 'Colección'}</div>
           <h1 className="p-nm">{product.nombre}</h1>
           {product.subtitulo && <div className="p-sb">{product.subtitulo}</div>}
 
+          {/* Price line */}
           <div className="p-pr">
             <span className="p-price">
-              {totalPrice != null
-                ? fmt(totalPrice)
+              {distribuidor
+                ? selectedColor
+                  ? livePrice != null
+                    ? fmt(livePrice)
+                    : 'Combinación no disponible'
+                  : lowestPrice != null
+                    ? `desde ${fmt(lowestPrice)}`
+                    : 'Precio a consultar'
                 : 'Precio a consultar'}
             </span>
-            {totalPrice != null && <span className="p-note">IVA incluido</span>}
+            {distribuidor && livePrice != null && (
+              <span className="p-note">IVA incluido</span>
+            )}
           </div>
 
           {product.descripcion && <p className="p-desc">{product.descripcion}</p>}
 
-          {/* Fabric swatches grouped by category */}
-          {textiles.length > 0 && (
-            <div className="cb">
-              <div className="ct">
-                Tela
-                <span>
-                  {selectedTextile
-                    ? <>{selectedTextile.nombre}{selectedTextile.grado && <span className="grado-pill">{selectedTextile.grado}</span>}</>
-                    : 'Seleccionar'}
-                </span>
+          {/* PASO 1 — TAMAÑO */}
+          {detail && (detail.configuraciones ?? []).length > 0 && (
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ fontSize: 9, letterSpacing: '.25em', textTransform: 'uppercase', color: 'var(--charcoal)', marginBottom: 14 }}>
+                Paso 1 — Tamaño
+                {selectedConfig && (
+                  <span style={{ marginLeft: 12, fontWeight: 300, textTransform: 'none', letterSpacing: 0, fontSize: 12, color: 'var(--stone)' }}>
+                    {selectedConfig.nombre}
+                  </span>
+                )}
               </div>
-              {Object.entries(textilesGrouped).map(([cat, tels]) => (
-                <div key={cat} style={{ marginBottom: 12 }}>
-                  {Object.keys(textilesGrouped).length > 1 && (
-                    <p style={{ fontFamily: 'var(--sans)', fontSize: 9, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--taupe)', margin: '0 0 8px' }}>{cat}</p>
-                  )}
-                  <div className="sws">
-                    {tels.map(t => (
-                      <button
-                        key={t.id}
-                        className={`sw ${selectedTextile?.id === t.id ? 'on' : ''}`}
-                        d={t.nombre}
-                        style={t.imagen_url
-                          ? { backgroundImage: `url(${t.imagen_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-                          : { background: t.color_hex ?? '#ccc' }
-                        }
-                        onClick={() => {
-                          setSelectedTextile(prev => prev?.id === t.id ? null : t)
-                          setTextileModal(t)
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Configuration selector */}
-          {configuraciones.length > 0 && (
-            <div className="cb">
-              <div className="ct">
-                Configuración
-                <span>{selectedConfig?.nombre ?? 'Seleccionar'}</span>
-              </div>
-              <div className="szs">
-                {configuraciones.map(c => {
-                  const extra = distribuidor ? (configPrecios.find(cp => cp.config_id === c.id)?.precio_extra ?? 0) : 0
-                  return (
-                    <button
-                      key={c.id}
-                      className={`so ${selectedConfig?.id === c.id ? 'on' : ''}`}
-                      onClick={() => setSelectedConfig(prev => prev?.id === c.id ? null : c)}
-                    >
-                      {c.nombre}{distribuidor && extra > 0 ? ` +${fmt(extra)}` : ''}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Orientation selector */}
-          {orientaciones.length > 0 && (
-            <div className="cb">
-              <div className="ct">
-                Orientación
-                <span>{selectedOrientacion?.nombre ?? 'Seleccionar'}</span>
-              </div>
-              <div className="szs">
-                {orientaciones.map(o => (
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {(detail.configuraciones ?? []).map(cfg => (
                   <button
-                    key={o.id}
-                    className={`so ${selectedOrientacion?.id === o.id ? 'on' : ''}`}
-                    onClick={() => setSelectedOrientacion(prev => prev?.id === o.id ? null : o)}
+                    key={cfg.id}
+                    onClick={() => setSelectedConfig(cfg)}
+                    style={{
+                      padding: '12px 18px',
+                      border: `1px solid ${selectedConfig?.id === cfg.id ? 'var(--charcoal)' : 'var(--sand)'}`,
+                      background: selectedConfig?.id === cfg.id ? 'var(--charcoal)' : 'transparent',
+                      color: selectedConfig?.id === cfg.id ? '#fff' : 'var(--charcoal)',
+                      fontFamily: 'var(--sans)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all .2s',
+                    }}
                   >
-                    {o.nombre}
+                    <div style={{ fontSize: 12, fontWeight: 400 }}>{cfg.nombre}</div>
+                    {cfg.dimensiones && (
+                      <div style={{ fontSize: 10, color: selectedConfig?.id === cfg.id ? 'rgba(255,255,255,.6)' : 'var(--taupe)', marginTop: 3 }}>
+                        {cfg.dimensiones}
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          <button
-            className="bcot"
-            onClick={requestQuote}
-            disabled={quoteStatus === 'loading' || quoteStatus === 'ok'}
-          >
-            {quoteStatus === 'loading' ? 'Enviando…'
-              : quoteStatus === 'ok' ? '✓ Solicitud enviada'
-              : 'Cotizar esta Pieza'}
-          </button>
-          <button className="bkit" onClick={onBack}>✦ Solicitar Kit de Muestras</button>
+          {/* PASO 2 — TELA */}
+          {detail && (detail.telas ?? []).length > 0 && (
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ fontSize: 9, letterSpacing: '.25em', textTransform: 'uppercase', color: 'var(--charcoal)', marginBottom: 14 }}>
+                Paso 2 — Tela
+              </div>
 
-          {quoteStatus === 'error' && (
-            <p style={{ color: '#c0392b', fontFamily: 'var(--sans)', fontSize: 12, marginBottom: 16 }}>
-              Error al enviar. Por favor inténtalo de nuevo.
-            </p>
+              {selectedColor ? (
+                /* SELECTED SUMMARY */
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', border: '1px solid var(--charcoal)', background: 'var(--warm)' }}>
+                  {selectedColor.imagen_url
+                    ? <img src={selectedColor.imagen_url} alt={selectedColor.nombre} style={{ width: 48, height: 48, objectFit: 'cover', flexShrink: 0 }} />
+                    : <div style={{ width: 48, height: 48, background: 'var(--sand)', flexShrink: 0 }} />
+                  }
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: 'var(--serif)', fontSize: 15, color: 'var(--ink)' }}>
+                      {(detail.telas.find(t => t.id === selectedColor.tela_id)?.nombre ?? '')} · {selectedColor.nombre}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--taupe)', marginTop: 3 }}>
+                      Grado {detail.telas.find(t => t.id === selectedColor.tela_id)?.grado}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setSelectedColor(null); setSelectedFamilia(null) }}
+                    style={{ fontSize: 11, color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', letterSpacing: '.1em', textTransform: 'uppercase' }}
+                  >
+                    Cambiar
+                  </button>
+                </div>
+              ) : (
+                /* GRADO TABS + CONTENT */
+                (() => {
+                  const gradosDisponibles = [...new Set((detail.telas ?? []).map(t => t.grado))].sort()
+                  const activeGrado = selectedGrado ?? gradosDisponibles[0] ?? null
+                  const telasDe = (detail.telas ?? []).filter(t => t.grado === activeGrado)
+
+                  return (
+                    <div>
+                      {/* Grado tabs */}
+                      <div style={{ display: 'flex', borderBottom: '1px solid var(--sand)', marginBottom: 16 }}>
+                        {gradosDisponibles.map(g => (
+                          <button
+                            key={g}
+                            onClick={() => { setSelectedGrado(g); setSelectedFamilia(null) }}
+                            style={{
+                              padding: '8px 18px',
+                              background: 'none',
+                              border: 'none',
+                              borderBottom: activeGrado === g ? '2px solid var(--charcoal)' : '2px solid transparent',
+                              marginBottom: -1,
+                              cursor: 'pointer',
+                              fontFamily: 'var(--sans)',
+                              fontSize: 10,
+                              letterSpacing: '.18em',
+                              color: activeGrado === g ? 'var(--charcoal)' : 'var(--taupe)',
+                            }}
+                          >
+                            {g}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Familia cards for active grado */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {telasDe.map(tela => (
+                          <div key={tela.id}>
+                            {/* Familia header — click to expand/collapse */}
+                            <div
+                              onClick={() => setSelectedFamilia(prev => prev?.id === tela.id ? null : tela)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 12,
+                                padding: '10px 14px',
+                                border: '1px solid var(--sand)',
+                                cursor: 'pointer',
+                                background: selectedFamilia?.id === tela.id ? 'var(--cream)' : '#fff',
+                                transition: 'background .2s',
+                              }}
+                            >
+                              {/* First color swatch as preview */}
+                              {tela.colores[0]?.imagen_url
+                                ? <img src={tela.colores[0].imagen_url} alt="" style={{ width: 32, height: 32, objectFit: 'cover', flexShrink: 0 }} />
+                                : <div style={{ width: 32, height: 32, background: 'var(--sand)', flexShrink: 0 }} />
+                              }
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontFamily: 'var(--serif)', fontSize: 14, color: 'var(--ink)' }}>{tela.nombre}</div>
+                                <div style={{ fontSize: 10, color: 'var(--taupe)', marginTop: 2 }}>{tela.colores.length} colores</div>
+                              </div>
+                              <span style={{ color: 'var(--taupe)', fontSize: 16 }}>
+                                {selectedFamilia?.id === tela.id ? '−' : '+'}
+                              </span>
+                            </div>
+
+                            {/* Color swatches — shown when familia is expanded */}
+                            {selectedFamilia?.id === tela.id && (
+                              <div style={{ padding: '16px 14px', border: '1px solid var(--sand)', borderTop: 'none', display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                                {tela.colores.map(color => (
+                                  <button
+                                    key={color.id}
+                                    title={color.nombre}
+                                    onClick={() => setSelectedColor({ ...color, tela_id: tela.id })}
+                                    style={{
+                                      width: 44,
+                                      height: 44,
+                                      border: selectedColor?.id === color.id ? '2px solid var(--charcoal)' : '2px solid transparent',
+                                      padding: 0,
+                                      cursor: 'pointer',
+                                      overflow: 'hidden',
+                                      background: 'var(--sand)',
+                                    }}
+                                  >
+                                    {color.imagen_url && (
+                                      <img src={color.imagen_url} alt={color.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()
+              )}
+            </div>
           )}
 
+          {/* CTAs */}
+          {distribuidor ? (
+            <>
+              <button className="bcot" disabled style={{ opacity: 0.5, cursor: 'not-allowed', marginBottom: 11 }}>
+                Agregar a Cotización
+              </button>
+              <p style={{ fontFamily: 'var(--sans)', fontSize: 10, color: 'var(--taupe)', textAlign: 'center', marginBottom: 34, letterSpacing: '.1em' }}>
+                Función disponible próximamente
+              </p>
+            </>
+          ) : (
+            <>
+              <button
+                className="bcot"
+                onClick={requestQuote}
+                disabled={quoteStatus === 'loading' || quoteStatus === 'ok'}
+                style={{ marginBottom: 11 }}
+              >
+                {quoteStatus === 'loading'
+                  ? 'Enviando…'
+                  : quoteStatus === 'ok'
+                  ? '✓ Solicitud enviada'
+                  : 'Solicitar cotización'}
+              </button>
+              <button className="bkit" onClick={onBack}>✦ Solicitar Kit de Muestras</button>
+              {quoteStatus === 'error' && (
+                <p style={{ color: '#c0392b', fontSize: 12, fontFamily: 'var(--sans)', marginBottom: 16 }}>
+                  Error al enviar.
+                </p>
+              )}
+            </>
+          )}
+
+          {/* Accordion */}
           {accordions.length > 0 && (
             <div className="acc">
               {accordions.map(a => (
@@ -298,47 +418,8 @@ export default function ProductDetail({ product, onBack }) {
               ))}
             </div>
           )}
-
-          {/* Isometric technical drawing */}
-          {isometricoUrl && (
-            <div style={{ marginTop: 32, borderTop: '1px solid var(--sand)', paddingTop: 24 }}>
-              <p style={{ fontFamily: 'var(--sans)', fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--taupe)', marginBottom: 14 }}>
-                Dibujo técnico
-              </p>
-              <img
-                src={isometricoUrl}
-                alt={`Dibujo isométrico ${product.nombre}`}
-                style={{ width: '100%', maxWidth: 420, display: 'block', background: '#faf9f7', padding: 16, boxSizing: 'border-box' }}
-              />
-            </div>
-          )}
         </div>
       </div>
-
-      {/* Textile detail modal */}
-      {textileModal && (
-        <div className="tl-ov" onClick={() => setTextileModal(null)}>
-          <div className="tl-box" onClick={e => e.stopPropagation()}>
-            <button className="tl-x" onClick={() => setTextileModal(null)}>×</button>
-            <div className="tl-img">
-              {textileModal.imagen_url
-                ? <img src={textileModal.imagen_url} alt={textileModal.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : <div style={{ width: '100%', height: '100%', background: textileModal.color_hex ?? 'var(--sand)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: 80, height: 80, background: textileModal.color_hex ?? 'var(--sand)', border: '4px solid rgba(255,255,255,.4)', borderRadius: '50%' }} />
-                  </div>
-              }
-            </div>
-            <div className="tl-body">
-              {textileModal.categoria && <div className="tl-cat">{textileModal.categoria}</div>}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <div className="tl-nm">{textileModal.nombre}</div>
-                {textileModal.grado && <span className="grado-pill">{textileModal.grado}</span>}
-              </div>
-              {textileModal.descripcion && <p className="tl-ds">{textileModal.descripcion}</p>}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
