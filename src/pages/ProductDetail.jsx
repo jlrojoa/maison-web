@@ -61,7 +61,7 @@ export default function ProductDetail({ product, onBack }) {
       if (distribuidor) {
         const [precioRes, cfgPrecioRes, gradoPrecioRes] = await Promise.all([
           supabase.from('producto_precios').select('precio').eq('producto_id', product.id).single(),
-          supabase.from('producto_config_precios').select('configuracion_id, precio_extra'),
+          supabase.from('producto_config_precios').select('config_id, precio_extra'),
           supabase.from('producto_grado_precios').select('grado, precio_extra').eq('producto_id', product.id),
         ])
         setPrecioBase(precioRes.data?.precio ?? null)
@@ -99,7 +99,7 @@ export default function ProductDetail({ product, onBack }) {
 
   // Live price calculation (distribuidor only)
   const configExtra = selectedConfig
-    ? (configPrecios.find(cp => cp.configuracion_id === selectedConfig.id)?.precio_extra ?? 0)
+    ? (configPrecios.find(cp => cp.config_id === selectedConfig.id)?.precio_extra ?? 0)
     : 0
   const gradoKey = selectedTextile?.grado
   const gradoExtra = gradoKey
@@ -230,7 +230,7 @@ export default function ProductDetail({ product, onBack }) {
               </div>
               <div className="szs">
                 {configuraciones.map(c => {
-                  const extra = distribuidor ? (configPrecios.find(cp => cp.configuracion_id === c.id)?.precio_extra ?? 0) : 0
+                  const extra = distribuidor ? (configPrecios.find(cp => cp.config_id === c.id)?.precio_extra ?? 0) : 0
                   return (
                     <button
                       key={c.id}

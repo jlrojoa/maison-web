@@ -188,7 +188,7 @@ export default function AdminProducts() {
         if (insertedConfigs?.length > 0) {
           await supabase.from('producto_config_precios').insert(
             insertedConfigs.map((cfg, i) => ({
-              configuracion_id: cfg.id,
+              config_id: cfg.id,
               precio_extra: parseFloat(configsWithUrls[i].precio_extra) || 0,
             }))
           )
