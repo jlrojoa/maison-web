@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configurador Brendell</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui; background: #f5f5f5; color: #0F172A; }
+    
+    header { background: #fff; border-bottom: 1px solid #E2E8F0; padding: 16px 24px; }
+    .header-content { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; }
+    .logo { font-weight: 600; font-size: 18px; }
+    
+    .container { max-width: 1400px; margin: 0 auto; padding: 40px 24px; }
+    h1 { font-size: 32px; font-weight: 300; margin-bottom: 8px; }
+    .subtitle { font-size: 14px; color: #64748B; margin-bottom: 40px; }
+    
+    .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; }
+    
+    .carousel { background: linear-gradient(135deg, #D4C4B0 0%, #E8DCC4 100%); border-radius: 8px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; font-size: 18px; color: #0F172A; font-weight: 500; min-height: 400px; }
+    .thumbnails { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 16px; }
+    .thumbnail { width: 80px; height: 80px; background: #F1F5F9; border: 2px solid #E2E8F0; border-radius: 4px; flex-shrink: 0; }
+    .thumbnail.active { border-color: #0F172A; }
+    
+    .isometric-container { background: #F9F9F9; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; min-height: 400px; display: flex; align-items: center; justify-content: center; }
+    .isometric-image { width: 100%; aspect-ratio: 1; border-radius: 4px; background: linear-gradient(135deg, #D4C4B0 0%, #E8DCC4 100%); display: flex; align-items: center; justify-content: center; font-size: 14px; color: rgba(0,0,0,0.2); font-weight: 500; }
+    
+    .step { margin-bottom: 40px; background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #E2E8F0; }
+    .step-header { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; }
+    .step-number { font-size: 16px; font-weight: 600; min-width: 20px; }
+    .step-title { font-size: 14px; font-weight: 500; }
+    
+    .options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .option { padding: 16px; border: 1px solid #E2E8F0; border-radius: 4px; text-align: center; cursor: pointer; transition: all 0.2s; }
+    .option:hover { border-color: #0F172A; }
+    .option.active { border: 2px solid #0F172A; background: #F1F5F9; }
+    .option-icon { font-size: 32px; margin-bottom: 12px; }
+    .option-label { font-size: 13px; font-weight: 500; }
+    
+    .tabs { display: flex; gap: 2px; border-bottom: 1px solid #E2E8F0; margin-bottom: 16px; }
+    .tab { padding: 12px 16px; font-size: 13px; font-weight: 500; border: none; background: none; cursor: pointer; color: #64748B; border-bottom: 2px solid transparent; }
+    .tab.active { color: #0F172A; border-bottom-color: #0F172A; }
+    
+    .dropdown { width: 100%; padding: 10px 12px; border: 1px solid #E2E8F0; border-radius: 4px; font-size: 13px; font-family: inherit; margin-bottom: 16px; }
+    
+    .colors-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .color-swatch { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #E2E8F0; cursor: pointer; transition: all 0.2s; }
+    .color-swatch.active { border: 3px solid #0F172A; }
+    
+    .specs { background: #F1F5F9; padding: 16px; border-radius: 4px; margin-top: 16px; }
+    .specs-header { display: flex; gap: 12px; margin-bottom: 16px; }
+    .specs-swatch { width: 50px; height: 50px; border-radius: 4px; }
+    
+    .summary { background: #F1F5F9; padding: 20px; border-radius: 4px; margin-bottom: 16px; }
+    .summary-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #64748B; margin-bottom: 12px; font-weight: 600; }
+    .summary-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; }
+    
+    .buttons { display: flex; flex-direction: column; gap: 12px; }
+    button { padding: 12px 16px; border: none; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; }
+    .btn-primary { background: #0F172A; color: #fff; }
+    .btn-secondary { background: #fff; color: #0F172A; border: 1px solid #0F172A; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .message { background: #fff; padding: 12px; border: 1px solid #E2E8F0; border-radius: 4px; font-size: 12px; color: #64748B; text-align: center; margin-bottom: 16px; }
+    
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-content">
+    <div class="logo">Brendell</div>
+    <div>
+      <span id="authStatus" style="font-size: 12px; background: #F1F5F9; padding: 8px 12px; border-radius: 4px; color: #64748B;">📍 Sin sesión</span>
+      <button onclick="toggleAuth()" style="margin-left: 12px; background: #F1F5F9; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">Cambiar</button>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <h1>Configura tu Sofá</h1>
+  <p class="subtitle">Personaliza seleccionando tipo, modelo, medida y tela que mejor se adapte a tu espacio.</p>
+
+  <div class="grid-2col">
+    
+    <!-- LEFT: CAROUSEL -->
+    <div>
+      <div class="carousel" id="carouselImg" style="background: linear-gradient(135deg, #D4C4B0 0%, #E8DCC4 100%);">
+      </div>
+      <div class="thumbnails">
+        <div class="thumbnail" style="background: linear-gradient(135deg, #8B7355 0%, #A9A9A9 100%);"></div>
+        <div class="thumbnail" style="background: linear-gradient(135deg, #696969 0%, #808080 100%);"></div>
+        <div class="thumbnail" style="background: linear-gradient(135deg, #D4A574 0%, #B8956F 100%);"></div>
+        <div class="thumbnail" style="background: linear-gradient(135deg, #2F4F4F 0%, #4A5568 100%);"></div>
+        <div class="thumbnail" style="background: linear-gradient(135deg, #8B7355 0%, #A9A9A9 100%);"></div>
+      </div>
+      <div class="isometric-container" id="isometricContainer" style="display: none;">
+        <div class="isometric-image" id="isometricImage"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: STEPS -->
+    <div>
+      
+      <!-- PASO 0: TIPO -->
+      <div class="step">
+        <div class="step-header">
+          <div class="step-number">0.</div>
+          <div class="step-title">¿Qué tipo buscas?</div>
+        </div>
+        <div class="options-grid" id="typesGrid"></div>
+      </div>
+
+      <!-- PASO 1: MODELO -->
+      <div class="step" id="step1">
+        <div class="step-header">
+          <div class="step-number">1.</div>
+          <div class="step-title">Selecciona el modelo</div>
+        </div>
+        <div class="options-grid" id="modelsGrid"></div>
+      </div>
+
+      <!-- PASO 2: MEDIDAS -->
+      <div class="step" id="step2">
+        <div class="step-header">
+          <div class="step-number">2.</div>
+          <div class="step-title">Selecciona la medida</div>
+        </div>
+        <div class="options-grid" id="measuresGrid"></div>
+      </div>
+
+      <!-- PASO 3: TELAS (SIN CASCADA) -->
+      <div class="step" id="step3">
+        <div class="step-header">
+          <div class="step-number">3.</div>
+          <div class="step-title">Selecciona la tela</div>
+        </div>
+        <div class="tabs" id="categoryTabs"></div>
+        <label style="font-size: 12px; color: #64748B; text-transform: uppercase; display: block; margin-bottom: 8px; font-weight: 600;">Seleccionar catálogo</label>
+        <select class="dropdown" id="catalogDropdown" onchange="selectCatalog()">
+          <option value="">Elige un catálogo</option>
+        </select>
+        <div class="colors-grid" id="colorsGrid"></div>
+        <div class="specs hidden" id="specsPanel">
+          <div class="specs-header">
+            <div class="specs-swatch" id="specsSwatch"></div>
+            <div>
+              <h4 style="font-size: 13px; font-weight: 600; margin: 0 0 2px 0;" id="specsName"></h4>
+              <p style="font-size: 12px; color: #64748B; margin: 0;" id="specsCat"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PASO 4: RESUMEN -->
+      <div class="step" id="step4">
+        <div class="step-header">
+          <div class="step-number">4.</div>
+          <div class="step-title">Resumen de tu selección</div>
+        </div>
+        <div class="summary">
+          <div class="summary-label">Tu Configuración</div>
+          <div class="summary-row"><span>Tipo</span><span id="sumType">—</span></div>
+          <div class="summary-row"><span>Modelo</span><span id="sumModel">—</span></div>
+          <div class="summary-row"><span>Medida</span><span id="sumMeasure">—</span></div>
+          <div class="summary-row"><span>Tela</span><span id="sumTela">—</span></div>
+          <div class="summary-row" id="priceRow" style="display: none; font-weight: 600; font-size: 16px; padding-top: 12px; border-top: 1px solid #E2E8F0;"><span>Precio</span><span id="sumPrice">MXN $55,000</span></div>
+        </div>
+        <div class="message" id="loginMsg">🔒 Inicia sesión para ver precios como distribuidor</div>
+        <div class="buttons">
+          <button class="btn-primary" onclick="handleQuote()" id="cotBtn" disabled>Crear Cotización</button>
+          <button class="btn-secondary" onclick="handleSaveSpace()" id="saveBtn" disabled>Guardar en mi espacio</button>
+          <button class="btn-secondary" onclick="handleCart()" id="cartBtn" disabled>Enviar al carrito</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+let state = {
+  isLoggedIn: false,
+  selectedType: null,
+  selectedModel: null,
+  selectedMeasure: null,
+  selectedCategory: 'AA',
+  selectedCatalog: null,
+  selectedColor: null
+};
+
+const types = [
+  { id: 'escuadra', label: 'Escuadra', icon: '⌐' },
+  { id: 'chaise', label: 'Chaise Lounge', icon: '🛋️' },
+  { id: 'sofas', label: 'Sofás', icon: '🪑' },
+  { id: 'individuales', label: 'Individuales', icon: '🛝' }
+];
+
+const models = {
+  escuadra: ['Cubo', 'Kasa', 'Tokio', 'Norway'],
+  chaise: ['Milano', 'Barcelona', 'París', 'Berlín'],
+  sofas: ['Cubo', 'Kasa', 'Tokio', 'Norway', 'Madrid', 'Venecia'],
+  individuales: ['Minimal', 'Comfort', 'Premium', 'Luxury']
+};
+
+const measures = {
+  'Cubo': ['280cm', '250cm', '200cm'],
+  'Kasa': ['210cm', '180cm', '150cm'],
+  'Tokio': ['240cm', '220cm'],
+  'Norway': ['260cm', '200cm'],
+  'Milano': ['190cm', '160cm'],
+  'Barcelona': ['200cm', '170cm'],
+  'París': ['220cm', '180cm'],
+  'Berlín': ['210cm', '150cm'],
+  'Madrid': ['270cm', '240cm', '200cm'],
+  'Venecia': ['250cm', '210cm'],
+  'Minimal': ['95cm', '80cm'],
+  'Comfort': ['110cm', '90cm'],
+  'Premium': ['120cm', '100cm'],
+  'Luxury': ['130cm', '110cm']
+};
+
+const catalogs = {
+  'AA': ['Shepard', 'Lana Premium'],
+  'A': ['Terranova', 'Nantes', 'Lino Natural'],
+  'B': ['Cancún', 'Boucle'],
+  'C': ['Natura', 'Soft Touch']
+};
+
+const modelImages = {
+  'Cubo': 'linear-gradient(135deg, #8B7355 0%, #A9A9A9 100%)',
+  'Kasa': 'linear-gradient(135deg, #696969 0%, #808080 100%)',
+  'Tokio': 'linear-gradient(135deg, #D4A574 0%, #B8956F 100%)',
+  'Norway': 'linear-gradient(135deg, #2F4F4F 0%, #4A5568 100%)',
+  'Milano': 'linear-gradient(135deg, #8B7355 0%, #A9A9A9 100%)',
+  'Barcelona': 'linear-gradient(135deg, #696969 0%, #808080 100%)',
+  'París': 'linear-gradient(135deg, #D4A574 0%, #B8956F 100%)',
+  'Berlín': 'linear-gradient(135deg, #2F4F4F 0%, #4A5568 100%)',
+  'Madrid': 'linear-gradient(135deg, #8B7355 0%, #A9A9A9 100%)',
+  'Venecia': 'linear-gradient(135deg, #696969 0%, #808080 100%)',
+  'Minimal': 'linear-gradient(135deg, #D4A574 0%, #B8956F 100%)',
+  'Comfort': 'linear-gradient(135deg, #2F4F4F 0%, #4A5568 100%)',
+  'Premium': 'linear-gradient(135deg, #8B7355 0%, #A9A9A9 100%)',
+  'Luxury': 'linear-gradient(135deg, #696969 0%, #808080 100%)'
+};
+
+const colors = {
+  'AA': {
+    'Shepard': ['#E8DCC4', '#D4A574', '#B8956F', '#8B7355', '#A9A9A9', '#2F4F4F', '#000000', '#001A4D', '#4A5568', '#2D3748', '#1A365D', '#744210', '#8B6914', '#CD853F', '#DAA520'],
+    'Lana Premium': ['#F5DEB3', '#DEB887', '#D2B48C', '#BC8F8F', '#A0826D', '#696969', '#2F4F4F', '#004B49', '#003D3D', '#2C5F5F', '#1F4F4F', '#5F5F5F', '#8B4513', '#A0522D', '#8B7355']
+  },
+  'A': {
+    'Terranova': ['#D4A574', '#C9965C', '#BF8F4A', '#B8764A', '#A9A9A9', '#999999', '#808080', '#696969', '#4A4A4A', '#333333', '#1C1C1C', '#9E7B3E', '#8B6914', '#DAA520', '#CD853F'],
+    'Nantes': ['#A9A9A9', '#999999', '#808080', '#696969', '#585858', '#4A4A4A', '#333333', '#1C1C1C', '#0F0F0F', '#2F4F4F', '#36454F', '#5F6A6A', '#708090', '#778899', '#A9A9A9'],
+    'Lino Natural': ['#E8DCC4', '#D4C4B0', '#C9B8A0', '#B8A890', '#A89880', '#989080', '#887870', '#786860', '#685850', '#584840', '#483830', '#D2B48C', '#DEB887', '#F5DEB3', '#FFE4B5']
+  },
+  'B': {
+    'Cancún': ['#87CEEB', '#6BA6D4', '#5F9FC7', '#4A90BA', '#3D7FB8', '#2F6FA8', '#226B9E', '#156594', '#0A5A8A', '#0D4680', '#004D7A', '#003D5C', '#002E47', '#7FB3D5', '#A9C5E0'],
+    'Boucle': ['#C4A57B', '#B8956F', '#AC8B63', '#A08157', '#94774B', '#886D3F', '#7C6333', '#705927', '#644F1B', '#58450F', '#8B7355', '#996633', '#AA8844', '#BB9955', '#CCAA66']
+  },
+  'C': {
+    'Natura': ['#8B7355', '#7A6B4F', '#6A5D49', '#5A4F43', '#4A413D', '#3A3337', '#2A2531', '#1A1D2B', '#0A0F25', '#696969', '#585858', '#4A4A4A', '#333333', '#1C1C1C', '#0F0F0F'],
+    'Soft Touch': ['#D2B48C', '#C9A877', '#C09C6A', '#B7905D', '#AE8450', '#A57843', '#9C6C36', '#936029', '#8A541C', '#81480F', '#DEB887', '#DEB887', '#CD853F', '#DAA520', '#FFD700']
+  }
+};
+
+function toggleAuth() {
+  state.isLoggedIn = !state.isLoggedIn;
+  updateUI();
+}
+
+function renderTypes() {
+  const grid = document.getElementById('typesGrid');
+  grid.innerHTML = '';
+  types.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'option';
+    div.innerHTML = `<div class="option-icon">${t.icon}</div><div class="option-label">${t.label}</div>`;
+    div.onclick = () => selectType(div, t.id);
+    grid.appendChild(div);
+  });
+}
+
+function selectType(elem, typeId) {
+  state.selectedType = typeId;
+  state.selectedModel = null;
+  state.selectedMeasure = null;
+  state.selectedCatalog = null;
+  state.selectedColor = null;
+  
+  document.querySelectorAll('#typesGrid .option').forEach(e => e.classList.remove('active'));
+  elem.classList.add('active');
+  
+  document.getElementById('carouselImg').style.background = 'linear-gradient(135deg, #D4C4B0 0%, #E8DCC4 100%)';
+  document.getElementById('isometricContainer').style.display = 'none';
+  
+  renderModels(typeId);
+  updateUI();
+}
+
+function renderModels(typeId) {
+  const mods = models[typeId];
+  const grid = document.getElementById('modelsGrid');
+  grid.innerHTML = '';
+  
+  mods.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'option';
+    div.innerHTML = `<div style="height: 80px; background: ${modelImages[m]}; border-radius: 4px; margin-bottom: 12px;"></div><div class="option-label">${m}</div>`;
+    div.onclick = () => selectModel(div, m);
+    grid.appendChild(div);
+  });
+}
+
+function selectModel(elem, model) {
+  state.selectedModel = model;
+  state.selectedMeasure = null;
+  state.selectedCatalog = null;
+  state.selectedColor = null;
+  
+  document.querySelectorAll('#modelsGrid .option').forEach(e => e.classList.remove('active'));
+  elem.classList.add('active');
+  
+  document.getElementById('carouselImg').style.background = modelImages[model];
+  document.getElementById('isometricContainer').style.display = 'none';
+  
+  renderMeasures(model);
+  renderCategories();
+  
+  updateUI();
+}
+
+function renderMeasures(model) {
+  const meas = measures[model];
+  const grid = document.getElementById('measuresGrid');
+  grid.innerHTML = '';
+  grid.style.gridTemplateColumns = `repeat(${meas.length}, 1fr)`;
+  
+  meas.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'option';
+    div.innerHTML = `<div style="font-size: 16px; font-weight: 500; margin-bottom: 8px;">${m}</div>`;
+    div.onclick = () => selectMeasure(div, m);
+    grid.appendChild(div);
+  });
+}
+
+function selectMeasure(elem, measure) {
+  state.selectedMeasure = measure;
+  
+  document.querySelectorAll('#measuresGrid .option').forEach(e => e.classList.remove('active'));
+  elem.classList.add('active');
+  
+  // Mostrar imagen isométrica
+  const container = document.getElementById('isometricContainer');
+  const image = document.getElementById('isometricImage');
+  
+  if (measure) {
+    container.style.display = 'flex';
+    image.style.background = modelImages[state.selectedModel] || 'linear-gradient(135deg, #D4C4B0 0%, #E8DCC4 100%)';
+    image.textContent = `${measure} - Vista isométrica`;
+  } else {
+    container.style.display = 'none';
+  }
+  
+  updateUI();
+}
+
+function renderCategories() {
+  const tabs = document.getElementById('categoryTabs');
+  tabs.innerHTML = '';
+  
+  ['AA', 'A', 'B', 'C'].forEach((cat, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (idx === 0 ? ' active' : '');
+    btn.textContent = 'Categoría ' + cat;
+    btn.onclick = () => selectCategory(btn, cat);
+    tabs.appendChild(btn);
+  });
+  
+  // Auto-cargar AA al renderizar
+  const firstBtn = tabs.querySelector('.tab.active');
+  if (firstBtn) {
+    selectCategory(firstBtn, 'AA');
+  }
+}
+
+function selectCategory(elem, cat) {
+  state.selectedCategory = cat;
+  state.selectedCatalog = null;
+  state.selectedColor = null;
+  
+  document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
+  elem.classList.add('active');
+  
+  const cats = catalogs[cat];
+  const dropdown = document.getElementById('catalogDropdown');
+  dropdown.innerHTML = '<option value="">Elige un catálogo</option>';
+  
+  cats.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c + ' (' + colors[cat][c].length + ' colores)';
+    dropdown.appendChild(opt);
+  });
+  
+  // Auto-select primer catálogo y mostrar colores
+  if (cats && cats.length > 0) {
+    dropdown.value = cats[0];
+    selectCatalog();
+  } else {
+    document.getElementById('colorsGrid').innerHTML = '';
+    document.getElementById('specsPanel').classList.add('hidden');
+  }
+}
+
+function selectCatalog() {
+  const cat = document.getElementById('catalogDropdown').value;
+  state.selectedCatalog = cat;
+  state.selectedColor = null;
+  
+  if (!cat) {
+    document.getElementById('colorsGrid').innerHTML = '';
+    return;
+  }
+  
+  const colorsArray = colors[state.selectedCategory][cat];
+  const grid = document.getElementById('colorsGrid');
+  grid.innerHTML = '';
+  
+  colorsArray.forEach((color, idx) => {
+    const div = document.createElement('div');
+    div.className = 'color-swatch';
+    div.style.background = color;
+    div.onclick = () => selectColor(div, color);
+    grid.appendChild(div);
+  });
+}
+
+function selectColor(elem, color) {
+  state.selectedColor = color;
+  state.selectedColorNum = Array.from(document.querySelectorAll('.color-swatch')).indexOf(elem) + 1;
+  
+  document.querySelectorAll('.color-swatch').forEach(e => e.classList.remove('active'));
+  elem.classList.add('active');
+  
+  document.getElementById('specsSwatch').style.background = color;
+  document.getElementById('specsName').textContent = state.selectedCatalog;
+  document.getElementById('specsCat').textContent = 'Categoría ' + state.selectedCategory;
+  document.getElementById('specsPanel').classList.remove('hidden');
+  
+  updateUI();
+}
+
+function updateUI() {
+  const authStatus = document.getElementById('authStatus');
+  const loginMsg = document.getElementById('loginMsg');
+  const priceRow = document.getElementById('priceRow');
+  const cotBtn = document.getElementById('cotBtn');
+  const saveBtn = document.getElementById('saveBtn');
+  const cartBtn = document.getElementById('cartBtn');
+
+  // Manejar estado deshabilitado de elementos
+  const modelOptions = document.querySelectorAll('#modelsGrid .option');
+  modelOptions.forEach(opt => opt.style.opacity = state.selectedType ? '1' : '0.5');
+  document.getElementById('modelsGrid').style.pointerEvents = state.selectedType ? 'auto' : 'none';
+
+  const measureOptions = document.querySelectorAll('#measuresGrid .option');
+  measureOptions.forEach(opt => opt.style.opacity = state.selectedModel ? '1' : '0.5');
+  document.getElementById('measuresGrid').style.pointerEvents = state.selectedModel ? 'auto' : 'none';
+
+  const categoryTabs = document.querySelectorAll('.tab');
+  categoryTabs.forEach(tab => tab.style.opacity = state.selectedModel ? '1' : '0.5');
+  document.getElementById('categoryTabs').style.pointerEvents = state.selectedModel ? 'auto' : 'none';
+  document.getElementById('catalogDropdown').disabled = !state.selectedModel;
+
+  const colorSwatches = document.querySelectorAll('.color-swatch');
+  colorSwatches.forEach(swatch => swatch.style.opacity = state.selectedModel ? '1' : '0.5');
+  document.getElementById('colorsGrid').style.pointerEvents = state.selectedModel ? 'auto' : 'none';
+
+  authStatus.textContent = state.isLoggedIn ? '👤 Distribuidor logueado' : '📍 Sin sesión';
+  
+  if (state.isLoggedIn) {
+    loginMsg.classList.add('hidden');
+    priceRow.style.display = 'flex';
+    cotBtn.disabled = false;
+    saveBtn.disabled = false;
+    cartBtn.disabled = false;
+  } else {
+    loginMsg.classList.remove('hidden');
+    priceRow.style.display = 'none';
+    cotBtn.disabled = true;
+    saveBtn.disabled = true;
+    cartBtn.disabled = true;
+  }
+
+  document.getElementById('sumType').textContent = state.selectedType || '—';
+  document.getElementById('sumModel').textContent = state.selectedModel || '—';
+  document.getElementById('sumMeasure').textContent = state.selectedMeasure || '—';
+  if (state.selectedCatalog && state.selectedColor) {
+    document.getElementById('sumTela').innerHTML = state.selectedCatalog + ' (' + state.selectedCategory + ') · Tono ' + state.selectedColorNum + ' <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:' + state.selectedColor + ';border:1px solid #E2E8F0;vertical-align:middle;margin-left:4px;"></span>';
+  } else if (state.selectedCatalog) {
+    document.getElementById('sumTela').textContent = state.selectedCatalog + ' (' + state.selectedCategory + ')';
+  } else {
+    document.getElementById('sumTela').textContent = '—';
+  }
+}
+
+function handleQuote() {
+  if (state.isLoggedIn) alert('PDF cotización');
+}
+
+function handleSaveSpace() {
+  if (state.isLoggedIn) alert('Guardado en tu espacio - Folio generado');
+}
+
+function handleCart() {
+  if (state.isLoggedIn) alert('Agregado al carrito');
+}
+
+renderTypes();
+renderCategories();
+updateUI();
+
+// ============================================
+// PRECARGA DESDE COLECCIONES
+// Uso: configurador.html?tipo=sofas&modelo=Cubo
+// Simula los mismos clicks que haría el usuario
+// ============================================
+function precargarDesdeURL() {
+  const params = new URLSearchParams(window.location.search);
+  const tipoParam = params.get('tipo');
+  const modeloParam = params.get('modelo');
+  
+  if (!tipoParam || !models[tipoParam]) return;
+  
+  // Click en el tipo
+  const tipoIdx = types.findIndex(t => t.id === tipoParam);
+  const tipoElem = document.querySelectorAll('#typesGrid .option')[tipoIdx];
+  if (tipoElem) selectType(tipoElem, tipoParam);
+  
+  // Click en el modelo (si existe dentro de ese tipo)
+  if (modeloParam && models[tipoParam].includes(modeloParam)) {
+    const modIdx = models[tipoParam].indexOf(modeloParam);
+    const modElem = document.querySelectorAll('#modelsGrid .option')[modIdx];
+    if (modElem) selectModel(modElem, modeloParam);
+  }
+}
+
+precargarDesdeURL();
+</script>
+
+</body>
+</html>

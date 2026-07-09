@@ -1,0 +1,41 @@
+TASK 1 — CONECTAR CONFIGURADOR A SUPABASE (UN SOLO TASK, NADA MÁS)
+
+CONTEXTO:
+- Proyecto: C:\Users\Usuario\Downloads\maison (repo maison-web)
+- Supabase project: smnjbqjvqomopeulsuvp
+- El mockup HTML aprobado "BrendellConfiguradorSinCascada.html" es el spec visual EXACTO del configurador. Está adjunto. Ábrelo en navegador para ver el comportamiento esperado antes de escribir código.
+
+OBJETIVO:
+Implementar el configurador en React conectado a Supabase, replicando el mockup al pie de la letra. Los datos ya existen en la base (productos, medidas, telas, colores con hex y specs, precios). NO hay que crear ni modificar nada en Supabase.
+
+MAPEO DE DATOS (mockup → tablas reales):
+- Paso 1 "Tipo de producto" → tabla categorias (nombre, slug, orden, activo)
+- Paso 2 "Modelo" → tabla productos (filtrar por categoria_id; usar nombre, isometrico_url)
+- Paso 3 "Medida" → tabla producto_configuraciones (filtrar por producto_id; usar nombre, dimensiones, isometrico_url)
+- Paso 4 "Telas":
+  * Tabs de grado → telas.grado (AA, A, B, C)
+  * Dropdown catálogo → telas.nombre (filtrado por grado del tab activo)
+  * Grid de colores → tela_colores (usar codigo_hex para el swatch circular, nombre)
+- Panel de especificaciones al elegir color → tela_colores: composicion, martindale, resistencia_luz, pilling, facil_limpieza, repelente_liquidos, pais_origen
+- Precio → lookup en producto_precios WHERE producto_id + configuracion_id + grado (el grado de la tela elegida). Es un LOOKUP, NO un cálculo.
+
+COMPORTAMIENTOS DEL MOCKUP QUE DEBEN QUEDAR IDÉNTICOS:
+1. Todos los pasos visibles desde el inicio; deshabilitados (opacity 0.5, sin clicks) hasta cumplir su requisito.
+2. Al seleccionar modelo: las medidas Y las telas se activan simultáneamente, con el primer grado y primer catálogo auto-seleccionados mostrando sus colores.
+3. Al seleccionar medida: aparece la imagen isométrica (cuadrada, grande) debajo de los thumbnails del lado izquierdo (producto_configuraciones.isometrico_url; si es NULL, placeholder gris).
+4. Resumen muestra: Tipo, Modelo, Medida, y Tela en formato "Catálogo (Grado) · NombreColor" + swatch circular del color seleccionado.
+5. Precio visible SOLO con sesión de distribuidor iniciada; sin sesión: mensaje "Inicia sesión para ver precios como distribuidor".
+6. Los 3 botones finales: "Crear Cotización", "Guardar en mi espacio", "Enviar al carrito" — por ahora solo deshabilitados sin sesión / habilitados con sesión. NO implementar su lógica todavía (es otro task).
+7. Precarga por URL: el configurador debe aceptar ?tipo=<slug>&modelo=<slug> y auto-seleccionar tipo y modelo (así llega el usuario desde la página de Colecciones). Params inválidos se ignoran sin romper nada.
+
+RESTRICCIONES (OBLIGATORIAS):
+- PROHIBIDO modificar el schema de Supabase (no crear tablas, no alterar columnas, no tocar RLS, no insertar datos). Si algo no cuadra, DETENTE y pregunta antes de continuar.
+- PROHIBIDO cambiar diseño, layout, colores, tipografía o flujo del mockup. Nada de fuentes serif, nada de tonos beige/dorados, nada de fondos negros.
+- PROHIBIDO tocar otras partes del sitio (admin, colecciones, home, rutas existentes). Solo el configurador.
+- Este task NO incluye: generación de PDFs, WhatsApp, lógica de cotizaciones, carrito, ni la pantalla Mi Espacio. Eso viene en tasks posteriores.
+- UN task a la vez. No propongas ni adelantes trabajo de otros tasks.
+
+AL TERMINAR, REPORTA EXACTAMENTE:
+1. Lista completa de archivos creados y modificados (rutas exactas)
+2. Ruta/URL donde quedó el configurador funcionando
+3. Cualquier cosa del mockup que no pudiste replicar y por qué
