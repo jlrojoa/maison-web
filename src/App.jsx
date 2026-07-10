@@ -5,6 +5,7 @@ import Home from './pages/Home'
 import Colecciones from './pages/Colecciones'
 import ProductPage from './pages/ProductPage'
 import Distribuidores from './pages/Distribuidores'
+import Configurador from './pages/Configurador'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="/colecciones" element={<Colecciones />} />
         <Route path="/producto/:slug" element={<ProductPage />} />
         <Route path="/distribuidores" element={<Distribuidores />} />
+        <Route path="/configurador" element={<Configurador />} />
         <Route
           path="/admin"
           element={

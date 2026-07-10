@@ -1,0 +1,75 @@
+/* src/pages/Configurador.css */
+.cfg-page { font-family: system-ui; background: #f5f5f5; color: #0F172A; min-height: 100vh; }
+
+.cfg-header { background: #fff; border-bottom: 1px solid #E2E8F0; padding: 16px 24px; }
+.cfg-header-content { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+.cfg-logo { font-weight: 600; font-size: 18px; }
+.cfg-auth-status { font-size: 12px; background: #F1F5F9; padding: 8px 12px; border-radius: 4px; color: #64748B; }
+
+.cfg-container { max-width: 1400px; margin: 0 auto; padding: 40px 24px; }
+.cfg-h1 { font-size: 32px; font-weight: 300; margin-bottom: 8px; }
+.cfg-subtitle { font-size: 14px; color: #64748B; margin-bottom: 40px; }
+
+.cfg-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; }
+
+.cfg-carousel { background: linear-gradient(135deg, #D4C4B0 0%, #E8DCC4 100%); border-radius: 8px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; font-size: 18px; color: #0F172A; font-weight: 500; min-height: 400px; overflow: hidden; }
+.cfg-carousel img { width: 100%; height: 100%; object-fit: cover; }
+
+.cfg-thumbnails { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 16px; }
+.cfg-thumbnail { width: 80px; height: 80px; background: #F1F5F9; border: 2px solid #E2E8F0; border-radius: 4px; flex-shrink: 0; }
+
+.cfg-isometric-container { background: #F9F9F9; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; min-height: 400px; display: flex; align-items: center; justify-content: center; }
+.cfg-isometric-image { width: 100%; aspect-ratio: 1; border-radius: 4px; background: #F1F5F9; display: flex; align-items: center; justify-content: center; font-size: 14px; color: rgba(0,0,0,0.35); font-weight: 500; overflow: hidden; }
+.cfg-isometric-image img { width: 100%; height: 100%; object-fit: cover; }
+.cfg-iso-caption { font-size: 12px; color: #64748B; margin-top: 8px; text-align: center; }
+
+.cfg-step { margin-bottom: 40px; background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #E2E8F0; }
+.cfg-step.cfg-disabled { opacity: 0.5; pointer-events: none; }
+.cfg-step-header { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; }
+.cfg-step-number { font-size: 16px; font-weight: 600; min-width: 20px; }
+.cfg-step-title { font-size: 14px; font-weight: 500; }
+
+.cfg-options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.cfg-option { padding: 16px; border: 1px solid #E2E8F0; border-radius: 4px; text-align: center; cursor: pointer; transition: all 0.2s; background: none; }
+.cfg-option:hover { border-color: #0F172A; }
+.cfg-option.cfg-active { border: 2px solid #0F172A; background: #F1F5F9; }
+.cfg-option-icon { font-size: 32px; margin-bottom: 12px; font-family: system-ui; }
+.cfg-option-thumb { height: 80px; border-radius: 4px; margin-bottom: 12px; background: #F1F5F9; overflow: hidden; }
+.cfg-option-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.cfg-option-label { font-size: 13px; font-weight: 500; }
+.cfg-option-dim { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
+
+.cfg-tabs { display: flex; gap: 2px; border-bottom: 1px solid #E2E8F0; margin-bottom: 16px; }
+.cfg-tab { padding: 12px 16px; font-size: 13px; font-weight: 500; border: none; background: none; cursor: pointer; color: #64748B; border-bottom: 2px solid transparent; }
+.cfg-tab.cfg-active { color: #0F172A; border-bottom-color: #0F172A; }
+
+.cfg-dropdown-label { font-size: 12px; color: #64748B; text-transform: uppercase; display: block; margin-bottom: 8px; font-weight: 600; }
+.cfg-dropdown { width: 100%; padding: 10px 12px; border: 1px solid #E2E8F0; border-radius: 4px; font-size: 13px; font-family: inherit; margin-bottom: 16px; }
+
+.cfg-colors-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.cfg-color-swatch { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #E2E8F0; cursor: pointer; transition: all 0.2s; padding: 0; }
+.cfg-color-swatch.cfg-active { border: 3px solid #0F172A; }
+
+.cfg-specs { background: #F1F5F9; padding: 16px; border-radius: 4px; margin-top: 16px; }
+.cfg-specs-header { display: flex; gap: 12px; margin-bottom: 16px; }
+.cfg-specs-swatch { width: 50px; height: 50px; border-radius: 4px; flex-shrink: 0; }
+.cfg-specs-name { font-size: 13px; font-weight: 600; margin: 0 0 2px 0; }
+.cfg-specs-cat { font-size: 12px; color: #64748B; margin: 0; }
+.cfg-specs-list { display: flex; flex-direction: column; gap: 6px; }
+.cfg-specs-row { display: flex; justify-content: space-between; font-size: 12px; gap: 12px; }
+.cfg-specs-row span:first-child { color: #64748B; }
+.cfg-specs-row span:last-child { text-align: right; }
+
+.cfg-summary { background: #F1F5F9; padding: 20px; border-radius: 4px; margin-bottom: 16px; }
+.cfg-summary-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #64748B; margin-bottom: 12px; font-weight: 600; }
+.cfg-summary-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; }
+.cfg-summary-price-row { display: flex; justify-content: space-between; font-weight: 600; font-size: 16px; padding-top: 12px; border-top: 1px solid #E2E8F0; }
+.cfg-tela-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #E2E8F0; vertical-align: middle; margin-left: 4px; }
+
+.cfg-buttons { display: flex; flex-direction: column; gap: 12px; }
+.cfg-btn { padding: 12px 16px; border: none; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.cfg-btn-primary { background: #0F172A; color: #fff; }
+.cfg-btn-secondary { background: #fff; color: #0F172A; border: 1px solid #0F172A; }
+.cfg-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.cfg-message { background: #fff; padding: 12px; border: 1px solid #E2E8F0; border-radius: 4px; font-size: 12px; color: #64748B; text-align: center; margin-bottom: 16px; }
