@@ -56,6 +56,7 @@ export default function Configurador() {
   const selectTipo = (cat) => {
     setTipoSel(cat)
     setModeloSel(null)
+    setMedidaSel(null)
   }
 
   const selectModelo = (prod) => {
