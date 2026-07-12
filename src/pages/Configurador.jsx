@@ -21,6 +21,11 @@ export default function Configurador() {
   const [configuraciones, setConfiguraciones] = useState([])
   const [medidaSel, setMedidaSel] = useState(null)
 
+  const [telas, setTelas] = useState([])
+  const [gradoSel, setGradoSel] = useState('AA')
+  const [telaSel, setTelaSel] = useState(null)
+  const [colorSel, setColorSel] = useState(null)
+
   useEffect(() => {
     async function load() {
       const { data } = await supabase.from('categorias').select('*').eq('activo', true).order('orden')
@@ -42,12 +47,26 @@ export default function Configurador() {
   }, [tipoSel])
 
   useEffect(() => {
-    if (!modeloSel) { setConfiguraciones([]); return }
+    if (!modeloSel) { setConfiguraciones([]); setTelas([]); setTelaSel(null); setColorSel(null); return }
     let ignore = false
     async function load() {
-      const { data } = await supabase.from('producto_configuraciones').select('*')
-        .eq('producto_id', modeloSel.id).eq('activo', true).order('orden')
-      if (!ignore) setConfiguraciones(data ?? [])
+      const [cfgRes, telasRes] = await Promise.all([
+        supabase.from('producto_configuraciones').select('*')
+          .eq('producto_id', modeloSel.id).eq('activo', true).order('orden'),
+        supabase.from('telas').select('*, colores:tela_colores(*)')
+          .eq('activo', true).order('grado').order('orden'),
+      ])
+      if (ignore) return
+      setConfiguraciones(cfgRes.data ?? [])
+
+      const telasConColores = (telasRes.data ?? []).map(t => ({
+        ...t,
+        colores: (t.colores ?? []).filter(c => c.activo).sort((a, b) => a.orden - b.orden),
+      }))
+      setTelas(telasConColores)
+      setGradoSel('AA')
+      setTelaSel(telasConColores.find(t => t.grado === 'AA') ?? null)
+      setColorSel(null)
     }
     load()
     return () => { ignore = true }
@@ -65,6 +84,21 @@ export default function Configurador() {
   }
 
   const selectMedida = (cfg) => setMedidaSel(cfg)
+
+  const selectGrado = (grado) => {
+    setGradoSel(grado)
+    setTelaSel(telas.find(t => t.grado === grado) ?? null)
+    setColorSel(null)
+  }
+
+  const selectTela = (telaId) => {
+    setTelaSel(telas.find(t => t.id === telaId) ?? null)
+    setColorSel(null)
+  }
+
+  const selectColor = (color) => setColorSel(color)
+
+  const telasDelGrado = telas.filter(t => t.grado === gradoSel)
 
   const modeloActivo = !!tipoSel
   const medidaTelaActivo = !!modeloSel
@@ -173,6 +207,84 @@ export default function Configurador() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* PASO 3 */}
+            <div className={`cfg-step ${!medidaTelaActivo ? 'cfg-disabled' : ''}`}>
+              <div className="cfg-step-header">
+                <div className="cfg-step-number">3.</div>
+                <div className="cfg-step-title">Selecciona la tela</div>
+              </div>
+
+              <div className="cfg-tabs">
+                {GRADOS.map(g => (
+                  <button
+                    key={g}
+                    type="button"
+                    className={`cfg-tab ${gradoSel === g ? 'cfg-active' : ''}`}
+                    onClick={() => medidaTelaActivo && selectGrado(g)}
+                  >
+                    Categoría {g}
+                  </button>
+                ))}
+              </div>
+
+              <label className="cfg-dropdown-label">Seleccionar catálogo</label>
+              <select
+                className="cfg-dropdown"
+                disabled={!medidaTelaActivo}
+                value={telaSel?.id ?? ''}
+                onChange={e => selectTela(e.target.value)}
+              >
+                <option value="">Elige un catálogo</option>
+                {telasDelGrado.map(t => (
+                  <option key={t.id} value={t.id}>{t.nombre} ({t.colores.length} colores)</option>
+                ))}
+              </select>
+
+              <div className="cfg-colors-grid">
+                {(telaSel?.colores ?? []).map(color => (
+                  <button
+                    key={color.id}
+                    type="button"
+                    className={`cfg-color-swatch ${colorSel?.id === color.id ? 'cfg-active' : ''}`}
+                    style={{ background: color.codigo_hex || '#E2E8F0' }}
+                    title={color.nombre}
+                    onClick={() => selectColor(color)}
+                  />
+                ))}
+              </div>
+
+              {colorSel && (
+                <div className="cfg-specs">
+                  <div className="cfg-specs-header">
+                    <div className="cfg-specs-swatch" style={{ background: colorSel.codigo_hex || '#E2E8F0' }} />
+                    <div>
+                      <h4 className="cfg-specs-name">{telaSel?.nombre} · {colorSel.nombre}</h4>
+                      <p className="cfg-specs-cat">Categoría {telaSel?.grado}</p>
+                    </div>
+                  </div>
+                  <div className="cfg-specs-list">
+                    {colorSel.composicion && (
+                      <div className="cfg-specs-row"><span>Composición</span><span>{colorSel.composicion}</span></div>
+                    )}
+                    {colorSel.martindale != null && (
+                      <div className="cfg-specs-row"><span>Martindale</span><span>{colorSel.martindale}</span></div>
+                    )}
+                    {colorSel.resistencia_luz && (
+                      <div className="cfg-specs-row"><span>Resistencia a la luz</span><span>{colorSel.resistencia_luz}</span></div>
+                    )}
+                    {colorSel.pilling && (
+                      <div className="cfg-specs-row"><span>Pilling</span><span>{colorSel.pilling}</span></div>
+                    )}
+                    <div className="cfg-specs-row"><span>Fácil limpieza</span><span>{colorSel.facil_limpieza ? 'Sí' : 'No'}</span></div>
+                    <div className="cfg-specs-row"><span>Repelente a líquidos</span><span>{colorSel.repelente_liquidos ? 'Sí' : 'No'}</span></div>
+                    {colorSel.pais_origen && (
+                      <div className="cfg-specs-row"><span>País de origen</span><span>{colorSel.pais_origen}</span></div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
