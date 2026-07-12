@@ -28,12 +28,14 @@ export default function Configurador() {
 
   useEffect(() => {
     if (!tipoSel) { setProductos([]); return }
+    let ignore = false
     async function load() {
       const { data } = await supabase.from('productos').select('*')
         .eq('categoria_id', tipoSel.id).eq('activo', true).order('orden')
-      setProductos(data ?? [])
+      if (!ignore) setProductos(data ?? [])
     }
     load()
+    return () => { ignore = true }
   }, [tipoSel])
 
   const selectTipo = (cat) => {
