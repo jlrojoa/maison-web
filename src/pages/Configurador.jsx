@@ -18,6 +18,9 @@ export default function Configurador() {
   const [tipoSel, setTipoSel] = useState(null)
   const [modeloSel, setModeloSel] = useState(null)
 
+  const [configuraciones, setConfiguraciones] = useState([])
+  const [medidaSel, setMedidaSel] = useState(null)
+
   useEffect(() => {
     async function load() {
       const { data } = await supabase.from('categorias').select('*').eq('activo', true).order('orden')
@@ -38,6 +41,18 @@ export default function Configurador() {
     return () => { ignore = true }
   }, [tipoSel])
 
+  useEffect(() => {
+    if (!modeloSel) { setConfiguraciones([]); return }
+    let ignore = false
+    async function load() {
+      const { data } = await supabase.from('producto_configuraciones').select('*')
+        .eq('producto_id', modeloSel.id).eq('activo', true).order('orden')
+      if (!ignore) setConfiguraciones(data ?? [])
+    }
+    load()
+    return () => { ignore = true }
+  }, [modeloSel])
+
   const selectTipo = (cat) => {
     setTipoSel(cat)
     setModeloSel(null)
@@ -45,9 +60,13 @@ export default function Configurador() {
 
   const selectModelo = (prod) => {
     setModeloSel(prod)
+    setMedidaSel(null)
   }
 
+  const selectMedida = (cfg) => setMedidaSel(cfg)
+
   const modeloActivo = !!tipoSel
+  const medidaTelaActivo = !!modeloSel
 
   return (
     <div className="cfg-page">
@@ -73,6 +92,20 @@ export default function Configurador() {
             <div className="cfg-thumbnails">
               {[0, 1, 2, 3, 4].map(i => <div key={i} className="cfg-thumbnail" />)}
             </div>
+            {medidaSel && (
+              <div>
+                <div className="cfg-isometric-container">
+                  <div className="cfg-isometric-image">
+                    {medidaSel.isometrico_url
+                      ? <img src={medidaSel.isometrico_url} alt={medidaSel.nombre} />
+                      : 'Sin imagen isométrica'}
+                  </div>
+                </div>
+                <p className="cfg-iso-caption">
+                  {medidaSel.nombre}{medidaSel.dimensiones ? ` — ${medidaSel.dimensiones}` : ''}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* RIGHT */}
@@ -114,6 +147,28 @@ export default function Configurador() {
                       {prod.isometrico_url && <img src={prod.isometrico_url} alt={prod.nombre} />}
                     </div>
                     <div className="cfg-option-label">{prod.nombre}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* PASO 2 */}
+            <div className={`cfg-step ${!medidaTelaActivo ? 'cfg-disabled' : ''}`}>
+              <div className="cfg-step-header">
+                <div className="cfg-step-number">2.</div>
+                <div className="cfg-step-title">Selecciona la medida</div>
+              </div>
+              <div
+                className="cfg-options-grid"
+                style={{ gridTemplateColumns: `repeat(${configuraciones.length || 1}, 1fr)` }}
+              >
+                {configuraciones.map(cfg => (
+                  <div
+                    key={cfg.id}
+                    className={`cfg-option ${medidaSel?.id === cfg.id ? 'cfg-active' : ''}`}
+                    onClick={() => medidaTelaActivo && selectMedida(cfg)}
+                  >
+                    <div className="cfg-option-dim">{cfg.nombre}</div>
                   </div>
                 ))}
               </div>
