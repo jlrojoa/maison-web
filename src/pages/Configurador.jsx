@@ -91,6 +91,10 @@ export default function Configurador() {
     return row ? row.precio : null
   }, [precios, telaSel])
 
+  const [searchParams] = useSearchParams()
+  const [tipoPreloaded, setTipoPreloaded] = useState(false)
+  const [modeloPreloadDone, setModeloPreloadDone] = useState(false)
+
   const selectTipo = (cat) => {
     setTipoSel(cat)
     setModeloSel(null)
@@ -101,6 +105,24 @@ export default function Configurador() {
     setModeloSel(prod)
     setMedidaSel(null)
   }
+
+  // Precarga de tipo: una sola vez, cuando categorias ya cargó
+  useEffect(() => {
+    if (tipoPreloaded || categorias.length === 0) return
+    const tipoParam = searchParams.get('tipo')
+    const cat = tipoParam ? categorias.find(c => c.slug === tipoParam) : null
+    if (cat) selectTipo(cat)
+    setTipoPreloaded(true)
+  }, [categorias, tipoPreloaded, searchParams])
+
+  // Precarga de modelo: una sola vez, cuando productos del tipo precargado ya cargaron
+  useEffect(() => {
+    if (!tipoPreloaded || modeloPreloadDone || productos.length === 0) return
+    const modeloParam = searchParams.get('modelo')
+    const prod = modeloParam ? productos.find(p => p.slug === modeloParam) : null
+    if (prod) selectModelo(prod)
+    setModeloPreloadDone(true)
+  }, [tipoPreloaded, modeloPreloadDone, productos, searchParams])
 
   const selectMedida = (cfg) => setMedidaSel(cfg)
 
