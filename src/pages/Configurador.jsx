@@ -26,6 +26,8 @@ export default function Configurador() {
   const [telaSel, setTelaSel] = useState(null)
   const [colorSel, setColorSel] = useState(null)
 
+  const [precios, setPrecios] = useState([])
+
   useEffect(() => {
     async function load() {
       const { data } = await supabase.from('categorias').select('*').eq('activo', true).order('orden')
@@ -71,6 +73,23 @@ export default function Configurador() {
     load()
     return () => { ignore = true }
   }, [modeloSel])
+
+  useEffect(() => {
+    if (!distribuidor || !modeloSel || !medidaSel) { setPrecios([]); return }
+    let ignore = false
+    async function load() {
+      const { data } = await supabase.from('producto_precios').select('grado, precio')
+        .eq('producto_id', modeloSel.id).eq('configuracion_id', medidaSel.id)
+      if (!ignore) setPrecios(data ?? [])
+    }
+    load()
+    return () => { ignore = true }
+  }, [distribuidor, modeloSel, medidaSel])
+
+  const precioLookup = useMemo(() => {
+    const row = precios.find(p => p.grado === telaSel?.grado)
+    return row ? row.precio : null
+  }, [precios, telaSel])
 
   const selectTipo = (cat) => {
     setTipoSel(cat)
@@ -285,6 +304,47 @@ export default function Configurador() {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* PASO 4 */}
+            <div className="cfg-step">
+              <div className="cfg-step-header">
+                <div className="cfg-step-number">4.</div>
+                <div className="cfg-step-title">Resumen de tu selección</div>
+              </div>
+              <div className="cfg-summary">
+                <div className="cfg-summary-label">Tu Configuración</div>
+                <div className="cfg-summary-row"><span>Tipo</span><span>{tipoSel?.nombre ?? '—'}</span></div>
+                <div className="cfg-summary-row"><span>Modelo</span><span>{modeloSel?.nombre ?? '—'}</span></div>
+                <div className="cfg-summary-row"><span>Medida</span><span>{medidaSel?.nombre ?? '—'}</span></div>
+                <div className="cfg-summary-row">
+                  <span>Tela</span>
+                  <span>
+                    {telaSel && colorSel ? (
+                      <>
+                        {telaSel.nombre} ({telaSel.grado}) · {colorSel.nombre}
+                        <span className="cfg-tela-swatch" style={{ background: colorSel.codigo_hex || '#E2E8F0' }} />
+                      </>
+                    ) : telaSel ? `${telaSel.nombre} (${telaSel.grado})` : '—'}
+                  </span>
+                </div>
+                {distribuidor && (
+                  <div className="cfg-summary-price-row">
+                    <span>Precio</span>
+                    <span>{precioLookup != null ? fmt(precioLookup) : 'No disponible'}</span>
+                  </div>
+                )}
+              </div>
+
+              {!distribuidor && (
+                <div className="cfg-message">🔒 Inicia sesión para ver precios como distribuidor</div>
+              )}
+
+              <div className="cfg-buttons">
+                <button type="button" className="cfg-btn cfg-btn-primary" disabled={!distribuidor}>Crear Cotización</button>
+                <button type="button" className="cfg-btn cfg-btn-secondary" disabled={!distribuidor}>Guardar en mi espacio</button>
+                <button type="button" className="cfg-btn cfg-btn-secondary" disabled={!distribuidor}>Enviar al carrito</button>
+              </div>
             </div>
           </div>
         </div>
