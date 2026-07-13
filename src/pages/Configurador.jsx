@@ -47,7 +47,7 @@ export default function Configurador() {
   }, [tipoSel])
 
   useEffect(() => {
-    if (!modeloSel) { setConfiguraciones([]); setTelas([]); setTelaSel(null); setColorSel(null); return }
+    if (!modeloSel) { setConfiguraciones([]); setTelas([]); setGradoSel('AA'); setTelaSel(null); setColorSel(null); return }
     let ignore = false
     async function load() {
       const [cfgRes, telasRes] = await Promise.all([
