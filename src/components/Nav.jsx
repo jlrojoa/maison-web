@@ -29,6 +29,13 @@ export default function Nav() {
         {distribuidor ? (
           <>
             <a
+              href="/mi-espacio"
+              onClick={e => { e.preventDefault(); navigate('/mi-espacio') }}
+              style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'inherit', textDecoration: 'none', opacity: .85 }}
+            >
+              Mi Espacio
+            </a>
+            <a
               href="/distribuidores"
               onClick={e => { e.preventDefault(); navigate('/distribuidores') }}
               className="nbtn"

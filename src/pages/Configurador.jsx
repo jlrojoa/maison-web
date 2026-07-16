@@ -91,6 +91,72 @@ export default function Configurador() {
     return row ? row.precio : null
   }, [precios, telaSel])
 
+  // Guardar en Mi Espacio / Crear Cotización — usa las tablas cotizaciones/cotizacion_items
+  // y la función emitir_cotizacion() que ya existen en Supabase (backend construido de
+  // antemano, ver ESTADO-DEL-PROYECTO.md). El distribuidor fija su propio margen y los
+  // datos de su cliente final; ese documento es el que usa para venderle.
+  const [cotizModo, setCotizModo] = useState(null) // null | 'borrador' | 'emitir'
+  const [cotizForm, setCotizForm] = useState({ cliente_nombre: '', cliente_email: '', cliente_telefono: '', markup_pct: '0' })
+  const [cotizSaving, setCotizSaving] = useState(false)
+  const [cotizResultado, setCotizResultado] = useState(null)
+
+  const puedeGuardar = !!(distribuidor && modeloSel && medidaSel && telaSel && colorSel && precioLookup != null)
+
+  const abrirCotizModal = (modo) => {
+    if (!puedeGuardar) return
+    setCotizForm({ cliente_nombre: '', cliente_email: '', cliente_telefono: '', markup_pct: '0' })
+    setCotizResultado(null)
+    setCotizModo(modo)
+  }
+
+  const confirmarCotizacion = async () => {
+    if (!cotizForm.cliente_nombre.trim()) return alert('El nombre del cliente es obligatorio.')
+    setCotizSaving(true)
+    try {
+      const markup = parseFloat(cotizForm.markup_pct) || 0
+      const precioCliente = Math.round(precioLookup * (1 + markup / 100))
+
+      const { data: cot, error: cotErr } = await supabase.from('cotizaciones').insert({
+        distribuidor_email: distribuidor.email,
+        nombre_proyecto: `${modeloSel.nombre} · ${medidaSel.nombre}`,
+        status: 'borrador',
+        total: precioCliente,
+        markup_pct: markup,
+        cliente_nombre: cotizForm.cliente_nombre.trim(),
+        cliente_email: cotizForm.cliente_email.trim() || null,
+        cliente_telefono: cotizForm.cliente_telefono.trim() || null,
+      }).select().single()
+      if (cotErr) throw cotErr
+
+      const { error: itemErr } = await supabase.from('cotizacion_items').insert({
+        cotizacion_id: cot.id,
+        producto_id: modeloSel.id,
+        producto_nombre: modeloSel.nombre,
+        imagen_url: modeloSel.isometrico_url ?? null,
+        configuracion_nombre: medidaSel.nombre,
+        medidas: medidaSel.dimensiones ?? null,
+        textil_nombre: `${telaSel.nombre} (${telaSel.grado}) · ${colorSel.nombre}`,
+        precio_unitario: precioLookup,
+        precio_cliente: precioCliente,
+        cantidad: 1,
+      })
+      if (itemErr) throw itemErr
+
+      // El folio (BR-xxxx) ya se asignó solo al insertar (columna con secuencia
+      // automática). emitir_cotizacion() solo cambia el estado y fija la vigencia de 15 días.
+      if (cotizModo === 'emitir') {
+        const { error: emitErr } = await supabase.rpc('emitir_cotizacion', { cotizacion_uuid: cot.id })
+        if (emitErr) throw emitErr
+      }
+
+      setCotizResultado({ folio: cot.folio, modo: cotizModo })
+    } catch (err) {
+      alert(`Error al guardar la cotización: ${err.message}`)
+    } finally {
+      setCotizSaving(false)
+    }
+  }
+
   const [searchParams] = useSearchParams()
   const [tipoPreloaded, setTipoPreloaded] = useState(false)
   const [modeloPreloadDone, setModeloPreloadDone] = useState(false)
@@ -363,14 +429,60 @@ export default function Configurador() {
               )}
 
               <div className="cfg-buttons">
-                <button type="button" className="cfg-btn cfg-btn-primary" disabled={!distribuidor}>Crear Cotización</button>
-                <button type="button" className="cfg-btn cfg-btn-secondary" disabled={!distribuidor}>Guardar en mi espacio</button>
-                <button type="button" className="cfg-btn cfg-btn-secondary" disabled={!distribuidor}>Enviar al carrito</button>
+                <button type="button" className="cfg-btn cfg-btn-primary" disabled={!puedeGuardar} onClick={() => abrirCotizModal('emitir')}>Crear Cotización</button>
+                <button type="button" className="cfg-btn cfg-btn-secondary" disabled={!puedeGuardar} onClick={() => abrirCotizModal('borrador')}>Guardar en mi espacio</button>
+                <button type="button" className="cfg-btn cfg-btn-secondary" disabled>Enviar al carrito</button>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {cotizModo && (
+        <div className="cfg-modal-overlay" onClick={e => { if (e.target === e.currentTarget && !cotizSaving) setCotizModo(null) }}>
+          <div className="cfg-modal-box">
+            {cotizResultado ? (
+              <>
+                <h3 className="cfg-modal-title">
+                  {cotizResultado.modo === 'emitir' ? '¡Cotización emitida!' : 'Guardada en Mi Espacio'}
+                </h3>
+                <p className="cfg-modal-text">
+                  {cotizResultado.folio
+                    ? <>Folio <b>BR-{cotizResultado.folio}</b>. Vigente 15 días. Puedes verla, descargarla y compartirla desde Mi Espacio.</>
+                    : <>Quedó guardada como borrador. Termínala y emítela cuando quieras desde Mi Espacio.</>}
+                </p>
+                <div className="cfg-buttons">
+                  <a href="/mi-espacio" className="cfg-btn cfg-btn-primary" style={{ textAlign: 'center', textDecoration: 'none' }}>Ir a Mi Espacio</a>
+                  <button type="button" className="cfg-btn cfg-btn-secondary" onClick={() => setCotizModo(null)}>Seguir configurando</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="cfg-modal-title">{cotizModo === 'emitir' ? 'Crear cotización' : 'Guardar borrador'}</h3>
+                <p className="cfg-modal-text">Este documento es el que le compartes a tu cliente final.</p>
+                <label className="cfg-dropdown-label">Nombre del cliente *</label>
+                <input className="cfg-dropdown" value={cotizForm.cliente_nombre} onChange={e => setCotizForm(f => ({ ...f, cliente_nombre: e.target.value }))} />
+                <label className="cfg-dropdown-label">Email del cliente</label>
+                <input className="cfg-dropdown" value={cotizForm.cliente_email} onChange={e => setCotizForm(f => ({ ...f, cliente_email: e.target.value }))} />
+                <label className="cfg-dropdown-label">Teléfono del cliente</label>
+                <input className="cfg-dropdown" value={cotizForm.cliente_telefono} onChange={e => setCotizForm(f => ({ ...f, cliente_telefono: e.target.value }))} />
+                <label className="cfg-dropdown-label">Tu margen (%)</label>
+                <input className="cfg-dropdown" type="number" value={cotizForm.markup_pct} onChange={e => setCotizForm(f => ({ ...f, markup_pct: e.target.value }))} />
+                <div className="cfg-summary-price-row" style={{ marginBottom: 16 }}>
+                  <span>Precio para tu cliente</span>
+                  <span>{fmt(Math.round(precioLookup * (1 + (parseFloat(cotizForm.markup_pct) || 0) / 100)))}</span>
+                </div>
+                <div className="cfg-buttons">
+                  <button type="button" className="cfg-btn cfg-btn-primary" disabled={cotizSaving} onClick={confirmarCotizacion}>
+                    {cotizSaving ? 'Guardando…' : cotizModo === 'emitir' ? 'Confirmar y emitir' : 'Guardar borrador'}
+                  </button>
+                  <button type="button" className="cfg-btn cfg-btn-secondary" disabled={cotizSaving} onClick={() => setCotizModo(null)}>Cancelar</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
