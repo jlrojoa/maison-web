@@ -8,6 +8,12 @@ import './Configurador.css'
 const GRADOS = ['AA', 'A', 'B', 'C']
 const fmt = v => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(v)
 
+// Un color distinto por categoría, solo para diferenciar visualmente las tarjetas del
+// selector — no es una decisión de producto, es puramente la paleta del picker. Se
+// asigna por posición (orden), así que es estable mientras no se reordenen categorías.
+const TIPO_COLORS = ['#C99A6B', '#8FA998', '#B08699', '#7C93AC', '#C4A15A', '#A08072', '#7FA6A0']
+const colorForIndex = i => TIPO_COLORS[i % TIPO_COLORS.length]
+
 export default function Configurador() {
   const ctx = useDistribuidor()
   const distribuidor = ctx?.distribuidor ?? null
@@ -17,6 +23,7 @@ export default function Configurador() {
 
   const [tipoSel, setTipoSel] = useState(null)
   const [modeloSel, setModeloSel] = useState(null)
+  const [productosLoading, setProductosLoading] = useState(false)
 
   const [configuraciones, setConfiguraciones] = useState([])
   const [medidaSel, setMedidaSel] = useState(null)
@@ -37,12 +44,13 @@ export default function Configurador() {
   }, [])
 
   useEffect(() => {
-    if (!tipoSel) { setProductos([]); return }
+    if (!tipoSel) { setProductos([]); setProductosLoading(false); return }
     let ignore = false
     async function load() {
+      setProductosLoading(true)
       const { data } = await supabase.from('productos').select('*')
         .eq('categoria_id', tipoSel.id).eq('activo', true).order('orden')
-      if (!ignore) setProductos(data ?? [])
+      if (!ignore) { setProductos(data ?? []); setProductosLoading(false) }
     }
     load()
     return () => { ignore = true }
@@ -259,13 +267,14 @@ export default function Configurador() {
                 <div className="cfg-step-title">¿Qué tipo buscas?</div>
               </div>
               <div className="cfg-options-grid">
-                {categorias.map(cat => (
+                {categorias.map((cat, i) => (
                   <div
                     key={cat.id}
                     className={`cfg-option ${tipoSel?.id === cat.id ? 'cfg-active' : ''}`}
+                    style={{ '--cfg-tipo-color': colorForIndex(i) }}
                     onClick={() => selectTipo(cat)}
                   >
-                    <div className="cfg-option-icon">{cat.nombre?.[0]}</div>
+                    <div className="cfg-option-icon" style={{ background: colorForIndex(i) }}>{cat.nombre?.[0]}</div>
                     <div className="cfg-option-label">{cat.nombre}</div>
                   </div>
                 ))}
@@ -278,20 +287,26 @@ export default function Configurador() {
                 <div className="cfg-step-number">1.</div>
                 <div className="cfg-step-title">Selecciona el modelo</div>
               </div>
-              <div className="cfg-options-grid">
-                {productos.map(prod => (
-                  <div
-                    key={prod.id}
-                    className={`cfg-option ${modeloSel?.id === prod.id ? 'cfg-active' : ''}`}
-                    onClick={() => modeloActivo && selectModelo(prod)}
-                  >
-                    <div className="cfg-option-thumb">
-                      {prod.isometrico_url && <img src={prod.isometrico_url} alt={prod.nombre} />}
+              {modeloActivo && !productosLoading && productos.length === 0 ? (
+                <div className="cfg-message">
+                  Aún no hay modelos cargados en «{tipoSel?.nombre}». Se agregan desde el panel de administración → Productos.
+                </div>
+              ) : (
+                <div className="cfg-options-grid">
+                  {productos.map(prod => (
+                    <div
+                      key={prod.id}
+                      className={`cfg-option ${modeloSel?.id === prod.id ? 'cfg-active' : ''}`}
+                      onClick={() => modeloActivo && selectModelo(prod)}
+                    >
+                      <div className="cfg-option-thumb">
+                        {prod.isometrico_url && <img src={prod.isometrico_url} alt={prod.nombre} />}
+                      </div>
+                      <div className="cfg-option-label">{prod.nombre}</div>
                     </div>
-                    <div className="cfg-option-label">{prod.nombre}</div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* PASO 2 */}

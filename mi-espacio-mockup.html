@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Espacio — Brendell</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F8FAFC; color: #0F172A; }
+    
+    .header { background: #fff; border-bottom: 1px solid #E2E8F0; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-size: 18px; font-weight: 600; letter-spacing: 2px; }
+    .user-badge { font-size: 12px; background: #F1F5F9; padding: 8px 12px; border-radius: 4px; color: #64748B; }
+    
+    .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+    
+    h1 { font-size: 26px; font-weight: 300; margin-bottom: 4px; }
+    .subtitle { font-size: 13px; color: #64748B; margin-bottom: 32px; }
+    
+    /* FILTROS */
+    .filters { display: flex; gap: 8px; margin-bottom: 24px; }
+    .filter-btn { padding: 8px 16px; border: 1px solid #E2E8F0; background: #fff; border-radius: 4px; font-size: 13px; cursor: pointer; color: #64748B; }
+    .filter-btn.active { background: #0F172A; color: #fff; border-color: #0F172A; }
+    
+    /* LISTA DE COTIZACIONES */
+    .quote-card { background: #fff; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px 24px; margin-bottom: 12px; display: grid; grid-template-columns: 140px 1fr auto; gap: 24px; align-items: center; transition: border-color 0.15s; }
+    .quote-card:hover { border-color: #94A3B8; }
+    
+    /* Columna izquierda: FOLIO */
+    .folio-col { border-right: 1px solid #F1F5F9; padding-right: 24px; }
+    .folio { font-size: 16px; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .folio-draft { color: #94A3B8; font-style: italic; font-weight: 400; font-size: 14px; }
+    .quote-date { font-size: 11px; color: #94A3B8; }
+    .badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 3px; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .badge-emitida { background: #ECFDF5; color: #047857; }
+    .badge-guardada { background: #F1F5F9; color: #64748B; }
+    .badge-vencida { background: #FEF2F2; color: #B91C1C; }
+    
+    /* Columna central: DETALLE */
+    .quote-product { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+    .quote-details { font-size: 12px; color: #64748B; display: flex; align-items: center; gap: 6px; }
+    .mini-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1px solid #E2E8F0; vertical-align: middle; }
+    .quote-price { font-size: 14px; font-weight: 600; margin-top: 6px; }
+    .quote-validity { font-size: 11px; color: #94A3B8; margin-top: 2px; }
+    
+    /* Columna derecha: ACCIONES */
+    .actions { display: flex; gap: 6px; }
+    .action-btn { padding: 8px 12px; border: 1px solid #E2E8F0; background: #fff; border-radius: 4px; font-size: 12px; cursor: pointer; color: #0F172A; white-space: nowrap; transition: all 0.15s; }
+    .action-btn:hover { background: #F1F5F9; border-color: #94A3B8; }
+    .action-btn.primary { background: #0F172A; color: #fff; border-color: #0F172A; }
+    .action-btn.primary:hover { background: #1E293B; }
+    
+    @media (max-width: 768px) {
+      .quote-card { grid-template-columns: 1fr; gap: 12px; }
+      .folio-col { border-right: none; border-bottom: 1px solid #F1F5F9; padding-right: 0; padding-bottom: 12px; }
+      .actions { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">BRENDELL</div>
+  <span class="user-badge">👤 Mueblería García — Distribuidor</span>
+</div>
+
+<div class="container">
+  <h1>Mi Espacio</h1>
+  <p class="subtitle">Tus cotizaciones guardadas y emitidas</p>
+  
+  <div class="filters">
+    <button class="filter-btn active">Todas (4)</button>
+    <button class="filter-btn">Emitidas (2)</button>
+    <button class="filter-btn">Borradores (1)</button>
+    <button class="filter-btn">Vencidas (1)</button>
+  </div>
+  
+  <!-- COTIZACIÓN EMITIDA VIGENTE -->
+  <div class="quote-card">
+    <div class="folio-col">
+      <div class="folio">BR-1003</div>
+      <div class="quote-date">06 jul 2026</div>
+      <span class="badge badge-emitida">Emitida</span>
+    </div>
+    <div>
+      <div class="quote-product">Cubo · Sofá · 280cm</div>
+      <div class="quote-details">Shepard (AA) · Camel <span class="mini-swatch" style="background:#D4A574;"></span></div>
+      <div class="quote-price">MXN $55,000</div>
+      <div class="quote-validity">Vigente hasta el 21 jul 2026</div>
+    </div>
+    <div class="actions">
+      <button class="action-btn primary" onclick="alert('Abre el PDF generado al momento')">Abrir</button>
+      <button class="action-btn" onclick="alert('Descarga el PDF')">Descargar</button>
+      <button class="action-btn" onclick="alert('WhatsApp / Email con PDF adjunto')">Enviar</button>
+      <button class="action-btn" onclick="alert('Abre el configurador precargado.\nAl guardar se crea BR-1005 (folio nuevo).\nBR-1003 queda en historial.')">Editar</button>
+    </div>
+  </div>
+  
+  <!-- COTIZACIÓN EMITIDA VIGENTE 2 -->
+  <div class="quote-card">
+    <div class="folio-col">
+      <div class="folio">BR-1002</div>
+      <div class="quote-date">02 jul 2026</div>
+      <span class="badge badge-emitida">Emitida</span>
+    </div>
+    <div>
+      <div class="quote-product">Milano · Chaise Lounge · 190cm</div>
+      <div class="quote-details">Terranova (A) · Arena <span class="mini-swatch" style="background:#C9965C;"></span></div>
+      <div class="quote-price">MXN $38,500</div>
+      <div class="quote-validity">Vigente hasta el 17 jul 2026</div>
+    </div>
+    <div class="actions">
+      <button class="action-btn primary" onclick="alert('Abre el PDF')">Abrir</button>
+      <button class="action-btn" onclick="alert('Descarga el PDF')">Descargar</button>
+      <button class="action-btn" onclick="alert('Enviar por WhatsApp/Email')">Enviar</button>
+      <button class="action-btn" onclick="alert('Editar → nueva cotización')">Editar</button>
+    </div>
+  </div>
+  
+  <!-- BORRADOR (guardada sin folio) -->
+  <div class="quote-card">
+    <div class="folio-col">
+      <div class="folio folio-draft">Sin folio</div>
+      <div class="quote-date">07 jul 2026</div>
+      <span class="badge badge-guardada">Borrador</span>
+    </div>
+    <div>
+      <div class="quote-product">Norway · Escuadra · 260cm</div>
+      <div class="quote-details">Lino Natural (A) · Crudo <span class="mini-swatch" style="background:#E8DCC4;"></span></div>
+      <div class="quote-price">MXN $61,200</div>
+      <div class="quote-validity">Guardada en tu espacio — sin emitir</div>
+    </div>
+    <div class="actions">
+      <button class="action-btn primary" onclick="alert('Genera folio BR-1004.\nInicia vigencia de 15 días.\nEl precio se congela.')">Emitir cotización</button>
+      <button class="action-btn" onclick="alert('Abre el configurador precargado.\nComo es borrador, se edita directo (sin folio nuevo).')">Editar</button>
+      <button class="action-btn" onclick="alert('Elimina el borrador')">Eliminar</button>
+    </div>
+  </div>
+  
+  <!-- VENCIDA -->
+  <div class="quote-card" style="opacity: 0.65;">
+    <div class="folio-col">
+      <div class="folio">BR-1001</div>
+      <div class="quote-date">15 jun 2026</div>
+      <span class="badge badge-vencida">Vencida</span>
+    </div>
+    <div>
+      <div class="quote-product">Kasa · Sofá · 210cm</div>
+      <div class="quote-details">Boucle (B) · Miel <span class="mini-swatch" style="background:#C4A57B;"></span></div>
+      <div class="quote-price">MXN $42,000</div>
+      <div class="quote-validity">Venció el 30 jun 2026</div>
+    </div>
+    <div class="actions">
+      <button class="action-btn" onclick="alert('Abre el PDF (marcado como vencida)')">Abrir</button>
+      <button class="action-btn primary" onclick="alert('Abre el configurador precargado.\nSe genera nueva cotización con precio ACTUAL.\nFolio nuevo: BR-1005.')">Recotizar</button>
+    </div>
+  </div>
+  
+</div>
+
+</body>
+</html>
