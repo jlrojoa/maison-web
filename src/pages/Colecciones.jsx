@@ -46,8 +46,12 @@ export default function Colecciones() {
   }, [distribuidor])
 
   const handleClick = (product) => {
-    const key = product?.slug ?? product?.id
-    if (key) navigate(`/producto/${key}`)
+    const tipo = product?.categoria?.slug
+    const modelo = product?.slug ?? product?.id
+    if (!modelo) return
+    // El configurador es la ficha de producto real (abierto, sin precios hasta login de
+    // distribuidor). La ruta vieja /producto/:slug queda sin usar pero no se borra.
+    navigate(tipo ? `/configurador?tipo=${tipo}&modelo=${modelo}` : `/configurador?modelo=${modelo}`)
   }
 
   return (
