@@ -39,7 +39,17 @@ export default function Footer() {
       </div>
       <div className="fb">
         <p className="fc">© 2025 Maison Alta Tapicería. Todos los derechos reservados.</p>
-        <p className="fc">Diseñado y fabricado en México.</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          <p className="fc">Diseñado y fabricado en México.</p>
+          <a
+            href="/admin/login"
+            onClick={e => { e.preventDefault(); navigate('/admin/login') }}
+            className="fc"
+            style={{ opacity: .45, textDecoration: 'none' }}
+          >
+            Admin
+          </a>
+        </div>
       </div>
     </footer>
   )

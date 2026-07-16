@@ -44,7 +44,16 @@ export default function Nav() {
             </button>
           </>
         ) : (
-          <a href="#kt" className="nbtn">Kit de Muestras</a>
+          <>
+            <a
+              href="/distribuidores"
+              onClick={e => { e.preventDefault(); navigate('/distribuidores') }}
+              style={{ fontFamily: 'var(--sans)', fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'inherit', textDecoration: 'none', opacity: .75 }}
+            >
+              Distribuidor
+            </a>
+            <a href="#kt" className="nbtn">Kit de Muestras</a>
+          </>
         )}
       </div>
     </nav>
