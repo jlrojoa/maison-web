@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useDistribuidor } from '../contexts/DistribuidorContext'
+import Nav from '../components/Nav'
 import './Configurador.css'
 
 const GRADOS = ['AA', 'A', 'B', 'C']
@@ -220,14 +221,7 @@ export default function Configurador() {
 
   return (
     <div className="cfg-page">
-      <header className="cfg-header">
-        <div className="cfg-header-content">
-          <div className="cfg-logo">Brendell</div>
-          <span className="cfg-auth-status">
-            {distribuidor ? '👤 Distribuidor logueado' : '📍 Sin sesión'}
-          </span>
-        </div>
-      </header>
+      <Nav solid />
 
       <div className="cfg-container">
         <h1 className="cfg-h1">Configura tu Sofá</h1>

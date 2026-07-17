@@ -19,6 +19,20 @@ function slugify(str) {
   return str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 }
 
+// SVG en vez del emoji de bote de basura — ese emoji no se renderiza en algunos
+// navegadores/sistemas (queda invisible), así que el botón de eliminar "desaparecía".
+function TrashIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+    </svg>
+  )
+}
+
 const TAB_PATHS = [
   { key: 'general', path: '/admin/productos', label: 'Información general' },
   { key: 'modelos', path: '/admin/productos/modelos', label: 'Modelos' },
@@ -97,7 +111,26 @@ function GestionCategoriasModal({ open, categorias, onClose, onChanged }) {
 }
 
 // ---------- TAB: Modelos ----------
-function Modelos({ productos, categorias, configCounts, imageCounts, onEdit }) {
+function Modelos({ productos, categorias, configCounts, imageCounts, onEdit, onDelete }) {
+  const eliminar = async (p) => {
+    const detalle = []
+    if (configCounts[p.id]) detalle.push(`${configCounts[p.id]} medida(s)`)
+    if (imageCounts[p.id]) detalle.push(`${imageCounts[p.id]} imagen(es)`)
+    const aviso = detalle.length
+      ? `"${p.nombre}" tiene ${detalle.join(' y ')} asociadas — también se borrarán. `
+      : ''
+    if (!confirm(`${aviso}¿Eliminar "${p.nombre}" definitivamente? Si prefieres solo ocultarlo del sitio, mejor desactívalo desde Información general.`)) return
+    try {
+      await supabase.from('producto_precios').delete().eq('producto_id', p.id)
+      await supabase.from('producto_imagenes').delete().eq('producto_id', p.id)
+      await supabase.from('producto_configuraciones').delete().eq('producto_id', p.id)
+      const { error } = await supabase.from('productos').delete().eq('id', p.id)
+      if (error) throw error
+      onDelete()
+    } catch (err) {
+      alert(`No se pudo eliminar: ${err.message}`)
+    }
+  }
   return (
     <div className="adm-content">
       <div className="adm-card">
@@ -124,6 +157,7 @@ function Modelos({ productos, categorias, configCounts, imageCounts, onEdit }) {
                 <td>{p.activo ? '✅' : <span style={{ color: '#D97706' }}>⏸ inactivo</span>}</td>
                 <td className="adm-cell-actions">
                   <button type="button" className="adm-icon-btn" onClick={() => onEdit(p.id)}>✎</button>
+                  <button type="button" className="adm-icon-btn" onClick={() => eliminar(p)}><TrashIcon /></button>
                 </td>
               </tr>
             ))}
@@ -168,6 +202,18 @@ function Medidas({ productos, categorias, selectedId, onSelectProducto }) {
     load()
   }
 
+  const eliminarMedida = async (cfg) => {
+    if (!confirm(`¿Eliminar la medida "${cfg.nombre}"? También se borran sus precios asociados.`)) return
+    try {
+      await supabase.from('producto_precios').delete().eq('configuracion_id', cfg.id)
+      const { error } = await supabase.from('producto_configuraciones').delete().eq('id', cfg.id)
+      if (error) throw error
+      load()
+    } catch (err) {
+      alert(`No se pudo eliminar: ${err.message}`)
+    }
+  }
+
   const isIncompleto = (cfg) => (preciosSet[cfg.id]?.size ?? 0) < 4
 
   return (
@@ -175,6 +221,7 @@ function Medidas({ productos, categorias, selectedId, onSelectProducto }) {
       <div className="adm-card">
         <div className="adm-card-header"><div className="adm-card-title">Selecciona un modelo</div></div>
         <select className="adm-select" style={{ width: 320 }} value={selectedId ?? ''} onChange={e => onSelectProducto(e.target.value)}>
+          <option value="">Selecciona un producto…</option>
           {productos.map(p => (
             <option key={p.id} value={p.id}>{p.nombre} · {categorias.find(c => c.id === p.categoria_id)?.nombre ?? '—'}</option>
           ))}
@@ -217,6 +264,7 @@ function Medidas({ productos, categorias, selectedId, onSelectProducto }) {
                   <td>{cfg.activo ? '✅' : <span style={{ color: '#D97706' }}>⏸</span>}</td>
                   <td className="adm-cell-actions">
                     <button type="button" className="adm-icon-btn" onClick={() => toggleActivo(cfg)}>{cfg.activo ? '⏸' : '▶'}</button>
+                    <button type="button" className="adm-icon-btn" onClick={() => eliminarMedida(cfg)}><TrashIcon /></button>
                   </td>
                 </tr>
               ))}
@@ -247,7 +295,10 @@ function InformacionGeneral({ productos, categorias, selectedId, onSelectProduct
   const [creatingCategoria, setCreatingCategoria] = useState(false)
   const [nuevaCategoriaNombre, setNuevaCategoriaNombre] = useState('')
 
-  useEffect(() => {
+  // Recarga el formulario con los últimos datos guardados de este producto —
+  // se usa al seleccionar/cambiar de producto y también en "Limpiar formulario"
+  // (descarta cualquier cambio sin guardar, sin borrar el producto).
+  const resetForm = async () => {
     if (!producto) return
     setForm({
       nombre: producto.nombre ?? '',
@@ -260,21 +311,51 @@ function InformacionGeneral({ productos, categorias, selectedId, onSelectProduct
     setIsoPreview(null)
     setPendingImages([])
     setCreatingCategoria(false)
-    async function loadDetail() {
-      const [specsRes, orientRes, imgRes] = await Promise.all([
-        supabase.from('producto_specs').select('*').eq('producto_id', producto.id).order('orden'),
-        supabase.from('producto_orientaciones').select('*').eq('producto_id', producto.id).order('orden'),
-        supabase.from('producto_imagenes').select('*').eq('producto_id', producto.id).order('orden'),
-      ])
-      setSpecs((specsRes.data ?? []).map(s => ({ id: s.id, titulo: s.titulo, contenido: typeof s.contenido === 'string' ? s.contenido : '' })))
-      setOrientaciones((orientRes.data ?? []).map(o => ({ id: o.id, nombre: o.nombre })))
-      setImagenes(imgRes.data ?? [])
-    }
-    loadDetail()
-  }, [producto?.id])
+    const [specsRes, orientRes, imgRes] = await Promise.all([
+      supabase.from('producto_specs').select('*').eq('producto_id', producto.id).order('orden'),
+      supabase.from('producto_orientaciones').select('*').eq('producto_id', producto.id).order('orden'),
+      supabase.from('producto_imagenes').select('*').eq('producto_id', producto.id).order('orden'),
+    ])
+    setSpecs((specsRes.data ?? []).map(s => ({ id: s.id, titulo: s.titulo, contenido: typeof s.contenido === 'string' ? s.contenido : '' })))
+    setOrientaciones((orientRes.data ?? []).map(o => ({ id: o.id, nombre: o.nombre })))
+    setImagenes(imgRes.data ?? [])
+  }
+
+  useEffect(() => { resetForm() }, [producto?.id])
+
+  // Vacía los campos en pantalla (nombre, descripción, specs, orientaciones,
+  // imágenes pendientes) sin tocar la base de datos. Solo se guarda si después
+  // le dan a "Guardar cambios" — por eso la confirmación lo advierte.
+  const limpiarFormulario = () => {
+    setForm(f => ({ ...f, nombre: '', descripcion: '' }))
+    setSpecs([])
+    setOrientaciones([])
+    setIsoFile(null)
+    setIsoPreview(null)
+    setPendingImages([])
+    setCreatingCategoria(false)
+  }
 
   if (!producto) {
-    return <div className="adm-content"><div className="adm-empty-note">Selecciona o crea un producto para editar su información.</div></div>
+    return (
+      <div className="adm-content">
+        <div className="adm-card">
+          <div className="adm-card-title" style={{ marginBottom: 4 }}>¿Qué quieres editar?</div>
+          <div className="adm-card-sub" style={{ marginBottom: 14 }}>
+            Elige un producto existente, o usa "+ Nuevo producto" arriba a la derecha para crear uno desde cero.
+          </div>
+          <select
+            className="adm-select" style={{ width: 320 }} value=""
+            onChange={e => { if (e.target.value) onSelectProducto(e.target.value) }}
+          >
+            <option value="">Selecciona un producto…</option>
+            {productos.map(p => (
+              <option key={p.id} value={p.id}>{p.nombre} · {categorias.find(c => c.id === p.categoria_id)?.nombre ?? '—'}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+    )
   }
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -378,6 +459,25 @@ function InformacionGeneral({ productos, categorias, selectedId, onSelectProduct
     }
   }
 
+  const eliminarProducto = async () => {
+    if (!confirm(`¿Eliminar "${producto.nombre}" definitivamente? Se borran también sus medidas, precios, imágenes, specs y orientaciones. Si prefieres solo ocultarlo, mejor apaga "Producto activo" y guarda.`)) return
+    setSaving(true)
+    try {
+      await supabase.from('producto_precios').delete().eq('producto_id', producto.id)
+      await supabase.from('producto_imagenes').delete().eq('producto_id', producto.id)
+      await supabase.from('producto_configuraciones').delete().eq('producto_id', producto.id)
+      await supabase.from('producto_specs').delete().eq('producto_id', producto.id)
+      await supabase.from('producto_orientaciones').delete().eq('producto_id', producto.id)
+      const { error } = await supabase.from('productos').delete().eq('id', producto.id)
+      if (error) throw error
+      onProductoSaved()
+    } catch (err) {
+      alert(`No se pudo eliminar: ${err.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="adm-content">
       <div className="adm-empty-note" style={{ marginBottom: 16 }}>
@@ -467,7 +567,7 @@ function InformacionGeneral({ productos, categorias, selectedId, onSelectProduct
                       <input className="adm-input" style={{ width: '100%' }} placeholder="Ej. Madera de pino tratada" value={s.contenido} onChange={e => setSpecField(i, 'contenido', e.target.value)} />
                     </td>
                     <td className="adm-cell-actions">
-                      <button type="button" className="adm-icon-btn" onClick={() => removeSpec(i)}>🗑</button>
+                      <button type="button" className="adm-icon-btn" onClick={() => removeSpec(i)}><TrashIcon /></button>
                     </td>
                   </tr>
                 ))}
@@ -513,7 +613,7 @@ function InformacionGeneral({ productos, categorias, selectedId, onSelectProduct
                     <tr key={i}>
                       <td><input className="adm-input" style={{ width: '100%' }} value={o.nombre} onChange={e => setOrientacionField(i, e.target.value)} /></td>
                       <td className="adm-cell-actions">
-                        <button type="button" className="adm-icon-btn" onClick={() => removeOrientacion(i)}>🗑</button>
+                        <button type="button" className="adm-icon-btn" onClick={() => removeOrientacion(i)}><TrashIcon /></button>
                       </td>
                     </tr>
                   ))}
@@ -529,6 +629,17 @@ function InformacionGeneral({ productos, categorias, selectedId, onSelectProduct
       <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
         <button type="button" className="adm-btn adm-btn-dark" onClick={save} disabled={saving}>
           {saving ? 'Guardando…' : 'Guardar cambios'}
+        </button>
+        <button
+          type="button"
+          className="adm-btn"
+          disabled={saving}
+          onClick={() => { if (confirm('Esto vacía el nombre, descripción, specs y orientaciones en pantalla (no borra nada en la base de datos todavía). Si después le das "Guardar cambios" así vacío, sí sobreescribe el producto. ¿Continuar?')) limpiarFormulario() }}
+        >
+          Limpiar formulario
+        </button>
+        <button type="button" className="adm-btn" style={{ color: '#DC2626', borderColor: '#FCA5A5' }} onClick={eliminarProducto} disabled={saving}>
+          Eliminar producto
         </button>
       </div>
     </div>
@@ -599,6 +710,7 @@ function Precios({ productos, categorias, grados, selectedId, onSelectProducto }
       <div className="adm-card">
         <div className="adm-card-header"><div className="adm-card-title">Selecciona un modelo</div></div>
         <select className="adm-select" style={{ width: 320 }} value={selectedId ?? ''} onChange={e => onSelectProducto(e.target.value)}>
+          <option value="">Selecciona un producto…</option>
           {productos.map(p => (
             <option key={p.id} value={p.id}>{p.nombre} · {categorias.find(c => c.id === p.categoria_id)?.nombre ?? '—'}</option>
           ))}
@@ -861,7 +973,7 @@ function Colecciones({ grados, telas, onReloadTelas }) {
                 <td>{t.activo ? '✅' : <span style={{ color: '#D97706' }}>⏸</span>}</td>
                 <td className="adm-cell-actions">
                   <button type="button" className="adm-icon-btn" onClick={() => openEdit(t)}>✎</button>
-                  <button type="button" className="adm-icon-btn" onClick={() => eliminar(t)}>🗑</button>
+                  <button type="button" className="adm-icon-btn" onClick={() => eliminar(t)}><TrashIcon /></button>
                 </td>
               </tr>
             ))}
@@ -1052,9 +1164,9 @@ function Colores({ grados, telas, onReloadTelas }) {
               <>
                 <div className="adm-img-grid" style={{ marginTop: 16 }}>
                   {pending.map(item => (
-                    <div key={item.localId} className="adm-img-thumb" style={{ background: `url(${item.previewUrl})`, opacity: 0.8 }}>
+                    <div key={item.localId} className="adm-img-thumb" style={{ background: `url(${item.previewUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.8 }}>
                       <span className="adm-principal-tag" style={{ background: '#6B7280' }}>Pendiente</span>
-                      <button type="button" className="adm-icon-btn" onClick={() => removePending(item.localId)}>🗑</button>
+                      <button type="button" className="adm-icon-btn" onClick={() => removePending(item.localId)}><TrashIcon /></button>
                       <input
                         className="adm-input"
                         style={{ position: 'absolute', bottom: -34, left: 0, width: '100%', fontSize: 11, padding: '4px 6px' }}
@@ -1081,7 +1193,7 @@ function Colores({ grados, telas, onReloadTelas }) {
                   <div key={color.id} className="adm-swatch-card">
                     <div className="adm-swatch-edit">
                       <button type="button" className="adm-icon-btn" onClick={() => openEdit(color)}>✎</button>
-                      <button type="button" className="adm-icon-btn" onClick={() => deleteColor(color.id)}>🗑</button>
+                      <button type="button" className="adm-icon-btn" onClick={() => deleteColor(color.id)}><TrashIcon /></button>
                     </div>
                     <div
                       className="adm-swatch-circle"
@@ -1159,7 +1271,10 @@ export default function AdminProducts() {
     ])
     setProductos(p.data ?? [])
     setCategorias(c.data ?? [])
-    setSelectedId(prev => prev ?? (p.data ?? [])[0]?.id ?? null)
+    // Ya no precarga el primer producto de la lista (Luna) por default — eso
+    // hacía que "Información general" siempre dijera "Editando: Luna" al entrar
+    // o refrescar, aunque no fuera lo que se quería editar. Ahora se queda vacío
+    // hasta que el usuario elige un producto o crea uno nuevo.
   }
 
   const loadGrados = async () => {
@@ -1249,6 +1364,7 @@ export default function AdminProducts() {
               configCounts={configCounts}
               imageCounts={imageCounts}
               onEdit={(id) => { setSelectedId(id); navigate('/admin/productos') }}
+              onDelete={load}
             />
           }
         />

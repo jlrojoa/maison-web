@@ -40,7 +40,7 @@ export default function Distribuidores() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--warm)' }}>
-      <Nav />
+      <Nav solid />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '100px 24px 64px' }}>
         <div style={{ width: '100%', maxWidth: 420 }}>
           <p className="sl" style={{ marginBottom: 16 }}>Portal Distribuidores</p>

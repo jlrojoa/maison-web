@@ -56,7 +56,7 @@ export default function Colecciones() {
 
   return (
     <div id="mp">
-      <Nav />
+      <Nav solid />
       <div className="cat-pg">
         <div className="cat-hd">
           <p className="sl">Catálogo</p>

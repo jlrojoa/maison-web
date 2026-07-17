@@ -2,8 +2,11 @@ import { useNavigate } from 'react-router-dom'
 import { useScrollNav } from '../hooks/useScrollNav'
 import { useDistribuidor } from '../contexts/DistribuidorContext'
 
-export default function Nav() {
-  const scrolled = useScrollNav(60)
+// solid: fuerza el estado "scrolled" (fondo claro sólido, texto oscuro) desde el
+// inicio. Necesario en páginas de fondo claro (ej. Configurador), donde el nav
+// transparente con letras blancas sería invisible.
+export default function Nav({ solid = false }) {
+  const scrolled = useScrollNav(60) || solid
   const navigate = useNavigate()
   const ctx = useDistribuidor()
   const distribuidor = ctx?.distribuidor ?? null

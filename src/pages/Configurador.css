@@ -2,11 +2,15 @@
 .cfg-page { font-family: system-ui; background: #f5f5f5; color: #0F172A; min-height: 100vh; }
 
 .cfg-header { background: #fff; border-bottom: 1px solid #E2E8F0; padding: 16px 24px; }
-.cfg-header-content { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
-.cfg-logo { font-weight: 600; font-size: 18px; }
+.cfg-header-content { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.cfg-logo { font-weight: 600; font-size: 18px; background: none; border: none; cursor: pointer; padding: 0; color: #0F172A; font-family: inherit; }
+.cfg-logo:hover { opacity: 0.7; }
+.cfg-back-link { margin-right: auto; margin-left: 24px; background: none; border: none; cursor: pointer; padding: 6px 10px; border-radius: 4px; font-size: 13px; color: #64748B; font-family: inherit; }
+.cfg-back-link:hover { color: #0F172A; background: #F1F5F9; }
 .cfg-auth-status { font-size: 12px; background: #F1F5F9; padding: 8px 12px; border-radius: 4px; color: #64748B; }
 
-.cfg-container { max-width: 1400px; margin: 0 auto; padding: 40px 24px; }
+/* padding-top alto porque el nav del sitio es position:fixed y en esta página va sólido desde el inicio */
+.cfg-container { max-width: 1400px; margin: 0 auto; padding: 110px 24px 40px; }
 .cfg-h1 { font-size: 32px; font-weight: 300; margin-bottom: 8px; }
 .cfg-subtitle { font-size: 14px; color: #64748B; margin-bottom: 40px; }
 

@@ -110,7 +110,7 @@ export default function MiEspacio() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#F8FAFC', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: '#0F172A' }}>
-      <Nav />
+      <Nav solid />
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '100px 24px 64px' }}>
         <h1 style={{ fontSize: 26, fontWeight: 300, marginBottom: 4 }}>Mi Espacio</h1>
         <p style={{ fontSize: 13, color: '#64748B', marginBottom: 32 }}>Tus cotizaciones guardadas y emitidas</p>
