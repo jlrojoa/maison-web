@@ -34,6 +34,12 @@ export default function Configurador() {
   const [telaSel, setTelaSel] = useState(null)
   const [colorSel, setColorSel] = useState(null)
 
+  // Fotos adicionales (galería) del modelo. "Imagen principal" (isometrico_url) es
+  // la portada por defecto; las miniaturas de abajo permiten cambiar la foto grande
+  // entre esa portada y el resto de la galería subida en el admin.
+  const [galeria, setGaleria] = useState([])
+  const [activeImgUrl, setActiveImgUrl] = useState(null)
+
   const [precios, setPrecios] = useState([])
 
   useEffect(() => {
@@ -58,14 +64,16 @@ export default function Configurador() {
   }, [tipoSel])
 
   useEffect(() => {
-    if (!modeloSel) { setConfiguraciones([]); setTelas([]); setGradoSel('AA'); setTelaSel(null); setColorSel(null); return }
+    if (!modeloSel) { setConfiguraciones([]); setTelas([]); setGradoSel('AA'); setTelaSel(null); setColorSel(null); setGaleria([]); setActiveImgUrl(null); return }
     let ignore = false
     async function load() {
-      const [cfgRes, telasRes] = await Promise.all([
+      const [cfgRes, telasRes, imgRes] = await Promise.all([
         supabase.from('producto_configuraciones').select('*')
           .eq('producto_id', modeloSel.id).eq('activo', true).order('orden'),
         supabase.from('telas').select('*, colores:tela_colores(*)')
           .eq('activo', true).order('grado').order('orden'),
+        supabase.from('producto_imagenes').select('*')
+          .eq('producto_id', modeloSel.id).order('orden'),
       ])
       if (ignore) return
       setConfiguraciones(cfgRes.data ?? [])
@@ -78,6 +86,9 @@ export default function Configurador() {
       setGradoSel('AA')
       setTelaSel(telasConColores.find(t => t.grado === 'AA') ?? null)
       setColorSel(null)
+
+      setGaleria(imgRes.data ?? [])
+      setActiveImgUrl(modeloSel.isometrico_url ?? imgRes.data?.[0]?.url ?? null)
     }
     load()
     return () => { ignore = true }
@@ -230,12 +241,31 @@ export default function Configurador() {
         <div className="cfg-grid-2col">
           {/* LEFT */}
           <div>
-            <div className={`cfg-carousel ${modeloSel?.isometrico_url ? 'cfg-has-img' : ''}`}>
-              {modeloSel?.isometrico_url && <img src={modeloSel.isometrico_url} alt={modeloSel.nombre} />}
+            <div className={`cfg-carousel ${activeImgUrl ? 'cfg-has-img' : ''}`}>
+              {activeImgUrl && <img src={activeImgUrl} alt={modeloSel?.nombre} />}
             </div>
-            <div className="cfg-thumbnails">
-              {[0, 1, 2, 3, 4].map(i => <div key={i} className="cfg-thumbnail" />)}
-            </div>
+            {(() => {
+              const cover = modeloSel?.isometrico_url
+                ? [{ id: 'cover', url: modeloSel.isometrico_url, alt: modeloSel.nombre }]
+                : []
+              const miniaturas = [...cover, ...galeria]
+              if (miniaturas.length === 0) return null
+              return (
+                <div className="cfg-thumbnails">
+                  {miniaturas.map(img => (
+                    <button
+                      key={img.id}
+                      type="button"
+                      className={`cfg-thumbnail ${activeImgUrl === img.url ? 'cfg-active' : ''}`}
+                      onClick={() => setActiveImgUrl(img.url)}
+                      style={{ padding: 0, cursor: 'pointer' }}
+                    >
+                      <img src={img.url} alt={img.alt || modeloSel?.nombre} style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#fff' }} />
+                    </button>
+                  ))}
+                </div>
+              )
+            })()}
             {medidaSel && (
               <div>
                 <div className="cfg-isometric-container">
