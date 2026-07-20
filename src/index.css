@@ -70,7 +70,7 @@ nav.s .nbtn{background:var(--charcoal);border-color:var(--charcoal)}
 .la:hover{color:var(--gold);border-color:var(--gold)}
 .pg{display:grid;grid-template-columns:repeat(3,1fr);gap:34px}
 .pc{cursor:pointer}
-.pci{aspect-ratio:4/5;overflow:hidden;position:relative;margin-bottom:16px}
+.pci{aspect-ratio:4/5;overflow:hidden;position:relative;margin-bottom:16px;background:var(--sand)}
 .pci-bg{width:100%;height:100%;transition:transform .8s cubic-bezier(.25,.46,.45,.94)}
 .pc:hover .pci-bg{transform:scale(1.05)}
 /* Product image cards */
@@ -79,7 +79,11 @@ nav.s .nbtn{background:var(--charcoal);border-color:var(--charcoal)}
 .bg-chair{background:#F0EDE6}
 .bg-kit{background:#2C2825}
 .bg-room{background:#C4B5A5}
-.pci-bg img{width:100%;height:100%;object-fit:cover;object-position:center;transition:transform .8s cubic-bezier(.25,.46,.45,.94)}
+/* contain (no cover) — las fotos de producto suben en distintas proporciones desde
+   el admin; con cover se recortaban feo (ver queja "toma la segunda imagen": en
+   realidad era la misma foto principal, pero tan recortada por el cover que no se
+   reconocía). Con contain se ve la foto completa, con relleno neutro a los lados. */
+.pci-bg img{width:100%;height:100%;object-fit:contain;object-position:center;transition:transform .8s cubic-bezier(.25,.46,.45,.94)}
 .pc:hover .pci-bg img{transform:scale(1.05)}
 .pbg{position:absolute;top:16px;left:16px;z-index:2;background:var(--charcoal);color:#fff;font-family:var(--sans);font-size:9px;letter-spacing:.2em;text-transform:uppercase;padding:5px 11px}
 .pov{position:absolute;inset:0;z-index:3;display:flex;align-items:flex-end;justify-content:center;padding-bottom:26px;background:rgba(26,23,21,0);transition:background .4s}

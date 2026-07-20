@@ -17,7 +17,7 @@
 .cfg-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; }
 
 .cfg-carousel { background: linear-gradient(135deg, #D4C4B0 0%, #E8DCC4 100%); border-radius: 8px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; font-size: 18px; color: #0F172A; font-weight: 500; min-height: 400px; overflow: hidden; }
-.cfg-carousel img { width: 100%; height: 100%; object-fit: cover; }
+.cfg-carousel img { width: 100%; height: 100%; object-fit: contain; }
 
 .cfg-thumbnails { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 16px; }
 .cfg-thumbnail { width: 80px; height: 80px; background: #F1F5F9; border: 2px solid #E2E8F0; border-radius: 4px; flex-shrink: 0; }
@@ -25,7 +25,7 @@
 
 .cfg-isometric-container { background: #F9F9F9; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; min-height: 400px; display: flex; align-items: center; justify-content: center; }
 .cfg-isometric-image { width: 100%; aspect-ratio: 1; border-radius: 4px; background: #F1F5F9; display: flex; align-items: center; justify-content: center; font-size: 14px; color: rgba(0,0,0,0.35); font-weight: 500; overflow: hidden; }
-.cfg-isometric-image img { width: 100%; height: 100%; object-fit: cover; }
+.cfg-isometric-image img { width: 100%; height: 100%; object-fit: contain; }
 .cfg-iso-caption { font-size: 12px; color: #64748B; margin-top: 8px; text-align: center; }
 
 .cfg-step { margin-bottom: 40px; background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #E2E8F0; }
@@ -41,7 +41,7 @@
 .cfg-option.cfg-active::after { content: '✓'; position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 50%; background: var(--cfg-tipo-color, #0F172A); color: #fff; font-size: 11px; line-height: 18px; }
 .cfg-option-icon { width: 44px; height: 44px; margin: 0 auto 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 600; color: #fff; font-family: system-ui; text-transform: uppercase; }
 .cfg-option-thumb { height: 80px; border-radius: 4px; margin-bottom: 12px; background: #F1F5F9; overflow: hidden; }
-.cfg-option-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.cfg-option-thumb img { width: 100%; height: 100%; object-fit: contain; }
 .cfg-option-label { font-size: 13px; font-weight: 500; }
 .cfg-option-dim { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
 

@@ -23,13 +23,19 @@ export default function NuevoProductoDrawer({ open, categorias, onClose, onCreat
     if (!categoriaId) return alert('Selecciona un tipo (categoría).')
     setSaving(true)
     try {
+      // Orden por defecto = al final de la lista, no 0. Con 0 fijo, cada producto
+      // nuevo empataba con los demás en "orden" y el orden final dependía de un
+      // desempate arbitrario — confuso para saber por qué algo aparecía antes o después.
+      const { data: maxRow } = await supabase.from('productos').select('orden').order('orden', { ascending: false }).limit(1).maybeSingle()
+      const siguienteOrden = (maxRow?.orden ?? -1) + 1
+
       const { data, error } = await supabase.from('productos').insert({
         nombre,
         slug: slugify(nombre),
         categoria_id: categoriaId,
         descripcion,
         activo,
-        orden: 0,
+        orden: siguienteOrden,
       }).select().single()
       if (error) throw error
       reset()
