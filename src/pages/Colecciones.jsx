@@ -26,10 +26,21 @@ export default function Colecciones() {
         supabase.from('categorias').select('*').order('orden'),
       ])
 
-      const prods = (prodRes.data ?? []).map(p => ({
-        ...p,
-        imagen_principal: p.imagenes?.find(i => i.es_principal) ?? p.imagenes?.[0] ?? null,
-      }))
+      const prods = (prodRes.data ?? []).map(p => {
+        // "Imagen principal" en el admin escribe en productos.isometrico_url — esa es
+        // la que el usuario elige a propósito para esta tarjeta. Antes esto se ignoraba
+        // y se usaba en su lugar la galería (es_principal, marcada automáticamente al
+        // subir), que es una foto distinta a la que el admin realmente eligió como
+        // "Imagen principal". isometrico_url manda; la galería es solo respaldo si
+        // el producto no tiene imagen principal capturada todavía.
+        const galeria = p.imagenes?.find(i => i.es_principal) ?? p.imagenes?.[0] ?? null
+        return {
+          ...p,
+          imagen_principal: p.isometrico_url
+            ? { url: p.isometrico_url, alt: p.nombre }
+            : galeria,
+        }
+      })
       setProducts(prods)
       setCategorias(catRes.data ?? [])
 

@@ -70,7 +70,11 @@ nav.s .nbtn{background:var(--charcoal);border-color:var(--charcoal)}
 .la:hover{color:var(--gold);border-color:var(--gold)}
 .pg{display:grid;grid-template-columns:repeat(3,1fr);gap:34px}
 .pc{cursor:pointer}
-.pci{aspect-ratio:4/5;overflow:hidden;position:relative;margin-bottom:16px;background:var(--sand)}
+/* Cuadrado (1:1), no 4:5 — las fotos de producto (sillones, tipo horizontal) casi
+   nunca son verticales; forzarlas en un marco 4:5 dejaba franjas grandes arriba y
+   abajo. 1:1 coincide con lo que ya se le pide al admin al subir ("1200×1200px
+   recomendado"), así que con esa medida la foto llena el cuadro sin franjas. */
+.pci{aspect-ratio:1;overflow:hidden;position:relative;margin-bottom:16px;background:#fff}
 .pci-bg{width:100%;height:100%;transition:transform .8s cubic-bezier(.25,.46,.45,.94)}
 .pc:hover .pci-bg{transform:scale(1.05)}
 /* Product image cards */

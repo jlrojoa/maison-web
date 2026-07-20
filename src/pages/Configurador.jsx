@@ -230,7 +230,7 @@ export default function Configurador() {
         <div className="cfg-grid-2col">
           {/* LEFT */}
           <div>
-            <div className="cfg-carousel">
+            <div className={`cfg-carousel ${modeloSel?.isometrico_url ? 'cfg-has-img' : ''}`}>
               {modeloSel?.isometrico_url && <img src={modeloSel.isometrico_url} alt={modeloSel.nombre} />}
             </div>
             <div className="cfg-thumbnails">

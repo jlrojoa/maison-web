@@ -17,6 +17,9 @@
 .cfg-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; }
 
 .cfg-carousel { background: linear-gradient(135deg, #D4C4B0 0%, #E8DCC4 100%); border-radius: 8px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; font-size: 18px; color: #0F172A; font-weight: 500; min-height: 400px; overflow: hidden; }
+/* El degradado beige es solo el placeholder de "sin foto"; en cuanto hay una foto
+   real, el fondo pasa a blanco para que no compita visualmente con la imagen. */
+.cfg-carousel.cfg-has-img { background: #fff; }
 .cfg-carousel img { width: 100%; height: 100%; object-fit: contain; }
 
 .cfg-thumbnails { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 16px; }
