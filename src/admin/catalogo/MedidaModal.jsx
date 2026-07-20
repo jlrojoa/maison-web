@@ -30,7 +30,8 @@ export default function MedidaModal({ open, producto, onClose, onCreated }) {
       if (file) {
         const ext = file.name.split('.').pop().toLowerCase()
         const url = await uploadProductoImage(file, `productos/${producto.id}/medida-${data.id}.${ext}`)
-        await supabase.from('producto_configuraciones').update({ isometrico_url: url }).eq('id', data.id)
+        const { error: updErr } = await supabase.from('producto_configuraciones').update({ isometrico_url: url }).eq('id', data.id)
+        if (updErr) throw updErr
       }
 
       reset()

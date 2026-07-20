@@ -400,18 +400,20 @@ function InformacionGeneral({ productos, categorias, selectedId, onSelectProduct
     if (!form.nombre.trim()) return alert('El nombre es obligatorio.')
     setSaving(true)
     try {
-      await supabase.from('productos').update({
+      const { error: prodErr } = await supabase.from('productos').update({
         nombre: form.nombre,
         categoria_id: form.categoria_id || null,
         orden: parseInt(form.orden) || 0,
         descripcion: form.descripcion,
         activo: form.activo,
       }).eq('id', producto.id)
+      if (prodErr) throw prodErr
 
       if (isoFile) {
         const ext = isoFile.name.split('.').pop().toLowerCase()
         const url = await uploadProductoImage(isoFile, `productos/iso-${producto.id}-${Date.now()}.${ext}`)
-        await supabase.from('productos').update({ isometrico_url: url }).eq('id', producto.id)
+        const { error: isoDbErr } = await supabase.from('productos').update({ isometrico_url: url }).eq('id', producto.id)
+        if (isoDbErr) throw isoDbErr
         setIsoFile(null)
         setIsoPreview(null)
       }
@@ -423,32 +425,37 @@ function InformacionGeneral({ productos, categorias, selectedId, onSelectProduct
           const ext = item.file.name.split('.').pop().toLowerCase()
           const path = `productos/${producto.id}/${Date.now()}-${i}.${ext}`
           const url = await uploadProductoImage(item.file, path)
-          await supabase.from('producto_imagenes').insert({
+          const { error: imgErr } = await supabase.from('producto_imagenes').insert({
             producto_id: producto.id,
             url,
             alt: item.file.name.replace(/\.[^.]+$/, ''),
             orden: startOrden + i,
             es_principal: imagenes.length === 0 && i === 0,
           })
+          if (imgErr) throw imgErr
         }
         setPendingImages([])
         await reloadImagenes()
       }
 
-      await supabase.from('producto_specs').delete().eq('producto_id', producto.id)
+      const { error: specDelErr } = await supabase.from('producto_specs').delete().eq('producto_id', producto.id)
+      if (specDelErr) throw specDelErr
       const validSpecs = specs.filter(s => s.titulo.trim())
       if (validSpecs.length > 0) {
-        await supabase.from('producto_specs').insert(
+        const { error: specInsErr } = await supabase.from('producto_specs').insert(
           validSpecs.map((s, i) => ({ producto_id: producto.id, titulo: s.titulo, tipo: 'texto', contenido: s.contenido, orden: i }))
         )
+        if (specInsErr) throw specInsErr
       }
 
-      await supabase.from('producto_orientaciones').delete().eq('producto_id', producto.id)
+      const { error: oriDelErr } = await supabase.from('producto_orientaciones').delete().eq('producto_id', producto.id)
+      if (oriDelErr) throw oriDelErr
       const validOrient = orientaciones.filter(o => o.nombre.trim())
       if (validOrient.length > 0) {
-        await supabase.from('producto_orientaciones').insert(
+        const { error: oriInsErr } = await supabase.from('producto_orientaciones').insert(
           validOrient.map((o, i) => ({ producto_id: producto.id, nombre: o.nombre, orden: i }))
         )
+        if (oriInsErr) throw oriInsErr
       }
 
       onProductoSaved()
@@ -1061,12 +1068,12 @@ function Colores({ grados, telas, onReloadTelas }) {
         const ext = item.file.name.split('.').pop().toLowerCase()
         const path = `telas/${selectedTela.id}/${Date.now()}-${i}.${ext}`
         const { error } = await supabase.storage.from(BUCKET_TELAS).upload(path, item.file, { upsert: true })
-        if (!error) {
-          const { data: urlData } = supabase.storage.from(BUCKET_TELAS).getPublicUrl(path)
-          await supabase.from('tela_colores').insert({
-            tela_id: selectedTela.id, nombre: item.nombre, imagen_url: urlData.publicUrl, orden: startOrden + i, activo: true,
-          })
-        }
+        if (error) throw error
+        const { data: urlData } = supabase.storage.from(BUCKET_TELAS).getPublicUrl(path)
+        const { error: insErr } = await supabase.from('tela_colores').insert({
+          tela_id: selectedTela.id, nombre: item.nombre, imagen_url: urlData.publicUrl, orden: startOrden + i, activo: true,
+        })
+        if (insErr) throw insErr
       }
       pending.forEach(p => URL.revokeObjectURL(p.previewUrl))
       setPending([])
