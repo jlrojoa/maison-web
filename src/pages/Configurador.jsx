@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useDistribuidor } from '../contexts/DistribuidorContext'
 import Nav from '../components/Nav'
+import { CategoryIcon } from './CategoryIcons'
 import './Configurador.css'
 
 const GRADOS = ['AA', 'A', 'B', 'C']
@@ -298,7 +299,7 @@ export default function Configurador() {
                     style={{ '--cfg-tipo-color': colorForIndex(i) }}
                     onClick={() => selectTipo(cat)}
                   >
-                    <div className="cfg-option-icon" style={{ background: colorForIndex(i) }}>{cat.nombre?.[0]}</div>
+                    <div className="cfg-option-icon"><CategoryIcon slug={cat.slug} /></div>
                     <div className="cfg-option-label">{cat.nombre}</div>
                   </div>
                 ))}
