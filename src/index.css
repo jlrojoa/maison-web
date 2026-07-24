@@ -1,6 +1,6 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --cream:#F5F0E8;--warm:#FAFAF7;--sand:#E8DDD0;--taupe:#C4B5A5;
+  --cream:#FFFFFF;--warm:#FFFFFF;--sand:#E2E8F0;--taupe:#6B7280;
   --stone:#8C7B6B;--charcoal:#2C2825;--ink:#1A1715;
   --gold:#B8976A;--gold-l:#D4B896;
   --serif:'Cormorant Garamond',Georgia,serif;
@@ -12,7 +12,7 @@ body{font-family:var(--sans);background:var(--warm);color:var(--charcoal);overfl
 
 /* NAV */
 nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:26px 52px;transition:all .4s}
-nav.s{background:rgba(250,250,247,.97);backdrop-filter:blur(12px);padding:15px 52px;box-shadow:0 1px 0 rgba(0,0,0,.06)}
+nav.s{background:rgba(255,255,255,.97);backdrop-filter:blur(12px);padding:15px 52px;box-shadow:0 1px 0 rgba(0,0,0,.06)}
 .logo{font-family:var(--serif);font-size:25px;font-weight:300;letter-spacing:.25em;color:#fff;text-decoration:none;transition:color .3s}
 nav.s .logo{color:var(--ink)}
 .logo b{color:var(--gold);font-weight:300}
@@ -78,11 +78,11 @@ nav.s .nbtn{background:var(--charcoal);border-color:var(--charcoal)}
 .pci-bg{width:100%;height:100%;transition:transform .8s cubic-bezier(.25,.46,.45,.94)}
 .pc:hover .pci-bg{transform:scale(1.05)}
 /* Product image cards */
-.bg-sofa{background:#E8DDD0}
+.bg-sofa{background:#F1F5F9}
 .bg-bed{background:#B8C4C8}
 .bg-chair{background:#F0EDE6}
 .bg-kit{background:#2C2825}
-.bg-room{background:#C4B5A5}
+.bg-room{background:#E2E8F0}
 /* contain (no cover) — las fotos de producto suben en distintas proporciones desde
    el admin; con cover se recortaban feo (ver queja "toma la segunda imagen": en
    realidad era la misma foto principal, pero tan recortada por el cover que no se

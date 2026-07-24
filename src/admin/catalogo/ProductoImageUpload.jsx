@@ -44,7 +44,7 @@ export function IsometricoPicker({ currentUrl, pendingFile, pendingPreviewUrl, o
     <div>
       <div
         className="adm-img-thumb"
-        style={{ height: 200, marginBottom: 10, background: displayUrl ? `url(${displayUrl})` : 'linear-gradient(135deg,#D4C4B0,#E8DCC4)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+        style={{ height: 200, marginBottom: 10, background: displayUrl ? `url(${displayUrl})` : '#F1F5F9', backgroundSize: 'cover', backgroundPosition: 'center' }}
       >
         <button type="button" className="adm-icon-btn" onClick={() => inputRef.current.click()}><PencilIcon /></button>
       </div>
