@@ -35,13 +35,8 @@ export function DistribuidorProvider({ children }) {
     supabase.auth.signInWithPassword({ email, password })
 
   const signUp = async (email, password) => {
-    const { data: dist } = await supabase
-      .from('distribuidores')
-      .select('id')
-      .eq('email', email)
-      .eq('activo', true)
-      .single()
-    if (!dist) return { error: { message: 'Cuenta no autorizada. Contacta a Maison.' } }
+    const { data: invitado } = await supabase.rpc('distribuidor_invitado', { p_email: email })
+    if (!invitado) return { error: { message: 'Cuenta no autorizada. Contacta a Maison.' } }
     return supabase.auth.signUp({ email, password })
   }
 
