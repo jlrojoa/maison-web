@@ -20,6 +20,24 @@ Modulares, Mesas y Butacas (0 productos cargados hoy, sin fecha para tener) **no
 - `productos.isometrico_url` es `null` en las 24 camas — las fotos reales viven en `producto_imagenes` (importadas de Shopify, patrón fijo de 3 ángulos × 4 tamaños por producto en las familias con fotografía real; algunas familias solo tienen 1 foto genérica).
 - Sofás e Individuales tiene 4 productos, Escuadras 6, Chaise Lounge 8.
 
+### Fotos de las 7 familias: no coinciden en tela/color (verificado bajando y mirando las 7)
+
+Bajé la imagen `es_principal` de los 7 productos "Liso + Estándar" (uno por familia) y las comparé una por una. **No hay ninguna tela/color en común**:
+
+| Familia | Tela/color real de la foto |
+|---|---|
+| Alejandra | Gris grafito oscuro |
+| Cuadro 10 | Gris claro |
+| Home | Azul marino |
+| Make | Verde salvia / gris texturizado |
+| Odisey | Beige/crema — además es un render de IA distinto (ángulo 3/4, fondo de estudio blanco) en vez de foto de catálogo frontal con fondo transparente como las otras 6 |
+| Polo | Gris grafito oscuro (similar a Alejandra, posible misma tela física) |
+| Pont | Gris claro (similar a Cuadro 10, posible misma tela física) |
+
+A lo mucho hay 2 pares que podrían coincidir (Alejandra/Polo en gris oscuro, Cuadro 10/Pont en gris claro), pero Home, Make y Odisey son claramente distintos entre sí y de esos pares. Y esto no es un problema que el código pueda resolver solo: el modelo de fotografía actual (heredado de la importación de Shopify) no tiene ninguna foto por combinación de tela/color — cada producto fue fotografiado una sola vez, con una sola tela física, sin importar qué tela elija el usuario en el selector (esto ya está documentado como limitación conocida en un comentario del propio `Configurador.jsx`: las fotos solo cambian por tamaño, nunca por tela). No existe, en los datos de hoy, una foto de "Home" o "Make" en gris grafito para poder igualarlas a Alejandra.
+
+**Decisión para el spec**: ya que no se puede lograr coincidencia de tela real con las fotos que hay (haría falta una sesión de fotografía nueva — tarea de contenido, no de código), las 7 tarjetas de Familia aplican un tratamiento visual uniforme — **escala de grises** (`filter: grayscale(1)` sobre la imagen, únicamente en las tarjetas de Familia) — para que ninguna tela llame más la atención que otra y la comparación quede genuinamente en la silueta/diseño de cada cabecera, que es el punto no negociable. El resto del configurador (visor grande, galería) sigue mostrando las fotos a color real, sin este filtro — el escala de grises es solo para el picker de 7 tarjetas.
+
 ## Arquitectura
 
 `Configurador.jsx` sigue siendo el punto de entrada: mantiene el Paso 0 (elegir categoría) y la carga de `productos` por categoría, sin cambios en esa parte. El JSX y estado del flujo actual (Modelo→Medida→Tela→Resumen, con sus modales) **se dejan intactos dentro del mismo archivo**, solo que ahora se renderiza condicionalmente:
@@ -80,11 +98,13 @@ Estado local de colapsado/expandido (`useState(!defaultOpen)`), todas las tarjet
 
 Columna sticky (`position: sticky; top: <altura del Nav>`) con la imagen grande + la tira de miniaturas debajo, reutilizando el mecanismo que ya existe hoy (`activeImgUrl` + clic en miniatura la cambia) — no se inventa un selector de ángulos con parsing de nombre de archivo; es la misma tira de thumbnails de siempre, solo reposicionada y con estilo nuevo.
 
+**Comportamiento mobile (breakpoint 1080px, igual que el mockup):** por debajo de `1080px` de ancho, `StickyViewer` deja de ser sticky — `position: relative` normal, en flujo, arriba de los pasos. La imagen se sigue viendo completa (no se oculta ni se recorta), pero ya no se queda fija ocupando la pantalla mientras el usuario hace scroll por los pasos: sube junto con el resto de la página, como una foto normal al principio del artículo. Esto es intencional pensando en que los distribuidores cotizan bastante desde el celular en campo — una imagen fija tapando la mitad de la pantalla en un teléfono sería peor que no tener sticky. La barra de precio, en cambio, sí se mantiene fija en mobile: pasa de "sticky al fondo de la columna derecha" a `position: fixed` a todo lo ancho de la pantalla, abajo del todo, sin el margen lateral que tiene en desktop (igual que la regla `@media(max-width:1080px)` del mockup).
+
 ### `CamasConfigurador`
 
 Props: `productos` (ya filtrados a categoría Camas por `Configurador.jsx`), `distribuidor`, `initialProducto` (opcional, resuelto desde `?modelo=` en la URL).
 
-- `familias` = valores distintos de `producto.familia` en el orden en que llegan (orden de la query `productos` por categoría). 7 tarjetas, cada una con foto real: se busca, por familia, el producto con `cabecera === 'Liso' && pata === 'Estándar'` (existe en las 7 familias verificado en la base; si alguna familia futura no lo tuviera, cae al primer producto de esa familia) y se le pide a `producto_imagenes` su imagen `es_principal` (una sola consulta por lote para las 7 al cargar `productos`, no una por tarjeta).
+- `familias` = valores distintos de `producto.familia`, en el orden en que llegan de la query `productos` por categoría (no hace falta un `ORDER BY` especial). 7 tarjetas, cada una con foto real: se busca, por familia, el producto con `cabecera === 'Liso' && pata === 'Estándar'` (existe en las 7 familias verificado en la base; si alguna familia futura no lo tuviera, cae al primer producto de esa familia) y se le pide a `producto_imagenes` su imagen `es_principal` (una sola consulta por lote para las 7 al cargar `productos`, no una por tarjeta). Como esas 7 fotos no comparten tela/color (ver hallazgo arriba), la tarjeta de Familia le aplica `filter: grayscale(1)` a la imagen — así las 7 se comparan por diseño de cabecera, no por color, sin depender de fotografía nueva.
 - `familiaSel`: default = `initialProducto?.familia` si vino por URL, si no la primera familia.
 - `cabecerasDisponibles`/`patasDisponibles`: valores distintos de `cabecera`/`pata` entre los productos de `familiaSel` (se recalculan cada vez que cambia `familiaSel`). Los chips que no están en ese conjunto se muestran con estilo "off" (atenuados, tachados, no clicables) — nunca desaparecen.
 - `cabeceraSel`/`pataSel`: default = los del `initialProducto` si vino por URL y siguen siendo válidos para la familia, si no el primer valor disponible. Si al cambiar de familia el valor actual deja de estar disponible, se corrige automáticamente al primero disponible (mismo comportamiento que la demo del mockup).
@@ -105,7 +125,7 @@ Props: `productos` (filtrados a la categoría), `distribuidor`, `initialProducto
 
 ### Barra de precio fija
 
-Reemplaza el Paso 4 "Resumen" actual. Cada `StepCard` colapsada ya muestra su valor elegido en el header, así que no hace falta un resumen aparte. La barra (sticky al fondo de la columna derecha en desktop, fija a todo el ancho en mobile) muestra:
+Reemplaza el Paso 4 "Resumen" actual. Cada `StepCard` colapsada ya muestra su valor elegido en el header, así que no hace falta un resumen aparte. La barra (sticky al fondo de la columna derecha en desktop; `position: fixed` a todo el ancho de la pantalla en mobile, ver comportamiento mobile arriba) muestra:
 
 - Sin sesión de distribuidor: mensaje "Inicia sesión para ver precios" (mismo texto que hoy).
 - Con sesión y `precioLookup`: precio + botones "Crear cotización" / "Guardar en mi espacio" (`useCotizacion`), habilitados solo cuando hay medida+tela+color+precio (mismo `puedeGuardar` de hoy).
@@ -126,6 +146,7 @@ Reemplaza el Paso 4 "Resumen" actual. Cada `StepCard` colapsada ya muestra su va
 4. Con sesión de distribuidor real: confirmar que el precio (o "no disponible") se ve correctamente y que Crear cotización / Guardar en mi espacio siguen funcionando igual que hoy.
 5. Sin sesión: confirmar que sigue oculto el precio con el mismo mensaje de hoy.
 6. Probar `?tipo=camas&modelo=<slug>` y el equivalente para las otras 3 categorías, confirmando que precargan la familia/cabecera/pata o el modelo correcto.
+7. Achicar la ventana por debajo de 1080px (o probar en un celular real): confirmar que la imagen deja de quedarse fija al hacer scroll (se ve, pero se desplaza con la página) y que la barra de precio sí se mantiene fija abajo, a todo el ancho. Confirmar también que las 7 tarjetas de Familia se ven en escala de grises (no a color) en cualquier tamaño de pantalla.
 
 ## Fuera de alcance (explícitamente, para no dar sorpresas)
 
