@@ -36,22 +36,35 @@ function PencilIcon() {
 
 // Isometric image: shows the saved image, or a local blob preview of a pending
 // (not-yet-uploaded) file. Never uploads by itself — the parent's save() does.
-export function IsometricoPicker({ currentUrl, pendingFile, pendingPreviewUrl, onFileSelected }) {
+export function IsometricoPicker({ currentUrl, fallbackUrl, pendingFile, pendingPreviewUrl, onFileSelected }) {
   const inputRef = useRef()
-  const displayUrl = pendingPreviewUrl || currentUrl
+  const usingFallback = !currentUrl && !pendingPreviewUrl && !!fallbackUrl
+  const displayUrl = pendingPreviewUrl || currentUrl || fallbackUrl
 
   return (
     <div>
       <div
         className="adm-img-thumb"
-        style={{ height: 200, marginBottom: 10, background: displayUrl ? `url(${displayUrl})` : '#F1F5F9', backgroundSize: 'cover', backgroundPosition: 'center' }}
+        style={{
+          height: 200,
+          marginBottom: 10,
+          backgroundColor: '#F1F5F9',
+          backgroundImage: displayUrl ? `url(${displayUrl})` : 'none',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
       >
         <button type="button" className="adm-icon-btn" onClick={() => inputRef.current.click()}><PencilIcon /></button>
       </div>
       <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }}
         onChange={e => { const f = e.target.files[0]; e.target.value = ''; if (f) onFileSelected(f) }} />
       <div className="adm-form-hint">
-        {pendingFile ? `${pendingFile.name} — se subirá al guardar` : 'Recomendado 1200×1200px, fondo neutro.'}
+        {pendingFile
+          ? `${pendingFile.name} — se subirá al guardar`
+          : usingFallback
+          ? 'Sin imagen principal guardada — mostrando la "Principal" de la galería como referencia. Sube una para fijarla aquí.'
+          : 'Recomendado 1200×1200px, fondo neutro.'}
       </div>
     </div>
   )

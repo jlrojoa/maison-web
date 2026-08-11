@@ -590,6 +590,7 @@ function InformacionGeneral({ productos, categorias, selectedId, onSelectProduct
             <div className="adm-card-sub">Se usa en tarjetas de Colecciones y carousel del configurador.</div>
             <IsometricoPicker
               currentUrl={producto.isometrico_url}
+              fallbackUrl={producto.isometrico_url ? null : (imagenes.find(i => i.es_principal)?.url ?? imagenes[0]?.url ?? null)}
               pendingFile={isoFile}
               pendingPreviewUrl={isoPreview}
               onFileSelected={onIsoSelected}
