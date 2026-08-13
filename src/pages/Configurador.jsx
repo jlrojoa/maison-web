@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useDistribuidor } from '../contexts/DistribuidorContext'
 import Nav from '../components/Nav'
 import { CategoryIcon } from './CategoryIcons'
+import CamasConfigurador from './configurador/CamasConfigurador'
 import './Configurador.css'
 
 const GRADOS = ['AA', 'A', 'B', 'C']
@@ -230,6 +231,21 @@ export default function Configurador() {
 
   const modeloActivo = !!tipoSel
   const medidaTelaActivo = !!modeloSel
+
+  const modeloParam = searchParams.get('modelo')
+  const initialProducto = useMemo(
+    () => (modeloParam ? productos.find(p => p.slug === modeloParam) ?? null : null),
+    [modeloParam, productos]
+  )
+
+  if (tipoSel?.slug === 'camas' && !productosLoading) {
+    return (
+      <div className="cfg-page">
+        <Nav solid />
+        <CamasConfigurador productos={productos} distribuidor={distribuidor} initialProducto={initialProducto} />
+      </div>
+    )
+  }
 
   return (
     <div className="cfg-page">
