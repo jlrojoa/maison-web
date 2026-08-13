@@ -1,0 +1,127 @@
+/* src/pages/configurador/ConfiguradorSticky.css */
+/* Layout nuevo (sticky + pasos colapsables) para Camas, Sofás e Individuales,
+   Escuadras y Chaise Lounge. Prefijo cfg2- para no chocar con Configurador.css
+   (layout viejo, sigue usándose para Modulares/Mesas/Butacas). Paleta igual a
+   la de Configurador.css, no la del mockup HTML. */
+
+.cfg2-wrap {
+  display: grid;
+  grid-template-columns: 1fr 440px;
+  gap: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 126px 24px 140px;
+  align-items: start;
+}
+
+/* ===== Visor de imagen sticky ===== */
+.cfg2-viewer { position: sticky; top: 126px; }
+.cfg2-stage {
+  background: #F1F5F9; border: 1px solid #E2E8F0; border-radius: 10px;
+  aspect-ratio: 4 / 3; display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.cfg2-stage.cfg2-has-img { background: #fff; }
+.cfg2-stage img { width: 100%; height: 100%; object-fit: contain; }
+
+.cfg2-thumbs { display: flex; gap: 8px; overflow-x: auto; margin-top: 12px; }
+.cfg2-thumb {
+  width: 72px; height: 72px; flex-shrink: 0; padding: 0; cursor: pointer;
+  background: #fff; border: 1.5px solid #E2E8F0; border-radius: 8px; overflow: hidden;
+}
+.cfg2-thumb.cfg2-active { border-color: #0F172A; }
+.cfg2-thumb img { width: 100%; height: 100%; object-fit: contain; }
+
+/* ===== Panel de pasos ===== */
+.cfg2-panel { display: flex; flex-direction: column; gap: 9px; }
+.cfg2-step { background: #fff; border: 1px solid #E2E8F0; border-radius: 12px; overflow: hidden; }
+.cfg2-step-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer; }
+.cfg2-step-num {
+  width: 22px; height: 22px; border-radius: 50%; background: #E2E8F0; color: #64748B;
+  font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex: none;
+}
+.cfg2-step.cfg2-open .cfg2-step-num { background: #0F172A; color: #fff; }
+.cfg2-step-title { font-size: 13px; font-weight: 600; flex: 1; }
+.cfg2-step-value { font-size: 12.5px; color: #64748B; font-weight: 500; }
+.cfg2-step-edit { font-size: 11px; color: #64748B; }
+.cfg2-step-body { padding: 0 16px 16px; }
+
+/* ===== Familia: 7 tarjetas con foto en escala de grises ===== */
+.cfg2-fams { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.cfg2-fam {
+  border: 1.5px solid #E2E8F0; border-radius: 10px; padding: 8px; cursor: pointer;
+  text-align: center; background: #fff;
+}
+.cfg2-fam:hover { border-color: #CBD5E1; }
+.cfg2-fam.cfg2-on { border-color: #0F172A; box-shadow: 0 0 0 2.5px rgba(15,23,42,.08); }
+.cfg2-fam-ph {
+  background: #F1F5F9; border-radius: 6px; aspect-ratio: 16 / 10; margin-bottom: 6px;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+/* Escala de grises: las 7 familias no comparten tela/color real (verificado
+   contra las fotos importadas de Shopify, ver spec) — se comparan por diseño
+   de cabecera, no por color. El color real se elige después, en Tela. */
+.cfg2-fam-ph img { width: 100%; height: 100%; object-fit: contain; filter: grayscale(1); }
+.cfg2-fam span { font-size: 11px; font-weight: 600; }
+
+.cfg2-hint { font-size: 11.5px; color: #64748B; margin-top: 10px; }
+
+/* ===== Chips (Cabecera, Pata, Tamaño, Grado) ===== */
+.cfg2-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.cfg2-chip {
+  padding: 9px 14px; border: 1.5px solid #E2E8F0; border-radius: 8px;
+  font-size: 12.5px; font-weight: 500; cursor: pointer; background: #fff;
+}
+.cfg2-chip:hover { border-color: #CBD5E1; }
+.cfg2-chip.cfg2-on { border-color: #0F172A; background: #0F172A; color: #fff; }
+.cfg2-chip.cfg2-off { opacity: .35; cursor: not-allowed; text-decoration: line-through; }
+
+.cfg2-lbl {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: #64748B; margin: 14px 0 8px;
+}
+.cfg2-lbl:first-child { margin-top: 0; }
+
+.cfg2-swatches { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 4px; }
+.cfg2-sw {
+  width: 36px; height: 36px; border-radius: 9px; cursor: pointer; padding: 0;
+  border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgba(0,0,0,.09);
+}
+.cfg2-sw.cfg2-on { border-color: #0F172A; }
+
+/* ===== Modelo (GenericStickyConfigurador) ===== */
+.cfg2-models { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.cfg2-model {
+  border: 1.5px solid #E2E8F0; border-radius: 10px; padding: 10px; cursor: pointer;
+  text-align: center; background: #fff;
+}
+.cfg2-model:hover { border-color: #CBD5E1; }
+.cfg2-model.cfg2-on { border-color: #0F172A; box-shadow: 0 0 0 2.5px rgba(15,23,42,.08); }
+.cfg2-model-ph {
+  background: #F1F5F9; border-radius: 6px; aspect-ratio: 16 / 10; margin-bottom: 6px;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.cfg2-model-ph img { width: 100%; height: 100%; object-fit: contain; }
+.cfg2-model span { font-size: 11px; font-weight: 600; }
+
+/* ===== Barra de precio fija ===== */
+.cfg2-bar {
+  position: sticky; bottom: 0; margin-top: 12px;
+  background: #fff; border: 1px solid #E2E8F0; border-radius: 14px 14px 0 0;
+  padding: 14px 18px; display: flex; align-items: center; gap: 14px;
+  box-shadow: 0 -6px 26px rgba(15,23,42,.07);
+}
+.cfg2-bar-msg { font-size: 12px; color: #64748B; text-align: center; flex: 1; }
+.cfg2-bar-price { flex: 1; }
+.cfg2-bar-price small { font-size: 10.5px; color: #64748B; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; display: block; }
+.cfg2-bar-price strong { font-size: 20px; font-weight: 700; }
+.cfg2-bar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Comportamiento mobile: la imagen deja de ser sticky (vuelve al flujo
+   normal, se ve pero se desplaza con la pagina); la barra de precio SI se
+   mantiene fija, a todo el ancho de la pantalla. */
+@media (max-width: 1080px) {
+  .cfg2-wrap { grid-template-columns: 1fr; padding-top: 126px; }
+  .cfg2-viewer { position: relative; top: 0; }
+  .cfg2-bar { position: fixed; left: 0; right: 0; bottom: 0; margin: 0; border-radius: 0; z-index: 40; }
+}
