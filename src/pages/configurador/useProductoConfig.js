@@ -1,27 +1,23 @@
 // src/pages/configurador/useProductoConfig.js
 //
 // Dado un producto (con id e isometrico_url), carga sus tamaños, telas,
-// galería y precio, con TODO arrancando en un valor por defecto (a diferencia
-// del flujo legado en Configurador.jsx, que arranca en null y bloquea cada
-// paso hasta que el usuario elige). Ver spec:
+// galería y precio. A diferencia de la primera versión, NO guarda la
+// selección (medida/grado/tela/color) como estado local propio — la deriva
+// de `preferred` (medidaNombre/telaNombre/colorNombre), que el llamador
+// arma a partir de la URL. Así no hay dos fuentes de verdad: la URL manda,
+// y esto solo resuelve "¿ese valor preferido existe en las opciones reales
+// de este producto? si no, ¿cuál es el default?". Ver spec:
 // docs/superpowers/specs/2026-08-10-configurador-sticky-design.md
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
 const GRADOS_ORDEN = ['AA', 'A', 'B', 'C']
 
-export function useProductoConfig(producto, distribuidor) {
+export function useProductoConfig(producto, distribuidor, preferred = {}) {
   const [configuraciones, setConfiguraciones] = useState([])
-  const [medidaSel, setMedidaSel] = useState(null)
-
   const [telas, setTelas] = useState([])
-  const [gradoSel, setGradoSel] = useState(null)
-  const [telaSel, setTelaSel] = useState(null)
-  const [colorSel, setColorSel] = useState(null)
-
   const [galeria, setGaleria] = useState([])
   const [activeImgUrl, setActiveImgUrl] = useState(null)
-
   const [precios, setPrecios] = useState([])
 
   // Dependencia en producto?.id (no en el objeto producto) para no recargar
@@ -29,9 +25,7 @@ export function useProductoConfig(producto, distribuidor) {
   // mismo producto.
   useEffect(() => {
     if (!producto) {
-      setConfiguraciones([]); setMedidaSel(null)
-      setTelas([]); setGradoSel(null); setTelaSel(null); setColorSel(null)
-      setGaleria([]); setActiveImgUrl(null)
+      setConfiguraciones([]); setTelas([]); setGaleria([]); setActiveImgUrl(null)
       return
     }
     let ignore = false
@@ -46,21 +40,13 @@ export function useProductoConfig(producto, distribuidor) {
       ])
       if (ignore) return
 
-      const cfgs = cfgRes.data ?? []
-      setConfiguraciones(cfgs)
-      setMedidaSel(cfgs[0] ?? null)
+      setConfiguraciones(cfgRes.data ?? [])
 
       const telasConColores = (telasRes.data ?? []).map(t => ({
         ...t,
         colores: (t.colores ?? []).filter(c => c.activo).sort((a, b) => a.orden - b.orden),
       }))
       setTelas(telasConColores)
-
-      const gradoDefault = GRADOS_ORDEN.find(g => telasConColores.some(t => t.grado === g)) ?? null
-      const telaDefault = telasConColores.find(t => t.grado === gradoDefault) ?? null
-      setGradoSel(gradoDefault)
-      setTelaSel(telaDefault)
-      setColorSel(telaDefault?.colores?.[0] ?? null)
 
       const imgs = imgRes.data ?? []
       setGaleria(imgs)
@@ -69,6 +55,32 @@ export function useProductoConfig(producto, distribuidor) {
     load()
     return () => { ignore = true }
   }, [producto?.id])
+
+  // Medida preferida (de la URL) si sigue existiendo en este producto; si
+  // no, la primera disponible. Esto ES la regla de "conservar selecciones
+  // válidas": si el paso anterior cambió pero la medida sigue existiendo
+  // (misma medida, otro cabecera por ejemplo), se mantiene sin que el
+  // llamador tenga que hacer nada especial.
+  const medidaSel = useMemo(
+    () => configuraciones.find(c => c.nombre === preferred.medidaNombre) ?? configuraciones[0] ?? null,
+    [configuraciones, preferred.medidaNombre]
+  )
+
+  const telaSel = useMemo(() => {
+    const porNombre = preferred.telaNombre && telas.find(t => t.nombre === preferred.telaNombre)
+    if (porNombre) return porNombre
+    const gradoDefault = GRADOS_ORDEN.find(g => telas.some(t => t.grado === g)) ?? null
+    return telas.find(t => t.grado === gradoDefault) ?? null
+  }, [telas, preferred.telaNombre])
+
+  const gradoSel = telaSel?.grado ?? null
+
+  const colorSel = useMemo(
+    () => (preferred.colorNombre && telaSel?.colores?.find(c => c.nombre === preferred.colorNombre)) || telaSel?.colores?.[0] || null,
+    [telaSel, preferred.colorNombre]
+  )
+
+  const telasDelGrado = telas.filter(t => t.grado === gradoSel)
 
   useEffect(() => {
     if (!distribuidor || !producto || !medidaSel) { setPrecios([]); return }
@@ -87,24 +99,9 @@ export function useProductoConfig(producto, distribuidor) {
     return row ? row.precio : null
   }, [precios, telaSel])
 
-  const selectGrado = (grado) => {
-    setGradoSel(grado)
-    const t = telas.find(x => x.grado === grado) ?? null
-    setTelaSel(t)
-    setColorSel(t?.colores?.[0] ?? null)
-  }
-
-  const selectTela = (telaId) => {
-    const t = telas.find(x => x.id === telaId) ?? null
-    setTelaSel(t)
-    setColorSel(t?.colores?.[0] ?? null)
-  }
-
-  const telasDelGrado = telas.filter(t => t.grado === gradoSel)
-
   return {
-    configuraciones, medidaSel, setMedidaSel,
-    telas, telasDelGrado, gradoSel, selectGrado, telaSel, selectTela, colorSel, setColorSel,
+    configuraciones, medidaSel,
+    telas, telasDelGrado, gradoSel, telaSel, colorSel,
     galeria, activeImgUrl, setActiveImgUrl,
     precioLookup,
   }

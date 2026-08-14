@@ -43,6 +43,8 @@ export default function App() {
           <Route path="/producto/:slug" element={<ProductPage />} />
           <Route path="/distribuidores" element={<Distribuidores />} />
           <Route path="/configurador" element={<Configurador />} />
+          <Route path="/configurador/:categoria" element={<Configurador />} />
+          <Route path="/configurador/:categoria/:productoSlug" element={<Configurador />} />
           <Route path="/mi-espacio" element={<MiEspacio />} />
           <Route path="/admin/login" element={<Suspense fallback={<AdminFallback />}><AdminLogin /></Suspense>} />
           <Route

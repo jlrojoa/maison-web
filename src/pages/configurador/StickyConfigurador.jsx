@@ -5,7 +5,14 @@
 // en vez de un componente por categoría. Los "pasos resolver" (Familia/
 // Cabecera/Pata en Camas; Modelo en las otras 3) pinchan un producto real;
 // de ahí en adelante Tamaño/Tela son siempre iguales (useProductoConfig).
+//
+// La URL es la única fuente de verdad (Principio 1): no hay useState para
+// familia/cabecera/pata/tamaño/tela/color. Cada selección se lee de
+// useParams()/useSearchParams() y cada cambio llama navigate() — así
+// recargar, copiar/pegar la URL y el botón "atrás" del navegador reconstruyen
+// siempre la misma pantalla sin sincronizar nada a mano.
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useProductoConfig } from './useProductoConfig'
 import { useCotizacion } from './useCotizacion'
@@ -26,55 +33,105 @@ function distinctInOrder(items, keyFn) {
   return out
 }
 
-export default function StickyConfigurador({ categoriaSlug, productos, distribuidor, initialProducto }) {
+function buildQuery({ cabecera, pata, tamano, tela, color }) {
+  const params = new URLSearchParams()
+  if (cabecera) params.set('cabecera', cabecera)
+  if (pata) params.set('pata', pata)
+  if (tamano) params.set('tamano', tamano)
+  if (tela) params.set('tela', tela)
+  if (color) params.set('color', color)
+  const qs = params.toString()
+  return qs ? `?${qs}` : ''
+}
+
+export default function StickyConfigurador({ categoriaSlug, categoriaNombre, productos, distribuidor }) {
+  const navigate = useNavigate()
+  const { productoSlug } = useParams()
+  const [searchParams] = useSearchParams()
+
   const resolverSteps = STEPS_BY_CATEGORY[categoriaSlug] ?? []
   const resolverFields = resolverSteps.map(s => s.id)
   const usaModelo = resolverFields.includes('modelo')
+  const tieneFamilia = resolverFields.includes('familia')
 
   // Valores disponibles para `field`, dado el estado de los campos ANTERIORES
   // a él en resolverFields (cascada: Cabecera depende de Familia, etc.).
   // 'modelo' no tiene cascada — el universo es todo `productos`.
-  const availableFor = (field, state) => {
+  const availableFor = (field, values) => {
     if (field === 'modelo') return productos
     const idx = resolverFields.indexOf(field)
-    const filtered = productos.filter(p => resolverFields.slice(0, idx).every(f => p[f] === state[f]))
+    const filtered = productos.filter(p => resolverFields.slice(0, idx).every(f => p[f] === values[f]))
     return distinctInOrder(filtered, p => p[field])
   }
 
-  const [resolverState, setResolverState] = useState(() => {
-    const state = {}
-    for (const field of resolverFields) {
-      if (field === 'modelo') { state.modelo = initialProducto?.id ?? productos[0]?.id ?? null; continue }
-      const options = availableFor(field, state)
-      const preferred = initialProducto?.[field]
-      state[field] = (preferred && options.includes(preferred)) ? preferred : (options[0] ?? null)
-    }
-    return state
-  })
+  const productoActivo = useMemo(
+    () => productos.find(p => p.slug === productoSlug) ?? productos[0] ?? null,
+    [productos, productoSlug]
+  )
+
+  // Estado "resolver" derivado del producto activo (no de useState): para
+  // Camas son sus columnas familia/cabecera/pata; para las otras 3, el
+  // producto ES el valor de 'modelo'.
+  const resolverValues = useMemo(() => {
+    if (usaModelo) return { modelo: productoActivo?.id ?? null }
+    const v = {}
+    for (const f of resolverFields) v[f] = productoActivo?.[f] ?? null
+    return v
+  }, [productoActivo, usaModelo, resolverFields])
+
+  const preferred = useMemo(() => ({
+    medidaNombre: searchParams.get('tamano'),
+    telaNombre: searchParams.get('tela'),
+    colorNombre: searchParams.get('color'),
+  }), [searchParams])
+
+  const cfg = useProductoConfig(productoActivo, distribuidor, preferred)
+
+  // Navega a `prod`, conservando tamaño/tela/color actuales salvo que se
+  // pasen overrides explícitos. `push` para pasos mayores (familia/modelo,
+  // cambian de "identidad"); replace para ajustes menores (cabecera, pata,
+  // tamaño, tela, color) — no llenan el historial de basura.
+  const goToProducto = (prod, { tamano, tela, color, push = false } = {}) => {
+    if (!prod) return
+    const q = buildQuery({
+      cabecera: tieneFamilia ? prod.cabecera : undefined,
+      pata: tieneFamilia ? prod.pata : undefined,
+      tamano: tamano !== undefined ? tamano : cfg.medidaSel?.nombre,
+      tela: tela !== undefined ? tela : cfg.telaSel?.nombre,
+      color: color !== undefined ? color : cfg.colorSel?.nombre,
+    })
+    navigate(`/configurador/${categoriaSlug}/${prod.slug}${q}`, { replace: !push })
+  }
 
   // Cambiar un paso resuelve en cascada los siguientes: si el valor que ya
   // tenían sigue siendo válido con la nueva selección, se conserva (no se
   // borra sin necesidad); solo se resetea al primero disponible lo que
   // quedó imposible.
-  const updateField = (field, value) => {
-    setResolverState(prev => {
-      const next = { ...prev, [field]: value }
-      const idx = resolverFields.indexOf(field)
-      for (let i = idx + 1; i < resolverFields.length; i++) {
-        const f = resolverFields[i]
-        const options = availableFor(f, next)
-        if (!options.includes(next[f])) next[f] = options[0] ?? null
-      }
-      return next
-    })
+  const updateResolverField = (field, value) => {
+    const next = { ...resolverValues, [field]: value }
+    const idx = resolverFields.indexOf(field)
+    for (let i = idx + 1; i < resolverFields.length; i++) {
+      const f = resolverFields[i]
+      const options = availableFor(f, next)
+      if (!options.includes(next[f])) next[f] = options[0] ?? null
+    }
+    const nextProducto = usaModelo
+      ? productos.find(p => p.id === next.modelo)
+      : productos.find(p => resolverFields.every(f => p[f] === next[f]))
+        ?? productos.find(p => p[resolverFields[0]] === next[resolverFields[0]])
+    goToProducto(nextProducto, { push: field === resolverFields[0] })
   }
 
-  const productoActivo = useMemo(() => {
-    if (usaModelo) return productos.find(p => p.id === resolverState.modelo) ?? productos[0] ?? null
-    return productos.find(p => resolverFields.every(f => p[f] === resolverState[f]))
-      ?? productos.find(p => p[resolverFields[0]] === resolverState[resolverFields[0]])
-      ?? null
-  }, [productos, resolverFields, resolverState, usaModelo])
+  const selectMedida = (medida) => goToProducto(productoActivo, { tamano: medida.nombre })
+  const selectGrado = (grado) => {
+    const t = cfg.telas.find(x => x.grado === grado) ?? null
+    goToProducto(productoActivo, { tela: t?.nombre ?? null, color: t?.colores?.[0]?.nombre ?? null })
+  }
+  const selectTela = (telaId) => {
+    const t = cfg.telas.find(x => x.id === telaId) ?? null
+    goToProducto(productoActivo, { tela: t?.nombre ?? null, color: t?.colores?.[0]?.nombre ?? null })
+  }
+  const selectColor = (color) => goToProducto(productoActivo, { color: color.nombre })
 
   // Portadas de Familia (solo si hay paso 'familia', hoy únicamente Camas):
   // foto real (es_principal) del representante Liso+Estándar de cada
@@ -82,7 +139,6 @@ export default function StickyConfigurador({ categoriaSlug, productos, distribui
   // combinación. Una sola consulta batch, no una por tarjeta. Escala de
   // grises se aplica en CSS (.cfg2-fam-ph img) porque las familias no
   // comparten tela/color real (ver spec).
-  const tieneFamilia = resolverFields.includes('familia')
   const familias = useMemo(() => (tieneFamilia ? distinctInOrder(productos, p => p.familia) : []), [productos, tieneFamilia])
   const [familiaCovers, setFamiliaCovers] = useState({})
 
@@ -119,7 +175,6 @@ export default function StickyConfigurador({ categoriaSlug, productos, distribui
     return () => { ignore = true }
   }, [tieneFamilia, familias, productos])
 
-  const cfg = useProductoConfig(productoActivo, distribuidor)
   const cotiz = useCotizacion({
     distribuidor, producto: productoActivo, medidaSel: cfg.medidaSel,
     telaSel: cfg.telaSel, colorSel: cfg.colorSel, precioLookup: cfg.precioLookup,
@@ -134,6 +189,11 @@ export default function StickyConfigurador({ categoriaSlug, productos, distribui
     : []
   const thumbnails = [...cover, ...cfg.galeria]
 
+  // Nivel actual del breadcrumb: la familia (Camas) o el nombre del modelo
+  // (las otras 3). "Siempre hay salida": Configurador -> categoría -> aquí,
+  // cada segmento anterior es clickeable y regresa a ese nivel.
+  const nivelActual = tieneFamilia ? resolverValues.familia : productoActivo?.nombre
+
   return (
     <div className="cfg2-wrap">
       <StickyViewer
@@ -144,12 +204,24 @@ export default function StickyConfigurador({ categoriaSlug, productos, distribui
       />
 
       <div className="cfg2-panel">
+        <div className="cfg2-breadcrumb" role="navigation" aria-label="Breadcrumb">
+          <a href="/configurador" onClick={e => { e.preventDefault(); navigate('/configurador') }}>Configurador</a>
+          <span className="cfg2-breadcrumb-sep">/</span>
+          <a href={`/configurador/${categoriaSlug}`} onClick={e => { e.preventDefault(); navigate(`/configurador/${categoriaSlug}`) }}>{categoriaNombre}</a>
+          {nivelActual && (
+            <>
+              <span className="cfg2-breadcrumb-sep">/</span>
+              <span className="cfg2-breadcrumb-current">{nivelActual}</span>
+            </>
+          )}
+        </div>
+
         {resolverSteps.map((step, i) => (
           <StepCard
             key={step.id}
             number={i + 1}
             title={step.label}
-            value={step.id === 'modelo' ? productoActivo?.nombre : resolverState[step.id]}
+            value={step.id === 'modelo' ? productoActivo?.nombre : resolverValues[step.id]}
           >
             {step.id === 'familia' && (
               <>
@@ -157,8 +229,8 @@ export default function StickyConfigurador({ categoriaSlug, productos, distribui
                   {familias.map(fam => (
                     <div
                       key={fam}
-                      className={`cfg2-fam ${resolverState.familia === fam ? 'cfg2-on' : ''}`}
-                      onClick={() => updateField('familia', fam)}
+                      className={`cfg2-fam ${resolverValues.familia === fam ? 'cfg2-on' : ''}`}
+                      onClick={() => updateResolverField('familia', fam)}
                     >
                       <div className="cfg2-fam-ph">{familiaCovers[fam] && <img src={familiaCovers[fam]} alt={fam} />}</div>
                       <span>{fam}</span>
@@ -174,8 +246,8 @@ export default function StickyConfigurador({ categoriaSlug, productos, distribui
                 {productos.map(prod => (
                   <div
                     key={prod.id}
-                    className={`cfg2-model ${resolverState.modelo === prod.id ? 'cfg2-on' : ''}`}
-                    onClick={() => updateField('modelo', prod.id)}
+                    className={`cfg2-model ${resolverValues.modelo === prod.id ? 'cfg2-on' : ''}`}
+                    onClick={() => updateResolverField('modelo', prod.id)}
                   >
                     <div className="cfg2-model-ph">{prod.isometrico_url && <img src={prod.isometrico_url} alt={prod.nombre} />}</div>
                     <span>{prod.nombre}</span>
@@ -186,14 +258,14 @@ export default function StickyConfigurador({ categoriaSlug, productos, distribui
 
             {(step.id === 'cabecera' || step.id === 'pata') && (() => {
               const universo = distinctInOrder(productos, p => p[step.id])
-              const disponibles = availableFor(step.id, resolverState)
+              const disponibles = availableFor(step.id, resolverValues)
               return (
                 <div className="cfg2-chips">
                   {universo.map(val => (
                     <div
                       key={val}
-                      className={`cfg2-chip ${resolverState[step.id] === val ? 'cfg2-on' : ''} ${!disponibles.includes(val) ? 'cfg2-off' : ''}`}
-                      onClick={() => disponibles.includes(val) && updateField(step.id, val)}
+                      className={`cfg2-chip ${resolverValues[step.id] === val ? 'cfg2-on' : ''} ${!disponibles.includes(val) ? 'cfg2-off' : ''}`}
+                      onClick={() => disponibles.includes(val) && updateResolverField(step.id, val)}
                     >
                       {val}
                     </div>
@@ -210,7 +282,7 @@ export default function StickyConfigurador({ categoriaSlug, productos, distribui
               <div
                 key={c.id}
                 className={`cfg2-chip ${cfg.medidaSel?.id === c.id ? 'cfg2-on' : ''}`}
-                onClick={() => cfg.setMedidaSel(c)}
+                onClick={() => selectMedida(c)}
               >
                 {c.nombre}
               </div>
@@ -222,11 +294,11 @@ export default function StickyConfigurador({ categoriaSlug, productos, distribui
           <div className="cfg2-lbl">Grado</div>
           <div className="cfg2-chips">
             {['AA', 'A', 'B', 'C'].map(g => (
-              <div key={g} className={`cfg2-chip ${cfg.gradoSel === g ? 'cfg2-on' : ''}`} onClick={() => cfg.selectGrado(g)}>{g}</div>
+              <div key={g} className={`cfg2-chip ${cfg.gradoSel === g ? 'cfg2-on' : ''}`} onClick={() => selectGrado(g)}>{g}</div>
             ))}
           </div>
           <div className="cfg2-lbl">Catálogo</div>
-          <select className="cfg-dropdown" value={cfg.telaSel?.id ?? ''} onChange={e => cfg.selectTela(e.target.value)}>
+          <select className="cfg-dropdown" value={cfg.telaSel?.id ?? ''} onChange={e => selectTela(e.target.value)}>
             {cfg.telasDelGrado.map(t => <option key={t.id} value={t.id}>{t.nombre} ({t.colores.length} colores)</option>)}
           </select>
           <div className="cfg2-swatches">
@@ -236,7 +308,7 @@ export default function StickyConfigurador({ categoriaSlug, productos, distribui
                 className={`cfg2-sw ${cfg.colorSel?.id === color.id ? 'cfg2-on' : ''}`}
                 style={{ background: color.codigo_hex || '#E2E8F0' }}
                 title={color.nombre}
-                onClick={() => cfg.setColorSel(color)}
+                onClick={() => selectColor(color)}
               />
             ))}
           </div>

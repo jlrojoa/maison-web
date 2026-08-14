@@ -1,6 +1,6 @@
 // src/pages/Configurador.jsx
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useDistribuidor } from '../contexts/DistribuidorContext'
 import Nav from '../components/Nav'
@@ -180,10 +180,20 @@ export default function Configurador() {
   }
 
   const [searchParams] = useSearchParams()
+  const params = useParams()
+  const navigate = useNavigate()
   const [tipoPreloaded, setTipoPreloaded] = useState(false)
   const [modeloPreloadDone, setModeloPreloadDone] = useState(false)
 
+  // Las 4 categorías con el layout nuevo (sticky + pasos colapsables) viven
+  // en la URL (/configurador/:categoria/:productoSlug), no en useState local
+  // — StickyConfigurador lee todo de useParams/useSearchParams. Modulares/
+  // Mesas/Butacas siguen con el flujo legado de abajo, con su propio
+  // tipoSel/modeloSel en memoria, sin tocar.
+  const STICKY_CATEGORIA_SLUGS = ['camas', 'sofas', 'escuadras-l', 'chaise-lounge']
+
   const selectTipo = (cat) => {
+    if (STICKY_CATEGORIA_SLUGS.includes(cat.slug)) { navigate(`/configurador/${cat.slug}`); return }
     setTipoSel(cat)
     setModeloSel(null)
     setMedidaSel(null)
@@ -194,16 +204,23 @@ export default function Configurador() {
     setMedidaSel(null)
   }
 
-  // Precarga de tipo: una sola vez, cuando categorias ya cargó
+  // tipoSel se resuelve del segmento de ruta /configurador/:categoria (o,
+  // por compatibilidad con links viejos, de ?tipo=) y se resincroniza cada
+  // vez que ese valor cambia — no solo una vez al montar. Esto es lo que
+  // hace que, si el usuario entra a una categoría sticky y luego usa el
+  // breadcrumb o el back del navegador para volver a /configurador (sin
+  // segmento), el Paso 0 reaparezca solo, sin recargar la página.
   useEffect(() => {
-    if (tipoPreloaded || categorias.length === 0) return
-    const tipoParam = searchParams.get('tipo')
-    const cat = tipoParam ? categorias.find(c => c.slug === tipoParam) : null
-    if (cat) selectTipo(cat)
+    if (categorias.length === 0) return
+    const slug = params.categoria ?? searchParams.get('tipo')
+    const cat = slug ? categorias.find(c => c.slug === slug) ?? null : null
+    setTipoSel(prev => (prev?.id === cat?.id ? prev : cat))
+    if (!cat) setModeloSel(null)
     setTipoPreloaded(true)
-  }, [categorias, tipoPreloaded, searchParams])
+  }, [categorias, params.categoria, searchParams])
 
-  // Precarga de modelo: una sola vez, cuando productos del tipo precargado ya cargaron
+  // Precarga de modelo (solo relevante para el flujo legado): una sola vez,
+  // cuando productos del tipo precargado ya cargaron.
   useEffect(() => {
     if (!tipoPreloaded || modeloPreloadDone || productos.length === 0) return
     const modeloParam = searchParams.get('modelo')
@@ -211,6 +228,19 @@ export default function Configurador() {
     if (prod) selectModelo(prod)
     setModeloPreloadDone(true)
   }, [tipoPreloaded, modeloPreloadDone, productos, searchParams])
+
+  // Compatibilidad con links viejos (?tipo=camas&modelo=x, usados por
+  // MiEspacio/ProductPage — fuera de alcance tocarlos en esta tarea):
+  // si resolvieron a una categoría sticky por la querystring vieja, se
+  // sube de categoría a la URL canónica por path una vez que ya sabemos
+  // tipoSel/modeloSel.
+  useEffect(() => {
+    if (params.categoria) return // ya está en la forma canónica por path, nada que subir
+    if (!searchParams.get('tipo')) return // /configurador sin querystring vieja (ej. "atrás" del navegador) — NO redirigir
+    if (!modeloPreloadDone || !tipoSel) return
+    if (!STICKY_CATEGORIA_SLUGS.includes(tipoSel.slug)) return
+    navigate(`/configurador/${tipoSel.slug}${modeloSel ? '/' + modeloSel.slug : ''}`, { replace: true })
+  }, [modeloPreloadDone, params.categoria, tipoSel, modeloSel, searchParams])
 
   const selectMedida = (cfg) => setMedidaSel(cfg)
 
@@ -232,19 +262,11 @@ export default function Configurador() {
   const modeloActivo = !!tipoSel
   const medidaTelaActivo = !!modeloSel
 
-  const modeloParam = searchParams.get('modelo')
-  const initialProducto = useMemo(
-    () => (modeloParam ? productos.find(p => p.slug === modeloParam) ?? null : null),
-    [modeloParam, productos]
-  )
-
-  const STICKY_CATEGORIA_SLUGS = ['camas', 'sofas', 'escuadras-l', 'chaise-lounge']
-
   if (tipoSel && STICKY_CATEGORIA_SLUGS.includes(tipoSel.slug) && !productosLoading) {
     return (
       <div className="cfg-page">
         <Nav solid />
-        <StickyConfigurador categoriaSlug={tipoSel.slug} productos={productos} distribuidor={distribuidor} initialProducto={initialProducto} />
+        <StickyConfigurador categoriaSlug={tipoSel.slug} categoriaNombre={tipoSel.nombre} productos={productos} distribuidor={distribuidor} />
       </div>
     )
   }
