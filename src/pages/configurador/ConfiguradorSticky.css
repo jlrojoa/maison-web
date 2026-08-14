@@ -6,7 +6,15 @@
 
 .cfg2-wrap {
   display: grid;
-  grid-template-columns: 1fr 440px;
+  /* minmax(0, 1fr), no 1fr a secas: un item de grid tiene min-width:auto por
+     default, y ese "auto" se calcula del min-content de sus hijos. La imagen
+     dentro de .cfg2-stage (aspect-ratio + object-fit:contain) igual cuenta
+     con un min-content grande, y sin el minmax(0, ...) esa columna se niega
+     a encoger por debajo de eso — revienta el grid y empuja la columna del
+     panel (440px) fuera del viewport. Confirmado forzando el ancho del
+     contenedor a 1000px: sin este fix la columna de imagen se queda fija en
+     952px pase lo que pase. */
+  grid-template-columns: minmax(0, 1fr) 440px;
   gap: 24px;
   max-width: 1400px;
   margin: 0 auto;
@@ -15,14 +23,23 @@
 }
 
 /* ===== Visor de imagen sticky ===== */
-.cfg2-viewer { position: sticky; top: 126px; }
+.cfg2-viewer {
+  position: sticky;
+  top: 126px;
+  /* Acotada a lo que queda de viewport bajo el header, para que nunca sea
+     más alta que la pantalla — deja espacio para la barra de precio fija. */
+  max-height: calc(100vh - 126px - 110px);
+}
 .cfg2-stage {
   background: #F1F5F9; border: 1px solid #E2E8F0; border-radius: 10px;
-  aspect-ratio: 4 / 3; display: flex; align-items: center; justify-content: center;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: calc(100vh - 126px - 110px);
+  display: flex; align-items: center; justify-content: center;
   overflow: hidden;
 }
 .cfg2-stage.cfg2-has-img { background: #fff; }
-.cfg2-stage img { width: 100%; height: 100%; object-fit: contain; }
+.cfg2-stage img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; }
 
 .cfg2-thumbs { display: flex; gap: 8px; overflow-x: auto; margin-top: 12px; }
 .cfg2-thumb {
