@@ -13,10 +13,21 @@ import { supabase } from '../../lib/supabase'
 
 const GRADOS_ORDEN = ['AA', 'A', 'B', 'C']
 
+// producto_imagenes no tiene columna de tamaño/color: las fotos importadas
+// de Shopify codifican ambos en el nombre de archivo (p. ej.
+// "...KINGFRENTE0048...") y llegan en tandas fijas de 3 (frente/45°/90°)
+// por tamaño — un solo producto_id puede traer las 4 tandas juntas (hasta
+// 12 fotos). Sin un vínculo real en BD a la medida seleccionada, filtramos
+// por texto contra el nombre de la medida y nos quedamos con esa tanda.
+const normalizeKey = s => (s || '')
+  .toLowerCase()
+  .normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .replace(/[^a-z0-9]/g, '')
+
 export function useProductoConfig(producto, distribuidor, preferred = {}) {
   const [configuraciones, setConfiguraciones] = useState([])
   const [telas, setTelas] = useState([])
-  const [galeria, setGaleria] = useState([])
+  const [galeriaCompleta, setGaleriaCompleta] = useState([])
   const [activeImgUrl, setActiveImgUrl] = useState(null)
   const [precios, setPrecios] = useState([])
 
@@ -25,7 +36,7 @@ export function useProductoConfig(producto, distribuidor, preferred = {}) {
   // mismo producto.
   useEffect(() => {
     if (!producto) {
-      setConfiguraciones([]); setTelas([]); setGaleria([]); setActiveImgUrl(null)
+      setConfiguraciones([]); setTelas([]); setGaleriaCompleta([])
       return
     }
     let ignore = false
@@ -48,9 +59,7 @@ export function useProductoConfig(producto, distribuidor, preferred = {}) {
       }))
       setTelas(telasConColores)
 
-      const imgs = imgRes.data ?? []
-      setGaleria(imgs)
-      setActiveImgUrl(producto.isometrico_url ?? imgs[0]?.url ?? null)
+      setGaleriaCompleta(imgRes.data ?? [])
     }
     load()
     return () => { ignore = true }
@@ -65,6 +74,25 @@ export function useProductoConfig(producto, distribuidor, preferred = {}) {
     () => configuraciones.find(c => c.nombre === preferred.medidaNombre) ?? configuraciones[0] ?? null,
     [configuraciones, preferred.medidaNombre]
   )
+
+  const galeria = useMemo(() => {
+    if (galeriaCompleta.length === 0) return []
+    let candidatas = galeriaCompleta
+    const medidaKey = normalizeKey(medidaSel?.nombre)
+    if (medidaKey) {
+      const porMedida = galeriaCompleta.filter(img => normalizeKey(`${img.url} ${img.alt ?? ''}`).includes(medidaKey))
+      if (porMedida.length > 0) candidatas = porMedida
+    }
+    return [...candidatas].sort((a, b) => a.orden - b.orden).slice(0, 3)
+  }, [galeriaCompleta, medidaSel])
+
+  // La imagen activa se resetea a la portada de ESTA medida cada vez que
+  // cambia el producto o la medida — si no, al cambiar de Tamaño (que no
+  // cambia el producto en las categorías sin Familia) se quedaba pegada la
+  // foto de la medida anterior aunque el riel de abajo ya hubiera cambiado.
+  useEffect(() => {
+    setActiveImgUrl(producto?.isometrico_url ?? galeria[0]?.url ?? null)
+  }, [producto?.id, medidaSel?.id, galeria])
 
   const telaSel = useMemo(() => {
     const porNombre = preferred.telaNombre && telas.find(t => t.nombre === preferred.telaNombre)
