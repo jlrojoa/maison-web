@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useDistribuidor } from '../contexts/DistribuidorContext'
 import Nav from '../components/Nav'
 import { CategoryIcon } from './CategoryIcons'
-import CamasConfigurador from './configurador/CamasConfigurador'
+import StickyConfigurador from './configurador/StickyConfigurador'
 import './Configurador.css'
 
 const GRADOS = ['AA', 'A', 'B', 'C']
@@ -238,11 +238,13 @@ export default function Configurador() {
     [modeloParam, productos]
   )
 
-  if (tipoSel?.slug === 'camas' && !productosLoading) {
+  const STICKY_CATEGORIA_SLUGS = ['camas', 'sofas', 'escuadras-l', 'chaise-lounge']
+
+  if (tipoSel && STICKY_CATEGORIA_SLUGS.includes(tipoSel.slug) && !productosLoading) {
     return (
       <div className="cfg-page">
         <Nav solid />
-        <CamasConfigurador productos={productos} distribuidor={distribuidor} initialProducto={initialProducto} />
+        <StickyConfigurador categoriaSlug={tipoSel.slug} productos={productos} distribuidor={distribuidor} initialProducto={initialProducto} />
       </div>
     )
   }
