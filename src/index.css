@@ -69,7 +69,7 @@ nav.s .nbtn{background:var(--charcoal);border-color:var(--charcoal)}
 .la{font-family:var(--sans);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--charcoal);text-decoration:none;border-bottom:1px solid var(--charcoal);padding-bottom:2px;transition:color .3s,border-color .3s}
 .la:hover{color:var(--gold);border-color:var(--gold)}
 .pg{display:grid;grid-template-columns:repeat(3,1fr);gap:34px}
-.pc{cursor:pointer}
+.pc{cursor:pointer;display:block;color:inherit;text-decoration:none}
 /* Cuadrado (1:1), no 4:5 — las fotos de producto (sillones, tipo horizontal) casi
    nunca son verticales; forzarlas en un marco 4:5 dejaba franjas grandes arriba y
    abajo. 1:1 coincide con lo que ya se le pide al admin al subir ("1200×1200px

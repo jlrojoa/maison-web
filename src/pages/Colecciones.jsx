@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useDistribuidor } from '../contexts/DistribuidorContext'
 import Nav from '../components/Nav'
@@ -14,7 +14,6 @@ export default function Colecciones() {
   const [loading, setLoading] = useState(true)
   const ctx = useDistribuidor()
   const distribuidor = ctx?.distribuidor ?? null
-  const navigate = useNavigate()
 
   useEffect(() => {
     async function load() {
@@ -56,13 +55,20 @@ export default function Colecciones() {
     load()
   }, [distribuidor])
 
-  const handleClick = (product) => {
+  // Las 4 categorías con el layout nuevo del configurador viven en la URL
+  // por path (/configurador/:categoria/:productoSlug) — Colecciones ya no
+  // es una vista distinta del configurador, es un link directo con el
+  // producto pre-seleccionado. Modulares/Mesas/Butacas (fuera del alcance
+  // de esta migración) siguen con la forma vieja por querystring, que es
+  // la que su flujo legado todavía sabe leer.
+  const STICKY_CATEGORIA_SLUGS = ['camas', 'sofas', 'escuadras-l', 'chaise-lounge']
+
+  const configuradorUrl = (product) => {
     const tipo = product?.categoria?.slug
     const modelo = product?.slug ?? product?.id
-    if (!modelo) return
-    // El configurador es la ficha de producto real (abierto, sin precios hasta login de
-    // distribuidor). La ruta vieja /producto/:slug queda sin usar pero no se borra.
-    navigate(tipo ? `/configurador?tipo=${tipo}&modelo=${modelo}` : `/configurador?modelo=${modelo}`)
+    if (!modelo) return '/configurador'
+    if (tipo && STICKY_CATEGORIA_SLUGS.includes(tipo)) return `/configurador/${tipo}/${modelo}`
+    return tipo ? `/configurador?tipo=${tipo}&modelo=${modelo}` : `/configurador?modelo=${modelo}`
   }
 
   return (
@@ -88,7 +94,7 @@ export default function Colecciones() {
                 </div>
                 <div className="pg5">
                   {matched.map(product => (
-                    <div key={product.id} className="pc" onClick={() => handleClick(product)}>
+                    <Link key={product.id} className="pc" to={configuradorUrl(product)}>
                       <div className="pci">
                         <div className="pci-bg">
                           {product.imagen_principal
@@ -108,7 +114,7 @@ export default function Colecciones() {
                           : <span style={{ color: 'var(--taupe)', fontSize: 12 }}>Precio a consultar</span>
                         }
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>
