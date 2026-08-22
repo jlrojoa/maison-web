@@ -18,6 +18,7 @@ export default function Materiales() {
   const [loading, setLoading] = useState(true)
   const [filtroGrado, setFiltroGrado] = useState('')
   const [filtroTela, setFiltroTela] = useState('')
+  const [filtroColor, setFiltroColor] = useState('')
 
   useEffect(() => {
     async function load() {
@@ -37,10 +38,17 @@ export default function Materiales() {
     load()
   }, [])
 
-  const visibles = useMemo(() => telas
-    .filter(t => !filtroGrado || t.grado === filtroGrado)
-    .filter(t => !filtroTela || t.id === filtroTela),
-  [telas, filtroGrado, filtroTela])
+  // Los 3 filtros se combinan con AND. El de Color no oculta catálogos completos —
+  // filtra los colores DENTRO de cada catálogo por coincidencia parcial de nombre
+  // (case-insensitive) y solo oculta el catálogo si ninguno de sus colores calza.
+  const visibles = useMemo(() => {
+    const texto = filtroColor.trim().toLowerCase()
+    return telas
+      .filter(t => !filtroGrado || t.grado === filtroGrado)
+      .filter(t => !filtroTela || t.id === filtroTela)
+      .map(t => ({ ...t, colores: texto ? t.colores.filter(c => c.nombre?.toLowerCase().includes(texto)) : t.colores }))
+      .filter(t => t.colores.length > 0)
+  }, [telas, filtroGrado, filtroTela, filtroColor])
 
   return (
     <div id="mp">
@@ -61,6 +69,14 @@ export default function Materiales() {
               <option value="">Catálogo — todos</option>
               {telas.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
             </select>
+            <input
+              className="so"
+              type="text"
+              placeholder="Buscar color (ej. Beige)…"
+              value={filtroColor}
+              onChange={e => setFiltroColor(e.target.value)}
+              style={{ padding: '10px 14px', minWidth: 200 }}
+            />
           </div>
         )}
 
@@ -68,7 +84,7 @@ export default function Materiales() {
           <div className="cat-loading">CARGANDO…</div>
         ) : visibles.length === 0 ? (
           <p style={{ color: 'var(--taupe)', fontSize: 13, padding: '0 24px' }}>
-            {telas.length === 0 ? 'Aún no hay telas cargadas.' : 'Ningún catálogo coincide con ese filtro.'}
+            {telas.length === 0 ? 'Aún no hay telas cargadas.' : 'Ningún color coincide con esos filtros.'}
           </p>
         ) : (
           visibles.map(t => (
