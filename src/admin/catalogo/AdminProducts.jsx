@@ -933,6 +933,23 @@ function Colecciones({ grados, telas, onReloadTelas }) {
     setSaving(true)
     try {
       if (editing) {
+        // El grado determina qué fila de producto_precios se resuelve (por letra, no
+        // por tela_id — no hay FK entre telas y producto_precios). Cambiarlo no rompe
+        // ninguna fila, pero sí cambia el precio que ve el distribuidor la próxima vez
+        // que elija esta tela en CUALQUIER producto con precios cargados — no es un
+        // efecto aislado a esta tela, por eso la advertencia explica el alcance real
+        // en vez de fingir que es "solo esta tela".
+        const original = telas.find(t => t.id === editing)
+        if (original && original.grado !== form.grado) {
+          const { data: preciosRows } = await supabase.from('producto_precios').select('producto_id')
+          const nProductos = new Set((preciosRows ?? []).map(r => r.producto_id)).size
+          const ok = confirm(
+            `Vas a cambiar "${original.nombre}" de Categoría ${original.grado} a Categoría ${form.grado}.\n\n` +
+            `El precio se resuelve por categoría, no por esta tela en particular — hoy hay ${nProductos} producto(s) con precios cargados, y el precio que vea un distribuidor al elegir esta tela en cualquiera de ellos cambiará de inmediato.\n\n` +
+            `¿Continuar?`
+          )
+          if (!ok) { setSaving(false); return }
+        }
         await supabase.from('telas').update({ nombre: form.nombre, grado: form.grado, descripcion: form.descripcion }).eq('id', editing)
       } else {
         // slug se fija solo al crear (igual que productos) — no se regenera al renombrar,
@@ -948,14 +965,37 @@ function Colecciones({ grados, telas, onReloadTelas }) {
     }
   }
 
+  const toggleActivo = async (t) => {
+    await supabase.from('telas').update({ activo: !t.activo }).eq('id', t.id)
+    onReloadTelas()
+  }
+
+  // Desactivar (reversible, botón principal) cubre el caso real de "esta tela ya no
+  // se vende" — desaparece del configurador y de Materiales sin perder nada. Borrar
+  // de verdad hace CASCADE sobre tela_colores (se van sus 5-7 colores, specs, cuidados
+  // y fotos, sin deshacer), así que exige escribir el nombre exacto en vez de un solo
+  // click en un confirm().
   const eliminar = async (t) => {
-    if (!confirm(`¿Eliminar "${t.nombre}"? Si tiene colores u otros datos asociados, mejor desactívala.`)) return
+    const { data: coloresRows } = await supabase.from('tela_colores').select('id').eq('tela_id', t.id)
+    const { data: prodTelasRows } = await supabase.from('producto_telas').select('producto_id').eq('tela_id', t.id)
+    const nColores = coloresRows?.length ?? 0
+    const nProductosVinculados = new Set((prodTelasRows ?? []).map(r => r.producto_id)).size
+
+    const detalle = []
+    if (nColores) detalle.push(`sus ${nColores} color(es) (con specs, cuidados y fotos)`)
+    if (nProductosVinculados) detalle.push(`su vínculo con ${nProductosVinculados} producto(s) en producto_telas`)
+    const aviso = detalle.length ? `Esto borra también ${detalle.join(' y ')} — no se puede deshacer.\n\n` : 'No se puede deshacer.\n\n'
+
+    const escrito = prompt(`${aviso}Para confirmar, escribe exactamente el nombre del catálogo: "${t.nombre}"`)
+    if (escrito === null) return
+    if (escrito !== t.nombre) return alert('El nombre no coincide — no se eliminó nada.')
+
     try {
       const { error } = await supabase.from('telas').delete().eq('id', t.id)
       if (error) throw error
       onReloadTelas()
-    } catch {
-      alert('No se pudo eliminar (tiene colores u otros datos asociados). Desactívala en vez de borrarla.')
+    } catch (err) {
+      alert(`No se pudo eliminar: ${err.message}`)
     }
   }
 
@@ -980,10 +1020,28 @@ function Colecciones({ grados, telas, onReloadTelas }) {
                 <td><span className="grado-pill">{t.grado}</span></td>
                 <td style={{ color: '#6B7280' }}>{t.descripcion ?? '—'}</td>
                 <td>{t.colores?.[0]?.count ?? 0}</td>
-                <td>{t.activo ? '✅' : <span style={{ color: '#D97706' }}>⏸</span>}</td>
+                <td>
+                  <button
+                    type="button"
+                    className="adm-btn-sm"
+                    onClick={() => toggleActivo(t)}
+                    title={t.activo ? 'Desactivar (se oculta de Materiales y el configurador, reversible)' : 'Activar'}
+                    style={{ color: t.activo ? '#059669' : '#D97706' }}
+                  >
+                    {t.activo ? '✅ Activa' : '⏸ Inactiva'}
+                  </button>
+                </td>
                 <td className="adm-cell-actions">
                   <button type="button" className="adm-icon-btn" onClick={() => openEdit(t)}>✎</button>
-                  <button type="button" className="adm-icon-btn" onClick={() => eliminar(t)}><TrashIcon /></button>
+                  <button
+                    type="button"
+                    className="adm-icon-btn"
+                    onClick={() => eliminar(t)}
+                    title="Borrar de verdad (irreversible) — usa Desactivar para el caso normal"
+                    style={{ opacity: .55 }}
+                  >
+                    <TrashIcon />
+                  </button>
                 </td>
               </tr>
             ))}
@@ -1090,6 +1148,7 @@ function Colores({ grados, telas, onReloadTelas }) {
   }
 
   const toggleColorActivo = async (color) => { await supabase.from('tela_colores').update({ activo: !color.activo }).eq('id', color.id); loadColores(selectedTelaId) }
+  const updateOrden = async (color, orden) => { await supabase.from('tela_colores').update({ orden }).eq('id', color.id); loadColores(selectedTelaId) }
   const deleteColor = async (id) => {
     if (!confirm('¿Eliminar este color?')) return
     await supabase.from('tela_colores').delete().eq('id', id)
@@ -1205,6 +1264,7 @@ function Colores({ grados, telas, onReloadTelas }) {
                   <div key={color.id} className="adm-swatch-card">
                     <div className="adm-swatch-edit">
                       <button type="button" className="adm-icon-btn" onClick={() => openEdit(color)}>✎</button>
+                      <button type="button" className="adm-icon-btn" onClick={() => toggleColorActivo(color)} title={color.activo ? 'Desactivar' : 'Activar'}>{color.activo ? '⏸' : '▶'}</button>
                       <button type="button" className="adm-icon-btn" onClick={() => deleteColor(color.id)}><TrashIcon /></button>
                     </div>
                     <div
@@ -1213,6 +1273,14 @@ function Colores({ grados, telas, onReloadTelas }) {
                     />
                     <div className="adm-swatch-name">{color.nombre}</div>
                     <div className="adm-swatch-code">{color.codigo_hex ?? (color.activo ? '' : 'inactivo')}</div>
+                    <div className="adm-field" style={{ marginTop: 4 }}>
+                      <label className="adm-label">Orden</label>
+                      <input
+                        className="adm-input" type="number" style={{ width: 56 }}
+                        defaultValue={color.orden}
+                        onBlur={e => { const v = parseInt(e.target.value, 10); if (v !== color.orden && !isNaN(v)) updateOrden(color, v) }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
