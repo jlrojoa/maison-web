@@ -8,6 +8,7 @@ import ProductPage from './pages/ProductPage'
 import Distribuidores from './pages/Distribuidores'
 import Configurador from './pages/Configurador'
 import MiEspacio from './pages/MiEspacio'
+import MiEspacioDescargas from './pages/MiEspacioDescargas'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -23,6 +24,7 @@ const Dashboard = lazy(() => import('./admin/catalogo/Dashboard'))
 const AdminProducts = lazy(() => import('./admin/catalogo/AdminProducts'))
 const AdminLeads = lazy(() => import('./admin/AdminLeads'))
 const AdminDistribuidores = lazy(() => import('./admin/AdminDistribuidores'))
+const AdminCatalogos = lazy(() => import('./admin/AdminCatalogos'))
 
 function AdminFallback() {
   return (
@@ -46,6 +48,7 @@ export default function App() {
           <Route path="/configurador/:categoria" element={<Configurador />} />
           <Route path="/configurador/:categoria/:productoSlug" element={<Configurador />} />
           <Route path="/mi-espacio" element={<MiEspacio />} />
+          <Route path="/mi-espacio/descargas" element={<MiEspacioDescargas />} />
           <Route path="/admin/login" element={<Suspense fallback={<AdminFallback />}><AdminLogin /></Suspense>} />
           <Route
             path="/admin"
@@ -59,6 +62,7 @@ export default function App() {
             <Route path="productos/*" element={<Suspense fallback={<AdminFallback />}><AdminProducts /></Suspense>} />
             <Route path="leads" element={<Suspense fallback={<AdminFallback />}><AdminLeads /></Suspense>} />
             <Route path="distribuidores" element={<Suspense fallback={<AdminFallback />}><AdminDistribuidores /></Suspense>} />
+            <Route path="catalogos" element={<Suspense fallback={<AdminFallback />}><AdminCatalogos /></Suspense>} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

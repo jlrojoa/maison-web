@@ -39,6 +39,13 @@ export default function Nav({ solid = false }) {
               Mi Espacio
             </a>
             <a
+              href="/mi-espacio/descargas"
+              onClick={e => { e.preventDefault(); navigate('/mi-espacio/descargas') }}
+              style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'inherit', textDecoration: 'none', opacity: .85 }}
+            >
+              Descargas
+            </a>
+            <a
               href="/distribuidores"
               onClick={e => { e.preventDefault(); navigate('/distribuidores') }}
               className="nbtn"

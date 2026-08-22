@@ -64,6 +64,9 @@ export default function AdminLayout() {
           <NavLink to="/admin/distribuidores" className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
             <span className="adm-nav-icon">◔</span> Distribuidores
           </NavLink>
+          <NavLink to="/admin/catalogos" className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
+            <span className="adm-nav-icon">⇩</span> Descargas
+          </NavLink>
           <div className="adm-nav-item adm-disabled"><span className="adm-nav-icon">⚙</span> Ajustes</div>
           <div className="adm-nav-item adm-disabled"><span className="adm-nav-icon">▣</span> Roles</div>
         </div>
