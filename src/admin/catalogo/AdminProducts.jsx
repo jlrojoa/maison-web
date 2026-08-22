@@ -935,7 +935,9 @@ function Colecciones({ grados, telas, onReloadTelas }) {
       if (editing) {
         await supabase.from('telas').update({ nombre: form.nombre, grado: form.grado, descripcion: form.descripcion }).eq('id', editing)
       } else {
-        await supabase.from('telas').insert({ nombre: form.nombre, grado: form.grado, descripcion: form.descripcion, activo: true })
+        // slug se fija solo al crear (igual que productos) — no se regenera al renombrar,
+        // para no romper un enlace de /materiales ya compartido.
+        await supabase.from('telas').insert({ nombre: form.nombre, slug: slugify(form.nombre), grado: form.grado, descripcion: form.descripcion, activo: true })
       }
       close()
       onReloadTelas()
@@ -1072,7 +1074,7 @@ function Colores({ grados, telas, onReloadTelas }) {
         if (error) throw error
         const { data: urlData } = supabase.storage.from(BUCKET_TELAS).getPublicUrl(path)
         const { error: insErr } = await supabase.from('tela_colores').insert({
-          tela_id: selectedTela.id, nombre: item.nombre, imagen_url: urlData.publicUrl, orden: startOrden + i, activo: true,
+          tela_id: selectedTela.id, nombre: item.nombre, slug: slugify(item.nombre), imagen_url: urlData.publicUrl, orden: startOrden + i, activo: true,
         })
         if (insErr) throw insErr
       }
@@ -1101,6 +1103,7 @@ function Colores({ grados, telas, onReloadTelas }) {
       nombre: color.nombre ?? '', codigo_hex: color.codigo_hex ?? '', composicion: color.composicion ?? '',
       pais_origen: color.pais_origen ?? '', martindale: color.martindale ?? '', resistencia_luz: color.resistencia_luz ?? '',
       pilling: color.pilling ?? '', facil_limpieza: color.facil_limpieza ?? false, repelente_liquidos: color.repelente_liquidos ?? false,
+      cuidados: color.cuidados ?? '',
     })
   }
   const setEditField = (k, v) => setEditForm(f => ({ ...f, [k]: v }))
@@ -1117,6 +1120,7 @@ function Colores({ grados, telas, onReloadTelas }) {
         pilling: editForm.pilling || null,
         facil_limpieza: editForm.facil_limpieza,
         repelente_liquidos: editForm.repelente_liquidos,
+        cuidados: editForm.cuidados || null,
       }).eq('id', editingColor)
       setEditingColor(null)
       loadColores(selectedTelaId)
@@ -1250,6 +1254,11 @@ function Colores({ grados, telas, onReloadTelas }) {
                   <div className="adm-toggle-row"><div className="adm-toggle-label">Repelente a líquidos</div>
                     <button type="button" className={`adm-switch ${editForm.repelente_liquidos ? '' : 'adm-off'}`} onClick={() => setEditField('repelente_liquidos', !editForm.repelente_liquidos)} /></div>
                 </div>
+              </div>
+              <div className="adm-field" style={{ marginTop: 4 }}>
+                <label className="adm-label">Cuidados (instrucciones, para la página pública de Materiales)</label>
+                <textarea className="adm-input" style={{ width: '100%', minHeight: 70, fontFamily: 'inherit', resize: 'vertical' }}
+                  value={editForm.cuidados} onChange={e => setEditField('cuidados', e.target.value)} />
               </div>
             </div>
           )}

@@ -24,7 +24,7 @@ export default function Nav({ solid = false }) {
       </a>
       <ul className="nav-ul">
         <li><a href="/colecciones" onClick={e => { e.preventDefault(); navigate('/colecciones') }}>Colecciones</a></li>
-        <li><a href="#mt">Materiales</a></li>
+        <li><a href="/materiales" onClick={e => { e.preventDefault(); navigate('/materiales') }}>Materiales</a></li>
         <li><a href="#kt">Showroom</a></li>
         <li><a href="#" onClick={e => e.preventDefault()}>Nosotros</a></li>
       </ul>

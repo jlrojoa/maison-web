@@ -4,6 +4,8 @@ import { DistribuidorProvider } from './contexts/DistribuidorContext'
 import { AdminAuthProvider } from './admin/catalogo/AdminAuthContext'
 import Home from './pages/Home'
 import Colecciones from './pages/Colecciones'
+import Materiales from './pages/Materiales'
+import MaterialDetalle from './pages/MaterialDetalle'
 import ProductPage from './pages/ProductPage'
 import Distribuidores from './pages/Distribuidores'
 import Configurador from './pages/Configurador'
@@ -42,6 +44,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/colecciones" element={<Colecciones />} />
+          <Route path="/materiales" element={<Materiales />} />
+          <Route path="/materiales/:idOrSlug" element={<MaterialDetalle />} />
           <Route path="/producto/:slug" element={<ProductPage />} />
           <Route path="/distribuidores" element={<Distribuidores />} />
           <Route path="/configurador" element={<Configurador />} />
