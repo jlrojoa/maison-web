@@ -306,7 +306,9 @@ export default function StickyConfigurador({ categoriaSlug, categoriaNombre, pro
               <button
                 key={color.id} type="button"
                 className={`cfg2-sw ${cfg.colorSel?.id === color.id ? 'cfg2-on' : ''}`}
-                style={{ background: color.codigo_hex || '#E2E8F0' }}
+                style={color.imagen_url
+                  ? { backgroundImage: `url(${color.imagen_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                  : { background: color.codigo_hex || '#E2E8F0' }}
                 title={color.nombre}
                 onClick={() => selectColor(color)}
               />
