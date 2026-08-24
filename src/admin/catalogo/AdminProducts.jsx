@@ -1094,9 +1094,19 @@ function Colores({ grados, telas, onReloadTelas }) {
   const [editForm, setEditForm] = useState(null)
   const [savingColor, setSavingColor] = useState(false)
   const inputRef = useRef()
+  const editPanelRef = useRef()
 
   useEffect(() => { setSelectedTelaId(prev => prev ?? telas[0]?.id ?? null) }, [telas])
   const selectedTela = telas.find(t => t.id === selectedTelaId) ?? null
+
+  // El panel de edición se renderiza debajo de todo el grid de swatches — con
+  // catálogos largos (25+ colores) queda fuera de la vista inicial y el clic
+  // en el lápiz parece no hacer nada. Bajamos hasta él automáticamente.
+  useEffect(() => {
+    if (editingColor && editPanelRef.current) {
+      editPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [editingColor])
 
   const loadColores = async (telaId) => {
     if (!telaId) { setColores([]); return }
@@ -1288,7 +1298,7 @@ function Colores({ grados, telas, onReloadTelas }) {
           </div>
 
           {editingColor && editForm && (
-            <div className="adm-card">
+            <div className="adm-card" ref={editPanelRef}>
               <div className="adm-card-header">
                 <div className="adm-card-title">Editar color: {editForm.nombre}</div>
                 <button type="button" className="adm-btn-sm adm-dark" onClick={saveEdit} disabled={savingColor}>{savingColor ? 'Guardando…' : '💾 Guardar'}</button>
