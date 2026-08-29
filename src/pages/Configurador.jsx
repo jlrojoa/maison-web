@@ -6,6 +6,7 @@ import { useDistribuidor } from '../contexts/DistribuidorContext'
 import Nav from '../components/Nav'
 import { CategoryIcon } from './CategoryIcons'
 import StickyConfigurador from './configurador/StickyConfigurador'
+import ModularesConfigurador from './configurador/ModularesConfigurador'
 import './Configurador.css'
 
 const GRADOS = ['AA', 'A', 'B', 'C']
@@ -187,13 +188,18 @@ export default function Configurador() {
 
   // Las 4 categorías con el layout nuevo (sticky + pasos colapsables) viven
   // en la URL (/configurador/:categoria/:productoSlug), no en useState local
-  // — StickyConfigurador lee todo de useParams/useSearchParams. Modulares/
-  // Mesas/Butacas siguen con el flujo legado de abajo, con su propio
-  // tipoSel/modeloSel en memoria, sin tocar.
+  // — StickyConfigurador lee todo de useParams/useSearchParams. Modulares
+  // tiene su propio layout (armado libre, piezas repetibles — no encaja en
+  // el patrón de selección única de ninguna de las dos). Mesas/Butacas
+  // siguen con el flujo legado de abajo, con su propio tipoSel/modeloSel en
+  // memoria, sin tocar.
   const STICKY_CATEGORIA_SLUGS = ['camas', 'sofas', 'escuadras-l', 'chaise-lounge']
+  const MODULARES_CATEGORIA_SLUGS = ['modulares']
 
   const selectTipo = (cat) => {
-    if (STICKY_CATEGORIA_SLUGS.includes(cat.slug)) { navigate(`/configurador/${cat.slug}`); return }
+    if (STICKY_CATEGORIA_SLUGS.includes(cat.slug) || MODULARES_CATEGORIA_SLUGS.includes(cat.slug)) {
+      navigate(`/configurador/${cat.slug}`); return
+    }
     setTipoSel(cat)
     setModeloSel(null)
     setMedidaSel(null)
@@ -238,7 +244,7 @@ export default function Configurador() {
     if (params.categoria) return // ya está en la forma canónica por path, nada que subir
     if (!searchParams.get('tipo')) return // /configurador sin querystring vieja (ej. "atrás" del navegador) — NO redirigir
     if (!modeloPreloadDone || !tipoSel) return
-    if (!STICKY_CATEGORIA_SLUGS.includes(tipoSel.slug)) return
+    if (!STICKY_CATEGORIA_SLUGS.includes(tipoSel.slug) && !MODULARES_CATEGORIA_SLUGS.includes(tipoSel.slug)) return
     navigate(`/configurador/${tipoSel.slug}${modeloSel ? '/' + modeloSel.slug : ''}`, { replace: true })
   }, [modeloPreloadDone, params.categoria, tipoSel, modeloSel, searchParams])
 
@@ -267,6 +273,15 @@ export default function Configurador() {
       <div className="cfg-page">
         <Nav solid />
         <StickyConfigurador categoriaSlug={tipoSel.slug} categoriaNombre={tipoSel.nombre} productos={productos} distribuidor={distribuidor} />
+      </div>
+    )
+  }
+
+  if (tipoSel && MODULARES_CATEGORIA_SLUGS.includes(tipoSel.slug) && !productosLoading) {
+    return (
+      <div className="cfg-page">
+        <Nav solid />
+        <ModularesConfigurador categoriaNombre={tipoSel.nombre} productos={productos} distribuidor={distribuidor} />
       </div>
     )
   }
