@@ -56,11 +56,13 @@
   border-radius: 8px; padding: 8px 12px; margin-bottom: 12px;
 }
 
-/* ===== Configuraciones predefinidas — tarjetas con diagrama isométrico =====
+/* ===== Configuraciones predefinidas — tarjetas con vista superior =====
    Antes eran píldoras de solo texto junto al nombre del modelo; ahora son
-   tarjetas propias (mismo patrón visual que mod-pieza) con un ícono
-   isométrico (PresetIso en el JSX) + "Piezas:"/"Dimensiones aprox.:" para
-   que los números no queden sueltos sin contexto. */
+   tarjetas propias (mismo patrón visual que mod-pieza) con un mini plano de
+   vista superior (PresetPlano en el JSX, misma función splitSofaLayout()
+   que usa el plano técnico principal — no un cálculo aparte) +
+   "Piezas:"/"Dimensiones aprox.:" para que los números no queden sueltos
+   sin contexto. */
 .mod-presets-section { margin-bottom: 18px; }
 .mod-presets-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
 @media (max-width: 960px) { .mod-presets-grid { grid-template-columns: repeat(3, 1fr); } }
@@ -74,11 +76,17 @@
 .mod-preset-card:hover:not(:disabled) { border-color: #0F172A; }
 .mod-preset-card:disabled { cursor: not-allowed; opacity: .5; }
 
-.mod-preset-iso-svg { width: 100%; max-width: 118px; height: 62px; display: block; flex-shrink: 0; }
-.mod-iso-face { stroke: #2A2620; stroke-width: 1; stroke-linejoin: round; }
-.mod-iso-face-top { fill: #F3F1EC; }
-.mod-iso-face-right { fill: #DDD7CB; }
-.mod-iso-face-left { fill: #C7C0B2; }
+/* Contenedor de altura fija para que las 5 tarjetas midan lo mismo sin
+   importar si el mini plano es una fila (Dos plazas) o una L de 2 filas
+   (Escuadra...). Rectángulos planos con borde — sin PiezaSVG (a este
+   tamaño el detalle de brazo/esquinero se vuelve ilegible) y sin
+   perspectiva 3D, a diferencia del PresetIso isométrico que reemplaza. */
+.mod-preset-plano-wrap { display: flex; align-items: center; justify-content: center; height: 56px; flex-shrink: 0; }
+.mod-preset-plano { display: flex; flex-direction: column; align-items: flex-start; }
+.mod-preset-plano-row { display: flex; }
+.mod-preset-plano-row-puffs { margin-top: -1px; }
+.mod-preset-plano-botcol { display: flex; flex-direction: column; margin-top: -1px; }
+.mod-preset-plano-tile { background: #EFEDE9; border: 1px solid #2A2620; margin-right: -1px; margin-bottom: -1px; flex-shrink: 0; }
 
 .mod-preset-nombre { font-size: 12.5px; font-weight: 700; color: #0F172A; }
 .mod-preset-meta {

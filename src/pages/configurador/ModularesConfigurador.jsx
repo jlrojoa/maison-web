@@ -68,63 +68,61 @@ function TelaTextura({ hex }) {
   )
 }
 
-// Diagrama isométrico de una configuración predefinida (tarjetas de
-// "Configuraciones predefinidas") — geometría simple, no foto ni render 3D:
-// cada pieza de preset.tipos es un bloque/cubo en perspectiva isométrica,
-// tejido en tira a lo largo del eje "derecha" hasta el Esquinero (si lo hay)
-// y desde ahí doblando al eje perpendicular — el mismo doblez en L que usa
-// el plano técnico principal (renderPlano/getTileSize), solo que aquí es un
-// ícono fijo de la CONFIGURACIÓN sugerida, no del armado en curso. Mismo
-// lenguaje visual grafito del plano (BLUEPRINT_COLORS): el cobre se reserva
-// para acentos de texto (ver .mod-preset-meta-label en el CSS), nunca para
-// el relleno de las piezas.
-function PresetIso({ tipos }) {
-  const w = 15 // medio-ancho de la base isométrica de cada pieza (rombo)
-  const H = 16 // altura del bloque (extrusión)
-  const dirRight = { dx: 2 * w, dy: w }
-  const dirDown = { dx: -2 * w, dy: w }
-  let x = 0, y = 0
-  let dir = dirRight
-  const cubos = []
-  for (const t of tipos) {
-    const topN = { x, y: y - w / 2 }
-    const topE = { x: x + w, y }
-    const topS = { x, y: y + w / 2 }
-    const topW = { x: x - w, y }
-    cubos.push({
-      topN, topE, topS, topW,
-      botS: { x: topS.x, y: topS.y + H },
-      botE: { x: topE.x, y: topE.y + H },
-      botW: { x: topW.x, y: topW.y + H },
-    })
-    if (t === 'corner') dir = dirDown
-    x += dir.dx
-    y += dir.dy
+// Regla de layout del armado — la misma que usa el plano técnico principal
+// (renderPlano más abajo) y ahora también el mini plano de las tarjetas de
+// preset (PresetPlano): si hay Esquinero, la fila horizontal llega hasta él
+// inclusive y el resto de las piezas (+ los Puffs) bajan en columna debajo,
+// alineados con el borde izquierdo del Esquinero. Sin Esquinero, todo es
+// una sola fila (Puffs en su propia fila abajo). UNA sola función para las
+// dos vistas — así un ajuste al doblez en L no se puede desalinear entre el
+// plano real y el preview de la tarjeta (motivo por el que el diagrama
+// isométrico anterior, con su propio cálculo de doblez, se veía roto).
+// Recibe cualquier arreglo de objetos con `.type` (piezas reales de
+// `sequence`, o el preview sintético que arma PresetPlano).
+function splitSofaLayout(piezas) {
+  const sofaPiezas = piezas.filter(p => p.type !== 'puff')
+  const puffs = piezas.filter(p => p.type === 'puff')
+  const cornerIdx = sofaPiezas.findIndex(p => p.type === 'corner')
+  const hasCorner = cornerIdx !== -1
+  return { sofaPiezas, puffs, cornerIdx, hasCorner }
+}
+
+// Mini plano de vista superior para las tarjetas de "Configuraciones
+// predefinidas" — geometría simple, sin perspectiva 3D: rectángulos planos
+// con línea divisoria (el borde de mod-preset-plano-tile), no PiezaSVG (a
+// este tamaño el detalle de brazo/esquinero se vuelve ilegible). El
+// posicionamiento es splitSofaLayout() de arriba, no un cálculo aparte.
+const PRESET_TILE_PX = 20
+function PresetPlano({ tipos }) {
+  const { sofaPiezas, puffs, cornerIdx, hasCorner } = splitSofaLayout(tipos.map((type, i) => ({ type, id: i })))
+  const tile = (key) => (
+    <div className="mod-preset-plano-tile" style={{ width: PRESET_TILE_PX, height: PRESET_TILE_PX }} key={key} />
+  )
+
+  if (!hasCorner) {
+    return (
+      <div className="mod-preset-plano" aria-hidden="true">
+        <div className="mod-preset-plano-row">{sofaPiezas.map(p => tile(p.id))}</div>
+        {puffs.length > 0 && (
+          <div className="mod-preset-plano-row mod-preset-plano-row-puffs">{puffs.map(p => tile(p.id))}</div>
+        )}
+      </div>
+    )
   }
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-  for (const c of cubos) {
-    for (const p of [c.topN, c.topE, c.topS, c.topW, c.botS, c.botE, c.botW]) {
-      if (p.x < minX) minX = p.x
-      if (p.x > maxX) maxX = p.x
-      if (p.y < minY) minY = p.y
-      if (p.y > maxY) maxY = p.y
-    }
-  }
-  const pad = 4
-  const poly = pts => pts.map(p => `${p.x},${p.y}`).join(' ')
+
+  const topRow = sofaPiezas.slice(0, cornerIdx)
+  const botRow = sofaPiezas.slice(cornerIdx + 1)
   return (
-    <svg
-      viewBox={`${minX - pad} ${minY - pad} ${maxX - minX + pad * 2} ${maxY - minY + pad * 2}`}
-      className="mod-preset-iso-svg" aria-hidden="true"
-    >
-      {cubos.map((c, i) => (
-        <g key={i}>
-          <polygon className="mod-iso-face mod-iso-face-left" points={poly([c.topW, c.topS, c.botS, c.botW])} />
-          <polygon className="mod-iso-face mod-iso-face-right" points={poly([c.topE, c.botE, c.botS, c.topS])} />
-          <polygon className="mod-iso-face mod-iso-face-top" points={poly([c.topN, c.topE, c.topS, c.topW])} />
-        </g>
-      ))}
-    </svg>
+    <div className="mod-preset-plano" aria-hidden="true">
+      <div className="mod-preset-plano-row">
+        {topRow.map(p => tile(p.id))}
+        {tile('corner')}
+      </div>
+      <div className="mod-preset-plano-botcol" style={{ marginLeft: topRow.length * PRESET_TILE_PX }}>
+        {botRow.map(p => tile(p.id))}
+        {puffs.map(p => tile(p.id))}
+      </div>
+    </div>
   )
 }
 
@@ -339,10 +337,7 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
   // el SVG, se resta esta franja de la altura real del dibujo (que se
   // escala un poco más angosto) y el texto vive debajo, en espacio propio.
   const LABEL_H = 14
-  const sofaPiezas = sequence.filter(p => p.type !== 'puff')
-  const puffsSeq = sequence.filter(p => p.type === 'puff')
-  const cornerIdx = sofaPiezas.findIndex(p => p.type === 'corner')
-  const hasCorner = cornerIdx !== -1
+  const { sofaPiezas, puffs: puffsSeq, cornerIdx, hasCorner } = splitSofaLayout(sequence)
 
   const getTileSize = (piece, variant) => {
     if (!tieneAncho(piece.type)) return { width: TILE_PX, height: TILE_PX }
@@ -567,7 +562,9 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
                     disabled={otroModeloEnCurso}
                     onClick={() => aplicarPreset(producto, preset)}
                   >
-                    <PresetIso tipos={preset.tipos} />
+                    <div className="mod-preset-plano-wrap">
+                      <PresetPlano tipos={preset.tipos} />
+                    </div>
                     <span className="mod-preset-nombre">{preset.nombre}</span>
                     <span className="mod-preset-meta">
                       <span><span className="mod-preset-meta-label">Piezas:</span> {preset.tipos.length}</span>
