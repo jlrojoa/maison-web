@@ -56,44 +56,77 @@
   border-radius: 8px; padding: 8px 12px; margin-bottom: 12px;
 }
 
-/* ===== Configuraciones predefinidas — tarjetas con vista superior =====
-   Antes eran píldoras de solo texto junto al nombre del modelo; ahora son
-   tarjetas propias (mismo patrón visual que mod-pieza) con un mini plano de
-   vista superior (PresetPlano en el JSX, misma función splitSofaLayout()
-   que usa el plano técnico principal — no un cálculo aparte) +
-   "Piezas:"/"Dimensiones aprox.:" para que los números no queden sueltos
-   sin contexto. */
+/* ===== Configuraciones predefinidas — tarjetas estilo Veka (referencia de
+   JL, 2026-08-30): blanco + sombra sutil + grises, se abandona a propósito
+   la paleta grafito/cobre del plano técnico — esta tarjeta ya no pretende
+   verse como un dibujo de ingeniería, es una tarjeta de producto normal.
+   El mini plano (PresetPlano en el JSX) sigue usando splitSofaLayout(), la
+   misma función de posicionamiento del plano técnico principal — lo único
+   que cambia aquí es el color, no el cálculo. */
 .mod-presets-section { margin-bottom: 18px; }
-.mod-presets-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+/* align-items:start (no el stretch default de Grid) a propósito — si las 5
+   tarjetas se estiran a la altura de la más alta (Escuadra...), "Dos
+   plazas" queda con un hueco vacío enorme arriba de su diagrama chico:
+   exactamente el "bloque chico flotando" que se pidió corregir. Cada
+   tarjeta toma su alto real de contenido; el diagrama entonces sí ocupa la
+   mayoría de SU propia tarjeta, sin depender de cuánto mida la vecina. */
+.mod-presets-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; align-items: start; }
 @media (max-width: 960px) { .mod-presets-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 600px) { .mod-presets-grid { grid-template-columns: repeat(2, 1fr); } }
 
 .mod-preset-card {
-  border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 12px 12px 10px; background: #fff;
-  display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer;
-  font-family: inherit; text-align: center;
+  border: 1px solid #F1F5F9; border-radius: 12px; padding: 14px 14px 12px; background: #fff;
+  box-shadow: 0 1px 2px rgba(15,23,42,.05), 0 1px 3px rgba(15,23,42,.06);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px; cursor: pointer;
+  font-family: inherit; text-align: left; transition: box-shadow .15s, border-color .15s;
 }
-.mod-preset-card:hover:not(:disabled) { border-color: #0F172A; }
+.mod-preset-card:hover:not(:disabled) {
+  border-color: #E2E8F0; box-shadow: 0 2px 6px rgba(15,23,42,.08), 0 1px 3px rgba(15,23,42,.06);
+}
 .mod-preset-card:disabled { cursor: not-allowed; opacity: .5; }
 
-/* Contenedor de altura fija para que las 5 tarjetas midan lo mismo sin
-   importar si el mini plano es una fila (Dos plazas) o una L de 2 filas
-   (Escuadra...). Rectángulos planos con borde — sin PiezaSVG (a este
-   tamaño el detalle de brazo/esquinero se vuelve ilegible) y sin
-   perspectiva 3D, a diferencia del PresetIso isométrico que reemplaza. */
-.mod-preset-plano-wrap { display: flex; align-items: center; justify-content: center; height: 56px; flex-shrink: 0; }
-.mod-preset-plano { display: flex; flex-direction: column; align-items: flex-start; }
-.mod-preset-plano-row { display: flex; }
-.mod-preset-plano-row-puffs { margin-top: -1px; }
-.mod-preset-plano-botcol { display: flex; flex-direction: column; margin-top: -1px; }
-.mod-preset-plano-tile { background: #EFEDE9; border: 1px solid #2A2620; margin-right: -1px; margin-bottom: -1px; flex-shrink: 0; }
-
-.mod-preset-nombre { font-size: 12.5px; font-weight: 700; color: #0F172A; }
-.mod-preset-meta {
-  display: flex; flex-direction: column; gap: 2px; font-size: 10.5px; color: #64748B;
-  align-self: stretch; text-align: left;
+/* Cuarta pasada de acabado (JL, 2026-08-30) — el posicionamiento sigue
+   siendo splitSofaLayout() sin tocar. Cada tile es PiezaSVG (el mismo
+   componente del plano técnico principal, ver PresetPlano en el JSX), no
+   una caja CSS decorada — el brazo izq/der y el Esquinero en L son
+   geometría real de la silueta, no un truco de fondo/diagonal encima de un
+   rectángulo genérico. El Puff usa el MISMO PRESET_TILE_PX que el resto
+   (un tamaño menor rompía el calce a ras contra la pieza contigua — solo
+   tocaban en una esquina, se veía suelto/flotando). mod-preset-plano-tile
+   ya solo es el wrapper de cada SVG, sin margen negativo (ver comentario
+   más abajo de por qué se quitó) ni relleno propio.
+   flex-grow en el wrap — el contenedor crece para llenar el espacio que le
+   sobra a la tarjeta, y el dibujo se ancla abajo-izquierda adentro, nunca
+   centrado ni con relleno visible de por medio (sigue transparente). */
+.mod-preset-plano-wrap {
+  display: flex; align-items: flex-end; justify-content: flex-start;
+  width: 100%; flex: 1 1 auto; min-height: 40px; padding: 4px; box-sizing: border-box;
 }
-.mod-preset-meta-label { font-weight: 600; color: #9C5228; }
+/* Los tiles ya NO se superponen -2px como en la versión sin silueta — ese
+   truco fusionaba bordes CSS lisos (sin contenido posicional adentro), pero
+   con PiezaSVG cada tile pinta contenido real (franja de apoyabrazos,
+   corte en L) y el que pinta encima en el DOM tapa 2px del vecino: recorta
+   la silueta de forma impredecible según el orden de pintado, y además el
+   marginLeft del botcol (topRow.length * PRESET_TILE_PX) asumía cero
+   solape, así que la columna quedaba corrida respecto al tile real. Cero
+   margen = tiles exactamente a ras (mismo ancho declarado, gap real 0px),
+   sin recorte de contenido y con el marginLeft ya correcto tal cual está
+   en el JSX. */
+.mod-preset-plano { display: flex; flex-direction: column; align-items: flex-start; }
+.mod-preset-plano-row { display: flex; align-items: flex-end; }
+.mod-preset-plano-botcol { display: flex; flex-direction: column; }
+.mod-preset-plano-tile { flex-shrink: 0; line-height: 0; }
+
+.mod-preset-nombre { font-size: 14px; font-weight: 700; color: #0F172A; margin-top: 2px; }
+/* Pendiente el copy de las 5 descripciones (JL) — el color "no negro/gris"
+   queda listo (acento tibio, no cobre) para cuando llegue el texto. */
+.mod-preset-desc { font-size: 11.5px; color: #B45309; line-height: 1.35; }
+
+.mod-preset-badge {
+  display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px;
+  background: #F1F5F9; color: #475569; font-size: 10.5px; font-weight: 600;
+}
+.mod-preset-dims { font-size: 10.5px; color: #94A3B8; }
 
 .mod-piezas { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
 @media (max-width: 960px) { .mod-piezas { grid-template-columns: repeat(3, 1fr); } }
@@ -269,11 +302,15 @@
 
 .mod-plano { display: flex; flex-direction: column; align-items: flex-start; padding-bottom: 4px; }
 .mod-plano-row { display: flex; }
-.mod-plano-row-puffs { margin-top: -1px; }
-.mod-plano-botcol { display: flex; flex-direction: column; margin-top: -1px; }
-.mod-plano-tile {
-  position: relative; flex-shrink: 0; margin-right: -1px; margin-bottom: -1px;
-}
+.mod-plano-botcol { display: flex; flex-direction: column; }
+/* Mismo bug que mod-preset-plano-tile (ver ese comentario): el margen
+   negativo fusionaba bordes CSS lisos, pero desde que PiezaSVG dibuja
+   contenido real por tipo (franja de brazo, corte en L del Esquinero), el
+   tile que pinta encima en el DOM tapa 1px del vecino y recorta su
+   silueta — y el marginLeft de mod-plano-botcol (suma de anchos reales,
+   sin restar los solapes) quedaba corrido respecto al Esquinero real.
+   Cero margen = a ras, sin recorte, sin corrimiento. */
+.mod-plano-tile { position: relative; flex-shrink: 0; }
 .mod-plano-tile-btn {
   position: relative; width: 100%; height: 100%; border: 1.5px solid rgba(42,38,32,.35); background: none;
   overflow: hidden; cursor: pointer; padding: 0; display: flex; flex-direction: column;

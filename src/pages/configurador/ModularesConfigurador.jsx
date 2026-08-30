@@ -87,40 +87,57 @@ function splitSofaLayout(piezas) {
   return { sofaPiezas, puffs, cornerIdx, hasCorner }
 }
 
+// Paleta neutra gris-azulada para el mini plano de las tarjetas de preset —
+// ni el grafito/cobre del plano técnico (BLUEPRINT_COLORS, reservado para
+// el plano real) ni el tono cálido de "sin foto" (PLACEHOLDER_COLORS):
+// blanco + gris claro azulado, mismo lenguaje que el resto de la tarjeta
+// estilo Veka (borde ~#64748B ya usado en el resto del componente).
+const PRESET_TILE_COLORS = { fill: '#FFFFFF', seat: '#F8FAFC', back: '#E2E8F0', stroke: '#64748B' }
+
 // Mini plano de vista superior para las tarjetas de "Configuraciones
-// predefinidas" — geometría simple, sin perspectiva 3D: rectángulos planos
-// con línea divisoria (el borde de mod-preset-plano-tile), no PiezaSVG (a
-// este tamaño el detalle de brazo/esquinero se vuelve ilegible). El
-// posicionamiento es splitSofaLayout() de arriba, no un cálculo aparte.
-const PRESET_TILE_PX = 20
+// predefinidas" — MISMO PiezaSVG que dibuja el plano técnico principal
+// (antes esto eran rectángulos idénticos sin importar el tipo; ahora la
+// silueta de Brazo Izq/Der/Central/Esquinero/Puff es literalmente el mismo
+// componente, solo con una paleta neutra en vez de BLUEPRINT_COLORS —
+// así un ajuste a una silueta nunca se puede desalinear entre las dos
+// vistas). El posicionamiento sigue siendo splitSofaLayout(), sin cambios.
+const PRESET_TILE_PX = 32
 function PresetPlano({ tipos }) {
   const { sofaPiezas, puffs, cornerIdx, hasCorner } = splitSofaLayout(tipos.map((type, i) => ({ type, id: i })))
-  const tile = (key) => (
-    <div className="mod-preset-plano-tile" style={{ width: PRESET_TILE_PX, height: PRESET_TILE_PX }} key={key} />
-  )
+  const tile = (p, variant) => {
+    // Corrección: el Puff usa el MISMO PRESET_TILE_PX que el resto — un
+    // tamaño distinto rompía el calce a ras contra la pieza contigua (solo
+    // tocaban en una esquina, el resto del borde quedaba suelto/flotando).
+    return (
+      <div className="mod-preset-plano-tile" key={p.id}>
+        <PiezaSVG type={variant || p.type} width={PRESET_TILE_PX} height={PRESET_TILE_PX} colors={PRESET_TILE_COLORS} />
+      </div>
+    )
+  }
 
   if (!hasCorner) {
     return (
       <div className="mod-preset-plano" aria-hidden="true">
-        <div className="mod-preset-plano-row">{sofaPiezas.map(p => tile(p.id))}</div>
+        <div className="mod-preset-plano-row">{sofaPiezas.map(p => tile(p))}</div>
         {puffs.length > 0 && (
-          <div className="mod-preset-plano-row mod-preset-plano-row-puffs">{puffs.map(p => tile(p.id))}</div>
+          <div className="mod-preset-plano-row mod-preset-plano-row-puffs">{puffs.map(p => tile(p))}</div>
         )}
       </div>
     )
   }
 
   const topRow = sofaPiezas.slice(0, cornerIdx)
+  const corner = sofaPiezas[cornerIdx]
   const botRow = sofaPiezas.slice(cornerIdx + 1)
   return (
     <div className="mod-preset-plano" aria-hidden="true">
       <div className="mod-preset-plano-row">
-        {topRow.map(p => tile(p.id))}
-        {tile('corner')}
+        {topRow.map(p => tile(p))}
+        {tile(corner)}
       </div>
       <div className="mod-preset-plano-botcol" style={{ marginLeft: topRow.length * PRESET_TILE_PX }}>
-        {botRow.map(p => tile(p.id))}
-        {puffs.map(p => tile(p.id))}
+        {botRow.map(p => tile(p, p.type === 'right' ? 'right_v' : 'center_v'))}
+        {puffs.map(p => tile(p))}
       </div>
     </div>
   )
@@ -566,10 +583,13 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
                       <PresetPlano tipos={preset.tipos} />
                     </div>
                     <span className="mod-preset-nombre">{preset.nombre}</span>
-                    <span className="mod-preset-meta">
-                      <span><span className="mod-preset-meta-label">Piezas:</span> {preset.tipos.length}</span>
-                      <span><span className="mod-preset-meta-label">Dimensiones aprox.:</span> {dimsPreset(preset.tipos)}</span>
-                    </span>
+                    {/* Línea de descripción corta — pendiente el copy de las 5
+                        (JL). El slot ya está listo con su estilo: en cuanto
+                        modularesPresets.js tenga preset.descripcion esto se
+                        muestra solo, sin tocar nada más aquí. */}
+                    {preset.descripcion && <span className="mod-preset-desc">{preset.descripcion}</span>}
+                    <span className="mod-preset-badge">{preset.tipos.length} pzas</span>
+                    <span className="mod-preset-dims">Dimensiones aprox.: {dimsPreset(preset.tipos)}</span>
                   </button>
                 ))}
               </div>

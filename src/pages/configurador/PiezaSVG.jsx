@@ -79,8 +79,13 @@ export default function PiezaSVG({ type, size, width, height, colors }) {
       <rect x="0" y="0" width="120" height="120" fill={fill} {...sw} />
       <rect x="0" y="0" width="120" height="22" fill={back} {...sw} />
       <rect x="98" y="0" width="22" height="120" fill={back} {...sw} />
-      <rect x="4" y="26" width="90" height="88" rx="1" fill={seat} {...swThin} />
-      <line x1="4" y1="73" x2="94" y2="73" {...swThin} opacity="0.35" />
+      {/* Único tipo cuyo footprint completo (0,0 120,120 arriba) sigue
+          siendo cuadrado — tiene que calzar a ras con el tile de arriba y
+          el de abajo en el doblez en L (splitSofaLayout). Lo que lo
+          distingue del resto es el asiento: un polígono en L, no un
+          rectángulo — el corte hacia el interior donde se dobla el
+          armado, en vez de una caja idéntica a 'right'. */}
+      <polygon points="4,26 54,26 54,66 94,66 94,114 4,114" fill={seat} {...swThin} />
     </>)
   } else if (type === 'center_v') {
     content = (<>
