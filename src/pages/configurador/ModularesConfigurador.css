@@ -131,9 +131,16 @@
 }
 .mod-preset-dims { font-size: 10.5px; color: #94A3B8; }
 
-.mod-piezas { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
-@media (max-width: 960px) { .mod-piezas { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 600px) { .mod-piezas { grid-template-columns: repeat(2, 1fr); } }
+/* minmax(0, 1fr), no 1fr a secas: Central/Puff traen debajo la fila de
+   píldoras de ancho (mod-pieza-anchos) que las demás tarjetas no tienen, y
+   su min-content forzaba esas dos columnas más anchas que el resto pese a
+   ser "1fr" — por eso mod-pieza-ph (aspect-ratio 4/3, width:100% de la
+   tarjeta) salía más grande ahí que en Brazo Derecho/Esquinero. Con
+   minmax(0, 1fr) las 5 columnas quedan exactamente iguales sin importar su
+   contenido, así que las 5 fotos ocupan el mismo espacio siempre. */
+.mod-piezas { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 960px) { .mod-piezas { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .mod-piezas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* mod-pieza ya no es el propio <button> — es un contenedor que agrupa el
    botón de "agregar" (mod-pieza-add, la foto+nombre+precio de siempre) y,
@@ -162,7 +169,10 @@
    selección desde el inicio (antes de tener ninguna instancia agregada).
    Mismo patrón de píldora que mod-anchos (Tu armado): reutiliza
    mod-ancho-pill / mod-ancho-pills-label sin duplicar esos estilos. */
-.mod-pieza-anchos { display: flex; align-items: center; gap: 6px; padding-top: 1px; }
+/* flex-wrap: la columna se angostó al parejar las 5 (ver .mod-piezas
+   arriba) y "Ancho: 100 cm 80 cm" ya no cabe en una sola línea sin
+   desbordar la tarjeta — envuelve a una segunda línea en vez de salirse. */
+.mod-pieza-anchos { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 1px; }
 .mod-pieza-anchos .mod-ancho-pill:disabled { cursor: not-allowed; opacity: .5; }
 
 .mod-pieza-ph {
