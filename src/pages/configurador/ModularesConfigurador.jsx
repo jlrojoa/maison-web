@@ -417,15 +417,26 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
 
   const renderPlano = () => {
     if (!hasCorner) {
+      // Sin esquinero no hay nada que "doble" que orientar — pero Espejo
+      // igual aplica acá: voltea el armado completo de lado a lado (ej.
+      // Chaise con Puff a la izquierda -> Puff a la derecha). Mismo truco
+      // que el caso con esquinero de abajo: transform:scaleX(-1) sobre TODA
+      // la figura (mod-plano-figure/mod-plano-mirrored, ya definido en CSS)
+      // en vez de reordenar `sequence` — así no hay que decidir si una
+      // pieza "Brazo Izquierdo" pasa a ser "Brazo Derecho" al cruzar de
+      // lado (serían SKUs/fotos distintos); es la MISMA pieza, solo dibujada
+      // en espejo, igual que ya se hace con el esquinero.
       const anchoTotalPx = sofaPiezas.reduce((sum, p) => sum + getTileSize(p).width, 0)
       return (
-        <>
+        <div className="mod-plano-with-dims">
           {anchoTotalPx > 0 && <DimLine sizePx={anchoTotalPx} label={`${totalHorizontalM.toFixed(2)} m`} />}
-          <div className="mod-plano">
-            <div className="mod-plano-row">{sofaPiezas.map(p => renderTile(p))}</div>
-            {puffsSeq.length > 0 && <div className="mod-plano-row mod-plano-row-puffs">{puffsSeq.map(p => renderTile(p))}</div>}
+          <div className={`mod-plano-figure ${mirrored ? 'mod-plano-mirrored' : ''}`}>
+            <div className="mod-plano">
+              <div className="mod-plano-row">{sofaPiezas.map(p => renderTile(p))}</div>
+              {puffsSeq.length > 0 && <div className="mod-plano-row mod-plano-row-puffs">{puffsSeq.map(p => renderTile(p))}</div>}
+            </div>
           </div>
-        </>
+        </div>
       )
     }
 
@@ -735,12 +746,17 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
                   no era un refactor borrándolo, era este unmount, y como
                   nada distingue "no aplica" de "se rompió" cada vez se leía
                   como bug. Ahora el bloque SIEMPRE se monta si hay
-                  secuencia; solo se deshabilita cuando no hay esquinero, así
-                  se ve gris en vez de ausente. */}
+                  secuencia. Espejo ya no depende de hasCorner: con
+                  esquinero voltea SU orientación (como antes); sin
+                  esquinero voltea el armado completo de lado a lado
+                  (renderPlano ya envuelve ambos casos en
+                  mod-plano-figure/mod-plano-mirrored). Solo se deshabilita
+                  con menos de 2 piezas, que es cuando espejar no cambia
+                  nada visualmente. */}
               {sequence.length > 0 && (
-                <div className={`mod-orientacion ${!hasCorner ? 'mod-orientacion-disabled' : ''}`} title={!hasCorner ? 'Espejo solo aplica a configuraciones con esquinero' : undefined}>
-                  <button type="button" disabled={!hasCorner} className={!mirrored ? 'mod-on' : ''} onClick={() => setMirrored(false)}>Normal</button>
-                  <button type="button" disabled={!hasCorner} className={mirrored ? 'mod-on' : ''} onClick={() => setMirrored(true)}>Espejo</button>
+                <div className={`mod-orientacion ${sequence.length < 2 ? 'mod-orientacion-disabled' : ''}`} title={sequence.length < 2 ? 'Agrega al menos 2 piezas para poder espejar' : undefined}>
+                  <button type="button" disabled={sequence.length < 2} className={!mirrored ? 'mod-on' : ''} onClick={() => setMirrored(false)}>Normal</button>
+                  <button type="button" disabled={sequence.length < 2} className={mirrored ? 'mod-on' : ''} onClick={() => setMirrored(true)}>Espejo</button>
                 </div>
               )}
             </div>
