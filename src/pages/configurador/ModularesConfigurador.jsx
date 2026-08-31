@@ -224,7 +224,14 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
 
   useEffect(() => {
     if (telaSel) return
-    const gradoConTelas = GRADOS.find(g => telas.some(t => t.grado === g)) ?? 'B'
+    // Default a Grado B — es el único grado con precios realmente
+    // capturados hoy (JL, 2026-08-31); antes esto tomaba el primer grado
+    // de GRADOS que tuviera CUALQUIER tela (AA sí tiene telas cargadas,
+    // solo que sin precio), así que el configurador siempre abría en AA
+    // mostrando "No disponible"/$0 en todo. AA/A/C se quedan seleccionables
+    // igual que antes — esto solo cambia cuál viene preseleccionado, y
+    // sigue cayendo al primero-con-telas si algún día B se queda sin telas.
+    const gradoConTelas = (telas.some(t => t.grado === 'B') ? 'B' : GRADOS.find(g => telas.some(t => t.grado === g))) ?? 'B'
     setGradoSel(gradoConTelas)
     const t = telas.find(t => t.grado === gradoConTelas) ?? null
     setTelaSel(t)
