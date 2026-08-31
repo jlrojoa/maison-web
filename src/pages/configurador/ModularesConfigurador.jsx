@@ -729,10 +729,18 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
 
             <div className="mod-lbl-row">
               <div className="mod-lbl">Secuencia armada</div>
-              {sequence.length > 0 && hasCorner && (
-                <div className="mod-orientacion">
-                  <button type="button" className={!mirrored ? 'mod-on' : ''} onClick={() => setMirrored(false)}>Normal</button>
-                  <button type="button" className={mirrored ? 'mod-on' : ''} onClick={() => setMirrored(true)}>Espejo</button>
+              {/* Antes este bloque se desmontaba por completo cuando
+                  !hasCorner (sofá lineal, sin esquinero — el espejo no
+                  aplica). Reportado 3 veces como "el toggle desapareció":
+                  no era un refactor borrándolo, era este unmount, y como
+                  nada distingue "no aplica" de "se rompió" cada vez se leía
+                  como bug. Ahora el bloque SIEMPRE se monta si hay
+                  secuencia; solo se deshabilita cuando no hay esquinero, así
+                  se ve gris en vez de ausente. */}
+              {sequence.length > 0 && (
+                <div className={`mod-orientacion ${!hasCorner ? 'mod-orientacion-disabled' : ''}`} title={!hasCorner ? 'Espejo solo aplica a configuraciones con esquinero' : undefined}>
+                  <button type="button" disabled={!hasCorner} className={!mirrored ? 'mod-on' : ''} onClick={() => setMirrored(false)}>Normal</button>
+                  <button type="button" disabled={!hasCorner} className={mirrored ? 'mod-on' : ''} onClick={() => setMirrored(true)}>Espejo</button>
                 </div>
               )}
             </div>
