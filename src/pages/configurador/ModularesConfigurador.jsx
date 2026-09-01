@@ -31,6 +31,9 @@ import { fmt } from './format'
 import { ARMADOS_SUGERIDOS } from './modularesPresets'
 import { TIPOS, NOMBRE_POR_TIPO, getAllowedTypes, addToSequence, removeFromSequence, getHintSegments, detectNombreTipo, getDisabledReason } from './modularesSequence'
 import PiezaSVG, { colorsFromHex } from './PiezaSVG'
+import { PDFViewer, pdf } from '@react-pdf/renderer'
+import ModularesCotizacionPdf from './cotizacionPdf/ModularesCotizacionPdf'
+import { buildCotizacionPdfData } from './cotizacionPdf/pdfData'
 import './ModularesConfigurador.css'
 
 const GRADOS = ['AA', 'A', 'B', 'C']
@@ -79,7 +82,7 @@ function TelaTextura({ hex }) {
 // isométrico anterior, con su propio cálculo de doblez, se veía roto).
 // Recibe cualquier arreglo de objetos con `.type` (piezas reales de
 // `sequence`, o el preview sintético que arma PresetPlano).
-function splitSofaLayout(piezas) {
+export function splitSofaLayout(piezas) {
   const sofaPiezas = piezas.filter(p => p.type !== 'puff')
   const puffs = piezas.filter(p => p.type === 'puff')
   const cornerIdx = sofaPiezas.findIndex(p => p.type === 'corner')
@@ -549,6 +552,28 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
     }
   }
 
+  // ── Vista previa del PDF (TEMPORAL, para revisión con JL antes de
+  // integrarlo al flujo real de "Crear cotización") — arma la misma forma
+  // de datos que confirmarCotizacion() ya usa (lineas, telaSel/colorSel,
+  // markup) pero solo para generar el PDF y mostrarlo en un <PDFViewer>
+  // embebido en la propia página, sin tocar Supabase ni pedir folio real.
+  // NO usa window.open(): en este entorno de pruebas el pop-up siempre
+  // vuelve null aunque la pestaña en blanco se abra igual (bloqueo del
+  // navegador automatizado), así que el visor va inline. Quitar este botón
+  // (handler + modal) una vez aprobado el formato.
+  const [previewPdfData, setPreviewPdfData] = useState(null)
+  const previewPdf = () => {
+    const producto = productos.find(p => p.id === modeloActivoId) ?? productos[0]
+    setPreviewPdfData(buildCotizacionPdfData({
+      folio: 'VISTA PREVIA',
+      fecha: new Date(),
+      productoNombre: producto?.nombre ?? '',
+      sequence, mirrored, telaSel, colorSel, gradoSel,
+      lineas, markupPct: cotizForm.markup_pct,
+      tiempoFabricacion: TIEMPO_FABRICACION,
+    }))
+  }
+
   if (productos.length === 0) {
     return <div className="cfg-message">Aún no hay modelos cargados en «{categoriaNombre}». Se agregan desde el panel de administración → Productos.</div>
   }
@@ -845,6 +870,8 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
                 <div className="mod-bar-fabricacion">Tiempo estimado de fabricación: {TIEMPO_FABRICACION}</div>
               )}
               <div className="mod-bar-actions">
+                {/* TEMPORAL — vista previa del PDF para revisión, ver previewPdf() arriba. Quitar una vez aprobado el formato. */}
+                <button type="button" className="cfg-btn cfg-btn-secondary" disabled={!puedeGuardar} onClick={previewPdf}>Vista previa PDF</button>
                 <button type="button" className="cfg-btn cfg-btn-primary" disabled={!puedeGuardar} onClick={() => abrirCotizModal('emitir')}>Crear cotización</button>
                 <button type="button" className="cfg-btn cfg-btn-secondary" disabled={!puedeGuardar} onClick={() => abrirCotizModal('borrador')}>Guardar en mi espacio</button>
               </div>
@@ -902,6 +929,33 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* TEMPORAL — visor embebido del PDF de cotización, ver previewPdf() arriba. Quitar una vez aprobado el formato. */}
+      {previewPdfData && (
+        <div className="cfg-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setPreviewPdfData(null) }}>
+          <div style={{ width: '90vw', height: '90vh', background: '#fff', borderRadius: 12, overflow: 'hidden', position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setPreviewPdfData(null)}
+              style={{ position: 'absolute', top: 10, right: 10, zIndex: 1, background: '#0F172A', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 12px', cursor: 'pointer' }}
+            >Cerrar</button>
+            <button
+              type="button"
+              onClick={async () => {
+                const blob = await pdf(<ModularesCotizacionPdf data={previewPdfData} />).toBlob()
+                const a = document.createElement('a')
+                a.href = URL.createObjectURL(blob)
+                a.download = 'cotizacion-preview.pdf'
+                a.click()
+              }}
+              style={{ position: 'absolute', top: 10, right: 80, zIndex: 1, background: '#64748B', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 12px', cursor: 'pointer' }}
+            >Descargar</button>
+            <PDFViewer style={{ width: '100%', height: '100%', border: 'none' }}>
+              <ModularesCotizacionPdf data={previewPdfData} />
+            </PDFViewer>
           </div>
         </div>
       )}

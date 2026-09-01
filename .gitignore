@@ -27,3 +27,6 @@ dist-ssr
 
 .worktrees
 _froca-uploads/
+
+# Prototipo de referencia (Modulares) — no es parte de la app, solo consulta local
+bayside.html
