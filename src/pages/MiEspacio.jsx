@@ -35,16 +35,28 @@ export default function MiEspacio() {
   const [cargando, setCargando] = useState(true)
   const [filtro, setFiltro] = useState('todas')
   const [busy, setBusy] = useState(null)
+  const [errorCarga, setErrorCarga] = useState(null)
 
+  // Antes `error` se descartaba en silencio y una falla de query (ej. un
+  // 400 por un embed de PostgREST que no puede resolver una relación) se
+  // veía exactamente igual que "no tienes cotizaciones" — mismo bug que
+  // dejó "Mi Espacio" vacío sin ningún indicio de qué pasaba (JL,
+  // 2026-09-02). Ahora el error se guarda y se muestra aparte del estado
+  // vacío real.
   const load = async () => {
-    if (!distribuidor) { setCotizaciones([]); setCargando(false); return }
+    if (!distribuidor) { setCotizaciones([]); setErrorCarga(null); setCargando(false); return }
     setCargando(true)
     const { data, error } = await supabase
       .from('cotizaciones')
       .select('*, items:cotizacion_items(*, producto:productos(slug, categoria:categorias(slug)))')
       .eq('distribuidor_email', distribuidor.email)
       .order('created_at', { ascending: false })
-    if (!error) setCotizaciones(data ?? [])
+    if (error) {
+      setErrorCarga(error.message)
+    } else {
+      setErrorCarga(null)
+      setCotizaciones(data ?? [])
+    }
     setCargando(false)
   }
 
@@ -131,7 +143,13 @@ export default function MiEspacio() {
           ))}
         </div>
 
-        {visibles.length === 0 ? (
+        {errorCarga ? (
+          <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '24px', color: '#B91C1C', fontSize: 13 }}>
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>No se pudieron cargar tus cotizaciones.</div>
+            <div style={{ marginBottom: 12 }}>{errorCarga}</div>
+            <button type="button" onClick={load} style={{ ...btnStyle(), borderColor: '#B91C1C', color: '#B91C1C' }}>Reintentar</button>
+          </div>
+        ) : visibles.length === 0 ? (
           <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: '40px 24px', textAlign: 'center', color: '#64748B', fontSize: 13 }}>
             {cotizaciones.length === 0
               ? <>Aún no tienes cotizaciones. Créalas desde el <a href="/configurador" style={{ color: '#0F172A' }}>configurador</a>.</>
