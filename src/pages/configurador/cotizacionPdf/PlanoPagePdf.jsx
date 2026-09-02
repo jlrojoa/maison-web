@@ -148,7 +148,7 @@ export default function PlanoPagePdf({ data, empresa }) {
 
       <View style={s.footerHr}>
         <View style={s.footerRow}>
-          <View style={{ maxWidth: 340 }}>
+          <View style={{ maxWidth: 430 }}>
             <Text style={[s.footerLeft, s.footerBold]}>Brendell Modular · {empresa.razonSocial}</Text>
             <Text style={[s.footerLeft, s.footerMuted]}>RFC: {empresa.rfc}</Text>
             <Text style={[s.footerLeft, s.footerMuted]}>{empresa.direccion}</Text>
