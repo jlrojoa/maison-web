@@ -16,11 +16,14 @@ const s = StyleSheet.create({
   presentadoPor: { fontSize: 7, color: COLORS.inkMuted, letterSpacing: 1.5, marginBottom: 3 },
   brand: { fontSize: 18, fontWeight: 700, letterSpacing: 1 },
   brandContact: { fontSize: 7.5, color: COLORS.inkMuted, marginTop: 4, lineHeight: 1.5 },
-  folioBadge: { backgroundColor: COLORS.headerBg, borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12, alignItems: 'center' },
-  folioLabel: { fontSize: 6.5, color: '#94A3B8', letterSpacing: 1.5 },
-  folioValue: { fontSize: 13, color: '#fff', fontWeight: 700, marginTop: 2 },
+  folioBadge: { backgroundColor: COLORS.accentBg, borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12, alignItems: 'center' },
+  folioLabel: { fontSize: 6.5, color: COLORS.copperText, letterSpacing: 1.5 },
+  folioValue: { fontSize: 13, color: COLORS.ink, fontWeight: 700, marginTop: 2 },
   metaRight: { fontSize: 7.5, color: COLORS.inkMuted, textAlign: 'right', marginTop: 6, lineHeight: 1.5 },
-  hr: { borderBottomWidth: 1.5, borderBottomColor: COLORS.ink, marginTop: 12, marginBottom: 16 },
+  // Beige en vez de negro (pedido de JL, 2026-09-02) — SOLO este PDF, ver
+  // pdfTheme.js. accentBg también reemplaza al negro que tenían folioBadge
+  // y totalBox más abajo.
+  hr: { borderBottomWidth: 3, borderBottomColor: COLORS.accentBg, marginTop: 12, marginBottom: 16 },
   sectionLabel: { fontSize: 8, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 1, marginBottom: 8 },
 
   table: { borderRadius: 6, overflow: 'hidden' },
@@ -37,15 +40,16 @@ const s = StyleSheet.create({
   cardLabel: { fontSize: 7, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.8, marginBottom: 3 },
   cardValue: { fontSize: 11, fontWeight: 600, color: COLORS.ink },
   cardSub: { fontSize: 7.5, color: COLORS.inkMuted, marginTop: 1 },
+  telaLine: { fontSize: 9, fontWeight: 600, color: COLORS.ink, lineHeight: 1.3 },
 
   totalBox: {
-    marginTop: 18, backgroundColor: COLORS.headerBg, borderRadius: 8,
+    marginTop: 18, backgroundColor: COLORS.accentBg, borderRadius: 8,
     paddingVertical: 14, paddingHorizontal: 16,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
-  totalLabel: { fontSize: 8, color: '#CBD5E1', letterSpacing: 1 },
-  totalValue: { fontSize: 20, color: '#fff', fontWeight: 700, marginTop: 2 },
-  totalArmado: { fontSize: 8.5, color: '#CBD5E1', textAlign: 'right' },
+  totalLabel: { fontSize: 8, color: COLORS.copperText, letterSpacing: 1 },
+  totalValue: { fontSize: 20, color: COLORS.ink, fontWeight: 700, marginTop: 2 },
+  totalArmado: { fontSize: 8.5, color: COLORS.inkMuted, textAlign: 'right' },
 
   fabricacionBox: {
     marginTop: 12, borderWidth: 1, borderColor: COLORS.copperLineFaint, borderRadius: 8,
@@ -62,16 +66,17 @@ const s = StyleSheet.create({
   footerRight: { fontSize: 8, color: COLORS.inkMuted, textAlign: 'right' },
 })
 
-export default function DetallePagePdf({ data, casaMin }) {
+export default function DetallePagePdf({ data, empresa }) {
   return (
     <Page size="LETTER" style={s.page}>
       <View style={s.headerRow}>
-        <View>
+        <View style={{ maxWidth: 300 }}>
           <Text style={s.presentadoPor}>PRESENTADO POR</Text>
           <Text style={s.brand}>BRENDELL MODULAR</Text>
           <Text style={s.brandContact}>
-            {casaMin.razonSocial} · RFC {casaMin.rfc}{'\n'}
-            {casaMin.direccion} · {casaMin.telefono}
+            {empresa.razonSocial} · RFC {empresa.rfc}{'\n'}
+            {empresa.direccion}{'\n'}
+            {empresa.telefono} · {empresa.email}
           </Text>
         </View>
         <View>
@@ -111,8 +116,8 @@ export default function DetallePagePdf({ data, casaMin }) {
 
       <View style={s.cards}>
         <View style={s.card}>
-          <Text style={s.cardLabel}>TONO DE TELA</Text>
-          <Text style={s.cardValue}>{data.colorNombre || '—'}</Text>
+          <Text style={s.cardLabel}>TELA</Text>
+          <Text style={s.telaLine}>Catálogo: {data.telaNombre || '—'} · Color: {data.colorNombre || '—'} · Categoría: {data.gradoSel || '—'}</Text>
           <Text style={s.cardSub}>Orientación: {data.orientacion}</Text>
         </View>
         <View style={s.card}>
@@ -141,11 +146,15 @@ export default function DetallePagePdf({ data, casaMin }) {
 
       <View style={s.footerHr}>
         <View style={s.footerRow}>
-          <View>
-            <Text style={[s.footerLeft, s.footerBold]}>Brendell Modular · {casaMin.razonSocial}</Text>
-            <Text style={[s.footerLeft, s.footerMuted]}>RFC: {casaMin.rfc} · {casaMin.direccion}</Text>
+          <View style={{ maxWidth: 340 }}>
+            <Text style={[s.footerLeft, s.footerBold]}>Brendell Modular · {empresa.razonSocial}</Text>
+            <Text style={[s.footerLeft, s.footerMuted]}>RFC: {empresa.rfc}</Text>
+            <Text style={[s.footerLeft, s.footerMuted]}>{empresa.direccion}</Text>
           </View>
-          <Text style={s.footerRight}>{casaMin.telefono}</Text>
+          <View>
+            <Text style={s.footerRight}>{empresa.telefono}</Text>
+            <Text style={s.footerRight}>{empresa.email}</Text>
+          </View>
         </View>
       </View>
     </Page>

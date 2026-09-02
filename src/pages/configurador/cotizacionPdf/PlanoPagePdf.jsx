@@ -23,7 +23,8 @@ const s = StyleSheet.create({
   headerRight: { alignItems: 'flex-end' },
   titulo: { fontSize: 9, fontWeight: 700, color: COLORS.copperText, letterSpacing: 0.5 },
   fecha: { fontSize: 8, color: COLORS.inkMuted, marginTop: 2 },
-  hr: { borderBottomWidth: 1, borderBottomColor: COLORS.ink, marginTop: 8, marginBottom: 18 },
+  // Beige en vez de negro (pedido de JL, 2026-09-02) — SOLO este PDF, ver pdfTheme.js.
+  hr: { borderBottomWidth: 3, borderBottomColor: COLORS.accentBg, marginTop: 8, marginBottom: 18 },
   panel: {
     backgroundColor: COLORS.panelBg, borderRadius: 8, padding: 20,
     minHeight: 300, alignItems: 'center', justifyContent: 'center',
@@ -58,7 +59,7 @@ function tileSize(piece) {
   return Math.round(TILE_PT * escala)
 }
 
-export default function PlanoPagePdf({ data, casaMin }) {
+export default function PlanoPagePdf({ data, empresa }) {
   const { sofaPiezas, puffs, cornerIdx, hasCorner } = splitSofaLayout(data.sequence)
   const anchoTotalPt = (hasCorner ? sofaPiezas.slice(0, cornerIdx + 1) : sofaPiezas)
     .reduce((sum, p) => sum + tileSize(p), 0)
@@ -113,7 +114,7 @@ export default function PlanoPagePdf({ data, casaMin }) {
       <View style={s.headerRow}>
         <View>
           <Text style={s.brand}>BRENDELL MODULAR</Text>
-          <Text style={s.brandSub}>PRESENTADO POR CASA MIN</Text>
+          <Text style={s.brandSub}>PRESENTADO POR {empresa.razonSocial.toUpperCase()}</Text>
         </View>
         <View style={s.headerRight}>
           <Text style={s.titulo}>PLANO TÉCNICO · {data.folio}</Text>
@@ -147,11 +148,15 @@ export default function PlanoPagePdf({ data, casaMin }) {
 
       <View style={s.footerHr}>
         <View style={s.footerRow}>
-          <View>
-            <Text style={[s.footerLeft, s.footerBold]}>Brendell Modular · {casaMin.razonSocial}</Text>
-            <Text style={[s.footerLeft, s.footerMuted]}>RFC: {casaMin.rfc} · {casaMin.direccion}</Text>
+          <View style={{ maxWidth: 340 }}>
+            <Text style={[s.footerLeft, s.footerBold]}>Brendell Modular · {empresa.razonSocial}</Text>
+            <Text style={[s.footerLeft, s.footerMuted]}>RFC: {empresa.rfc}</Text>
+            <Text style={[s.footerLeft, s.footerMuted]}>{empresa.direccion}</Text>
           </View>
-          <Text style={s.footerRight}>{casaMin.telefono}</Text>
+          <View>
+            <Text style={s.footerRight}>{empresa.telefono}</Text>
+            <Text style={s.footerRight}>{empresa.email}</Text>
+          </View>
         </View>
       </View>
     </Page>

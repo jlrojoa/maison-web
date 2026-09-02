@@ -15,7 +15,12 @@ export const COLORS = {
   panelBgAlt: '#FFFFFF', // fondo de página / tarjetas sobre el panel
   border: '#E2E8F0', // gris neutro ya establecido para tarjetas/tablas (no beige)
   fillNeutro: '#F8FAFC',
-  headerBg: '#0F172A', // franja oscura del encabezado (folio), mismo tono que .mod-tela-card.mod-on etc.
+  // Beige claro — SOLO para este PDF, pedido explícito de JL (2026-09-02)
+  // para reemplazar el negro/navy (#0F172A) que tenían el badge de folio y
+  // la caja de precio total. El resto de la app (.mod-* en
+  // ModularesConfigurador.css) sigue con la prohibición de beige de
+  // siempre — NO usar accentBg fuera de src/pages/configurador/cotizacionPdf/.
+  accentBg: '#E9DFCB',
 }
 
 // Mismos valores que BLUEPRINT_COLORS en ModularesConfigurador.jsx — el

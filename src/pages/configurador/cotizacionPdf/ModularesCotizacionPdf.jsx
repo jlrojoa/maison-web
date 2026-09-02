@@ -6,7 +6,7 @@
 // completos, y JL pidió explícitamente no inventarlas.
 import { Document } from '@react-pdf/renderer'
 import { registrarFuentesPdf } from './pdfFonts'
-import { CASA_MIN } from './casaMin'
+import { EMPRESA } from './empresa'
 import DetallePagePdf from './DetallePagePdf'
 import PlanoPagePdf from './PlanoPagePdf'
 
@@ -15,8 +15,8 @@ registrarFuentesPdf()
 export default function ModularesCotizacionPdf({ data }) {
   return (
     <Document title={`Cotización ${data.folio} · Brendell Modular`}>
-      <DetallePagePdf data={data} casaMin={CASA_MIN} />
-      <PlanoPagePdf data={data} casaMin={CASA_MIN} />
+      <DetallePagePdf data={data} empresa={EMPRESA} />
+      <PlanoPagePdf data={data} empresa={EMPRESA} />
     </Document>
   )
 }
