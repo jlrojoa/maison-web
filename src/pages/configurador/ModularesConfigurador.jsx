@@ -163,7 +163,7 @@ const dimsPreset = (tipos) => {
 // sin ícono (pedido explícito de JL). Sin regla automática: JL cambia este
 // valor a mano cuando un armado requiere negociar el tiempo en vez del
 // default de 6 semanas — no hay lógica que lo detecte sola todavía.
-const TIEMPO_FABRICACION = '6 semanas'
+export const TIEMPO_FABRICACION = '6 semanas'
 // const TIEMPO_FABRICACION = 'Tiempo a negociar'
 
 export default function ModularesConfigurador({ productos, distribuidor, categoriaNombre }) {
@@ -519,6 +519,13 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
     try {
       const textilNombre = `${telaSel.nombre} (${telaSel.grado}) · ${colorSel.nombre}`
 
+      // secuencia_pdf: guarda el arreglo ORDENADO de piezas + Normal/Espejo
+      // tal cual estaban al emitir — cotizacion_items agrupa por tipo+ancho
+      // (ej. "Módulo Central × 2") y con eso solo no alcanza para saber si
+      // esas 2 piezas van ambas antes del esquinero, ambas después, o una
+      // de cada lado. Sin este campo, "descargar el mismo PDF" después
+      // tendría que adivinar el doblez en L. Pedido explícito de JL,
+      // 2026-09-02 — ver migración add_cotizaciones_secuencia_pdf.
       const { data: cot, error: cotErr } = await supabase.from('cotizaciones').insert({
         distribuidor_email: distribuidor.email,
         nombre_proyecto: `Modulares · ${nombreArmado}`,
@@ -528,6 +535,7 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
         cliente_nombre: cotizForm.cliente_nombre.trim(),
         cliente_email: cotizForm.cliente_email.trim() || null,
         cliente_telefono: cotizForm.cliente_telefono.trim() || null,
+        secuencia_pdf: { sequence: sequence.map(p => ({ type: p.type, ancho: p.ancho ?? null })), mirrored },
       }).select().single()
       if (cotErr) throw cotErr
 

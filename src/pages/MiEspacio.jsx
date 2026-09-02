@@ -6,9 +6,13 @@
 // que faltaba.
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { pdf } from '@react-pdf/renderer'
 import { supabase } from '../lib/supabase'
 import { useDistribuidor } from '../contexts/DistribuidorContext'
 import Nav from '../components/Nav'
+import ModularesCotizacionPdf from './configurador/cotizacionPdf/ModularesCotizacionPdf'
+import { buildCotizacionPdfDataFromCotizacion } from './configurador/cotizacionPdf/pdfDataFromSaved'
+import { TIEMPO_FABRICACION } from './configurador/ModularesConfigurador'
 
 const fmt = v => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(v)
 const fmtDate = v => v ? new Date(v).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
@@ -36,6 +40,7 @@ export default function MiEspacio() {
   const [filtro, setFiltro] = useState('todas')
   const [busy, setBusy] = useState(null)
   const [errorCarga, setErrorCarga] = useState(null)
+  const [descargando, setDescargando] = useState(null)
 
   // Antes `error` se descartaba en silencio y una falla de query (ej. un
   // 400 por un embed de PostgREST que no puede resolver una relación) se
@@ -116,6 +121,30 @@ export default function MiEspacio() {
     }
   }
 
+  // Regenera el PDF desde los datos YA GUARDADOS de esa cotización
+  // (secuencia_pdf + cotizacion_items, precios ya congelados) — nunca
+  // desde el estado en vivo del configurador, para que "descargar" siga
+  // dando el mismo documento aunque el distribuidor esté armando otra
+  // cosa en ese momento, o los precios/telas hayan cambiado desde
+  // entonces. Solo aplica a cotizaciones de Modulares con secuencia_pdf
+  // guardada (ver puedeDescargar más abajo) — las demás categorías no
+  // tienen generador de PDF todavía.
+  const descargarPdf = async (cot) => {
+    setDescargando(cot.id)
+    try {
+      const data = buildCotizacionPdfDataFromCotizacion(cot, TIEMPO_FABRICACION)
+      const blob = await pdf(<ModularesCotizacionPdf data={data} />).toBlob()
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `cotizacion-${data.folio}.pdf`
+      a.click()
+    } catch (err) {
+      alert(`No se pudo generar el PDF: ${err.message}`)
+    } finally {
+      setDescargando(null)
+    }
+  }
+
   if (loading || cargando) {
     return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'system-ui', color: '#64748B', fontSize: 13 }}>Cargando…</div>
   }
@@ -163,6 +192,10 @@ export default function MiEspacio() {
             borrador: { background: '#F1F5F9', color: '#64748B' },
             vencida: { background: '#FEF2F2', color: '#B91C1C' },
           }[estado]
+          // Solo cotizaciones de Modulares emitidas después de que
+          // secuencia_pdf existiera tienen lo necesario para regenerar el
+          // PDF (mismo criterio que descargarPdf(), que si no tira error).
+          const puedeDescargar = estado === 'emitida' && !!cot.secuencia_pdf?.sequence?.length
           return (
             <div key={cot.id} style={{
               background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: '20px 24px', marginBottom: 12,
@@ -170,7 +203,11 @@ export default function MiEspacio() {
             }}>
               <div style={{ borderRight: '1px solid #F1F5F9', paddingRight: 24 }}>
                 <div style={{ fontSize: 16, fontWeight: 600 }}>
-                  {cot.folio ? `BR-${cot.folio}` : <span style={{ color: '#94A3B8', fontStyle: 'italic', fontWeight: 400 }}>Sin folio</span>}
+                  {cot.folio
+                    ? (puedeDescargar
+                      ? <button type="button" onClick={() => descargarPdf(cot)} disabled={descargando === cot.id} title="Descargar PDF de esta cotización" style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', fontWeight: 600, color: '#0F172A', cursor: 'pointer', textDecoration: 'underline', textDecorationColor: '#CBD5E1' }}>BR-{cot.folio}</button>
+                      : `BR-${cot.folio}`)
+                    : <span style={{ color: '#94A3B8', fontStyle: 'italic', fontWeight: 400 }}>Sin folio</span>}
                 </div>
                 <div style={{ fontSize: 11, color: '#94A3B8' }}>{fmtDate(cot.created_at)}</div>
                 <span style={{ display: 'inline-block', fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 3, marginTop: 6, textTransform: 'uppercase', letterSpacing: '.5px', ...badgeStyle }}>
@@ -189,7 +226,12 @@ export default function MiEspacio() {
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 {estado === 'emitida' && (
-                  <button type="button" onClick={() => enviar(cot)} style={btnStyle()}>Enviar</button>
+                  <>
+                    <button type="button" onClick={() => enviar(cot)} style={btnStyle()}>Enviar</button>
+                    {puedeDescargar && (
+                      <button type="button" disabled={descargando === cot.id} onClick={() => descargarPdf(cot)} style={btnStyle()}>{descargando === cot.id ? '…' : 'Descargar'}</button>
+                    )}
+                  </>
                 )}
                 {estado === 'borrador' && (
                   <>
