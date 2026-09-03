@@ -43,10 +43,14 @@ const s = StyleSheet.create({
   footerRight: { fontSize: 8, color: COLORS.inkMuted, textAlign: 'right' },
 })
 
-function Tile({ piece, variant, widthPt, heightPt, label }) {
+// `mirrored` pasa directo a PiezaSvgPdf, que espeja la silueta con el
+// atributo SVG nativo `transform` — la etiqueta de texto ("100cm") no
+// necesita contra-espejarse porque nunca se aplicó ningún transform al
+// contenedor que la envuelve (ver nota en PlanoPagePdf más abajo).
+function Tile({ piece, variant, widthPt, heightPt, label, mirrored }) {
   return (
     <View style={s.tileWrap}>
-      <PiezaSvgPdf type={variant || piece.type} width={widthPt} height={heightPt - LABEL_H_PT} colors={BLUEPRINT_PIEZA_COLORS} />
+      <PiezaSvgPdf type={variant || piece.type} width={widthPt} height={heightPt - LABEL_H_PT} colors={BLUEPRINT_PIEZA_COLORS} mirrored={mirrored} />
       <Text style={[s.tileDim, { width: widthPt }]}>{label}</Text>
     </View>
   )
@@ -63,18 +67,33 @@ export default function PlanoPagePdf({ data, empresa }) {
   const { sofaPiezas, puffs, cornerIdx, hasCorner } = splitSofaLayout(data.sequence)
   const anchoTotalPt = (hasCorner ? sofaPiezas.slice(0, cornerIdx + 1) : sofaPiezas)
     .reduce((sum, p) => sum + tileSize(p), 0)
+  const mirrored = !!data.mirrored
 
+  // Espejo: NO hay transform CSS global sobre todo el plano — se intentó
+  // (View { transform: 'scaleX(-1)' }) y no se aplicaba visualmente en
+  // esta versión de react-pdf pese a que el pipeline de
+  // @react-pdf/stylesheet se veía correcto revisando el código fuente
+  // (bug/limitación no resuelta de esa ruta específica). En vez de eso:
+  // 1) cada fila se reordena con flexDirection:'row-reverse' (la pieza
+  //    que iba primera en el arreglo pasa a dibujarse última, visualmente
+  //    a la derecha — mismo resultado que un espejo horizontal del orden)
+  // 2) cada PiezaSvgPdf se espeja con el atributo SVG nativo `transform`
+  //    (ruta de render de react-pdf distinta a la de View, sí funciona)
+  // 3) lo que estaba alineado a la izquierda (columna vertical bajo el
+  //    esquinero, fila de puffs) se realinea a la derecha a mano.
+  // El espejo NUNCA cambia el orden VERTICAL (de arriba hacia abajo) — un
+  // scaleX(-1) real tampoco lo haría, solo voltea horizontal.
   let planoContent
   if (!hasCorner) {
     planoContent = (
-      <View style={{ alignItems: 'flex-start' }}>
+      <View style={{ alignItems: mirrored ? 'flex-end' : 'flex-start' }}>
         <DimLineH widthPt={anchoTotalPt} label={`${(data.huellaAnchoCm / 100).toFixed(2)} m`} />
-        <View style={{ flexDirection: 'row' }}>
-          {sofaPiezas.map(p => <Tile key={p.id} piece={p} widthPt={tileSize(p)} heightPt={TILE_PT} label={`${p.ancho ?? 100}cm`} />)}
+        <View style={{ flexDirection: mirrored ? 'row-reverse' : 'row' }}>
+          {sofaPiezas.map(p => <Tile key={p.id} piece={p} widthPt={tileSize(p)} heightPt={TILE_PT} label={`${p.ancho ?? 100}cm`} mirrored={mirrored} />)}
         </View>
         {puffs.length > 0 && (
-          <View style={{ flexDirection: 'row', marginTop: 2 }}>
-            {puffs.map(p => <Tile key={p.id} piece={p} widthPt={tileSize(p)} heightPt={TILE_PT} label={`${p.ancho ?? 100}cm`} />)}
+          <View style={{ flexDirection: mirrored ? 'row-reverse' : 'row', marginTop: 2 }}>
+            {puffs.map(p => <Tile key={p.id} piece={p} widthPt={tileSize(p)} heightPt={TILE_PT} label={`${p.ancho ?? 100}cm`} mirrored={mirrored} />)}
           </View>
         )}
       </View>
@@ -88,19 +107,19 @@ export default function PlanoPagePdf({ data, empresa }) {
     const botColHeightPt = botRow.reduce((sum, p) => sum + TILE_PT, 0) + puffs.reduce((sum, p) => sum + TILE_PT, 0)
 
     planoContent = (
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+      <View style={{ flexDirection: mirrored ? 'row-reverse' : 'row', alignItems: 'flex-start' }}>
         <View style={{ alignItems: 'flex-start' }}>
           <DimLineH widthPt={topRowWidthPt + cornerWidthPt} label={`${(data.huellaAnchoCm / 100).toFixed(2)} m`} />
           <View>
-            <View style={{ flexDirection: 'row' }}>
-              {topRow.map(p => <Tile key={p.id} piece={p} widthPt={tileSize(p)} heightPt={TILE_PT} label={`${p.ancho ?? 100}cm`} />)}
-              <Tile piece={corner} widthPt={cornerWidthPt} heightPt={TILE_PT} label="100cm" />
+            <View style={{ flexDirection: mirrored ? 'row-reverse' : 'row' }}>
+              {topRow.map(p => <Tile key={p.id} piece={p} widthPt={tileSize(p)} heightPt={TILE_PT} label={`${p.ancho ?? 100}cm`} mirrored={mirrored} />)}
+              <Tile piece={corner} widthPt={cornerWidthPt} heightPt={TILE_PT} label="100cm" mirrored={mirrored} />
             </View>
-            <View style={{ flexDirection: 'column', marginLeft: topRowWidthPt }}>
+            <View style={{ flexDirection: 'column', marginLeft: mirrored ? 0 : topRowWidthPt }}>
               {botRow.map(p => (
-                <Tile key={p.id} piece={p} variant={p.type === 'right' ? 'right_v' : 'center_v'} widthPt={TILE_PT} heightPt={TILE_PT} label={`${p.ancho ?? 100}cm`} />
+                <Tile key={p.id} piece={p} variant={p.type === 'right' ? 'right_v' : 'center_v'} widthPt={TILE_PT} heightPt={TILE_PT} label={`${p.ancho ?? 100}cm`} mirrored={mirrored} />
               ))}
-              {puffs.map(p => <Tile key={p.id} piece={p} widthPt={TILE_PT} heightPt={TILE_PT} label={`${p.ancho ?? 100}cm`} />)}
+              {puffs.map(p => <Tile key={p.id} piece={p} widthPt={TILE_PT} heightPt={TILE_PT} label={`${p.ancho ?? 100}cm`} mirrored={mirrored} />)}
             </View>
           </View>
         </View>

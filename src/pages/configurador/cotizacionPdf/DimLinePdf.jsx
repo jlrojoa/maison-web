@@ -10,6 +10,16 @@ import { COLORS } from './pdfTheme'
 
 const ARROW = 5 // mismo tamaño que los bordes de 5px en CSS
 
+// Espejo (mirrored): NO se usa un transform CSS global sobre todo el
+// plano — se probó (View { transform: 'scaleX(-1)' }) y no se aplicaba
+// visualmente pese a que el parseo/pipeline de @react-pdf/stylesheet se
+// veía correcto en el código fuente (bug o limitación no resuelta de esa
+// ruta en esta versión). En vez de eso, PlanoPagePdf.jsx reordena las
+// filas con flexDirection:'row-reverse' y cada PiezaSvgPdf se espeja con
+// el atributo SVG nativo `transform` (ruta de render distinta, sí
+// verificada funcionando). Estas líneas de cota son puramente
+// geométricas/posicionales — no necesitan saber si el armado está
+// espejado, su posición ya la resuelve el padre.
 export function DimLineH({ widthPt, label }) {
   return (
     <View style={{ alignItems: 'center', marginBottom: 4 }}>

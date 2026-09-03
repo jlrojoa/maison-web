@@ -9,7 +9,7 @@
 // el del PDF no se desalineen.
 import { Svg, Rect, Line, Polygon, Circle } from '@react-pdf/renderer'
 
-export default function PiezaSvgPdf({ type, width, height, colors }) {
+export default function PiezaSvgPdf({ type, width, height, colors, mirrored }) {
   const { fill, seat, back, stroke } = colors
   const sw = { stroke, strokeWidth: 1.5 }
   const swThin = { stroke, strokeWidth: 0.5 }
@@ -74,7 +74,7 @@ export default function PiezaSvgPdf({ type, width, height, colors }) {
   }
 
   return (
-    <Svg width={width} height={height} viewBox="0 0 120 120">
+    <Svg width={width} height={height} viewBox="0 0 120 120" transform={mirrored ? 'translate(120,0) scale(-1,1)' : undefined}>
       {content}
     </Svg>
   )
