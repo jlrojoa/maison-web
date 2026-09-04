@@ -1,50 +1,62 @@
 // src/pages/configurador/cotizacionPdf/DimLinePdf.jsx
 //
-// Puerto de .mod-dim/.mod-dim-h/.mod-dim-v (línea de cota con flechas en
-// los extremos, ver ModularesConfigurador.css) a primitivos de react-pdf.
-// El truco CSS de bordes-transparentes para las flechas no tiene
-// equivalente directo en react-pdf, así que las flechas se dibujan como
-// <Polygon> dentro de un <Svg> — mismo resultado visual, otra técnica.
-import { View, Text, Svg, Line, Polygon } from '@react-pdf/renderer'
+// Línea de cota (con flechas en los extremos) + etiqueta de medida —
+// puerto de .mod-dim/.mod-dim-h/.mod-dim-v (ver ModularesConfigurador.css).
+// Devuelve primitivos SVG puros (Line/Polygon/Text) en las coordenadas
+// exactas que le pasa PlanoPagePdf.jsx, para insertarlos directo dentro
+// de SU <Svg> — nunca un <View>/<Svg> propio, para que cota y piezas
+// vivan siempre en el mismo sistema de coordenadas y no puedan
+// desalinearse entre sí (ver nota grande en PlanoPagePdf.jsx).
+import { Line, Polygon, Text, G } from '@react-pdf/renderer'
 import { COLORS } from './pdfTheme'
 
-const ARROW = 5 // mismo tamaño que los bordes de 5px en CSS
+const ARROW = 5
 
-// Espejo (mirrored): NO se usa un transform CSS global sobre todo el
-// plano — se probó (View { transform: 'scaleX(-1)' }) y no se aplicaba
-// visualmente pese a que el parseo/pipeline de @react-pdf/stylesheet se
-// veía correcto en el código fuente (bug o limitación no resuelta de esa
-// ruta en esta versión). En vez de eso, PlanoPagePdf.jsx reordena las
-// filas con flexDirection:'row-reverse' y cada PiezaSvgPdf se espeja con
-// el atributo SVG nativo `transform` (ruta de render distinta, sí
-// verificada funcionando). Estas líneas de cota son puramente
-// geométricas/posicionales — no necesitan saber si el armado está
-// espejado, su posición ya la resuelve el padre.
-export function DimLineH({ widthPt, label }) {
+// DimLineH SIEMPRE vive en coordenadas normales (nunca dentro del <G>
+// espejado) — igual que en pantalla, donde la cota horizontal es
+// hermana de mod-plano-figure, no hija, así que el espejo (que solo
+// voltea el contenido DENTRO de la figura) nunca la toca.
+export function DimLineH({ x, y, width, label }) {
+  const midX = x + width / 2
   return (
-    <View style={{ alignItems: 'center', marginBottom: 4 }}>
-      <Text style={{ fontSize: 8, fontWeight: 700, color: COLORS.copperText, marginBottom: 2 }}>{label}</Text>
-      <Svg width={widthPt} height={8}>
-        <Line x1={0} y1={4} x2={widthPt} y2={4} stroke={COLORS.copperLine} strokeWidth={1} />
-        <Polygon points={`0,4 ${ARROW},0.5 ${ARROW},7.5`} fill={COLORS.copperLine} />
-        <Polygon points={`${widthPt},4 ${widthPt - ARROW},0.5 ${widthPt - ARROW},7.5`} fill={COLORS.copperLine} />
-      </Svg>
-    </View>
+    <>
+      <Text x={midX} y={y - 5} textAnchor="middle" style={{ fontSize: 8, fontWeight: 700, fontFamily: 'Poppins', color: COLORS.copperText }}>{label}</Text>
+      <Line x1={x} y1={y} x2={x + width} y2={y} stroke={COLORS.copperLine} strokeWidth={1} />
+      <Polygon points={`${x},${y} ${x + ARROW},${y - 3.5} ${x + ARROW},${y + 3.5}`} fill={COLORS.copperLine} />
+      <Polygon points={`${x + width},${y} ${x + width - ARROW},${y - 3.5} ${x + width - ARROW},${y + 3.5}`} fill={COLORS.copperLine} />
+    </>
   )
 }
 
-export function DimLineV({ heightPt, label }) {
+// DimLineV SÍ vive dentro del <G> espejado (es hija de la figura, igual
+// que en pantalla: .mod-dim-v-anchor cuelga de .mod-plano-figure, así
+// que el espejo la mueve de lado con el resto). Su línea/flechas son
+// simétricas por diseño así que heredar el espejo no las distorsiona;
+// solo la ETIQUETA (el texto) se contra-espeja con su propio <G
+// transform="scale(-1,1)"> para que no salga al revés — mismo truco que
+// ".mod-plano-mirrored .mod-dim-label { transform: scaleX(-1) }" en
+// ModularesConfigurador.css.
+export function DimLineV({ x, y, height, label, mirrored }) {
+  const midY = y + height / 2
+  // labelX se aleja de la línea hacia x+ (nunca hacia las piezas, que
+  // quedan del lado x- de esta línea tanto espejado como no — el
+  // espejo se aplica DESPUÉS, como transform del <G> padre). Antes
+  // (x-3) el "grueso" del texto tras rotate(-90) caía del lado x- del
+  // pivote y llegaba a encimarse con las piezas — bug real, reportado
+  // 2026-09-03, independiente de qué lado termina la cota completa.
+  const labelX = x + 8
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <Svg width={8} height={heightPt}>
-        <Line x1={4} y1={0} x2={4} y2={heightPt} stroke={COLORS.copperLine} strokeWidth={1} />
-        <Polygon points={`4,0 0.5,${ARROW} 7.5,${ARROW}`} fill={COLORS.copperLine} />
-        <Polygon points={`4,${heightPt} 0.5,${heightPt - ARROW} 7.5,${heightPt - ARROW}`} fill={COLORS.copperLine} />
-      </Svg>
-      <Text style={{
-        fontSize: 8, fontWeight: 700, color: COLORS.copperText, marginLeft: 3,
-        transform: 'rotate(-90deg)', transformOrigin: 'left top',
-      }}>{label}</Text>
-    </View>
+    <>
+      <Line x1={x} y1={y} x2={x} y2={y + height} stroke={COLORS.copperLine} strokeWidth={1} />
+      <Polygon points={`${x},${y} ${x - 3.5},${y + ARROW} ${x + 3.5},${y + ARROW}`} fill={COLORS.copperLine} />
+      <Polygon points={`${x},${y + height} ${x - 3.5},${y + height - ARROW} ${x + 3.5},${y + height - ARROW}`} fill={COLORS.copperLine} />
+      <G transform={`translate(${labelX},${midY})`}>
+        <G transform={mirrored ? 'scale(-1,1)' : undefined}>
+          <G transform="rotate(-90)">
+            <Text x={0} y={0} textAnchor="middle" style={{ fontSize: 8, fontWeight: 700, fontFamily: 'Poppins', color: COLORS.copperText }}>{label}</Text>
+          </G>
+        </G>
+      </G>
+    </>
   )
 }

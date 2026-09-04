@@ -455,7 +455,14 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
     const botRow = sofaPiezas.slice(cornerIdx + 1)
     const topRowWidth = topRow.reduce((sum, p) => sum + getTileSize(p).width, 0)
     const cornerWidth = getTileSize(corner).width
+    // Incluye los Puffs (decisión de JL, 2026-09-04) — antes solo sumaba
+    // botRow y la cota vertical se quedaba corta contra "Profundidad
+    // total" (que sí los suma, ver totalVerticalM arriba). Los Puffs se
+    // dibujan SIN variant 'center_v'/'right_v' (renderTile(p) sin
+    // segundo argumento), así que su altura en la columna es siempre
+    // TILE_PX — solo su ancho escala con piece.ancho.
     const botColHeight = botRow.reduce((sum, p) => sum + getTileSize(p, p.type === 'right' ? 'right_v' : 'center_v').height, 0)
+      + puffsSeq.reduce((sum, p) => sum + getTileSize(p).height, 0)
 
     // La cota vertical se ancla con left:100% del propio contenedor de la
     // figura (no con un cálculo de ancho aparte) para quedar SIEMPRE flush

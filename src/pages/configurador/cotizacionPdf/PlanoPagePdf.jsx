@@ -3,30 +3,38 @@
 // Página 2 — plano técnico. Puerto de renderPlano()/renderTile() en
 // ModularesConfigurador.jsx a react-pdf: MISMA función splitSofaLayout()
 // (importada, no reimplementada) para que el doblez en L nunca se
-// desalinee entre pantalla y PDF — solo cambian los primitivos de dibujo
-// (View/Svg de react-pdf en vez de <div>/<svg> del DOM).
+// desalinee entre pantalla y PDF.
 //
-// Espejo (mirrored): se probaron DOS técnicas basadas en flexbox/CSS que
-// resultaron no confiables en esta versión de @react-pdf/renderer:
-//   1) transform:'scaleX(-1)' en un View — no se aplicaba visualmente en
-//      absoluto, pese a que el código fuente del paquete (parse ->
-//      normalizeTransformOperation -> handlers) se veía correcto.
-//   2) flexDirection:'row-reverse' — SÍ reordenaba las piezas (el
-//      Esquinero cambiaba de lado), pero desalineaba las cotas y
-//      etiquetas del resto del dibujo (reportado por JL, 2026-09-02;
-//      confirmado comparando contra las coordenadas exactas medidas en
-//      pantalla vía getBoundingClientRect()).
-// En vez de depender de ninguna de las dos, cada pieza/cota se posiciona
-// con coordenadas ABSOLUTAS calculadas a mano (mismo cálculo que ya usa
-// ModularesConfigurador.jsx para tamaños de tile, solo que aquí en vez de
-// dejar que Yoga/flexbox acomode las piezas, se calcula x/y explícito por
-// pieza). Espejar es entonces solo aritmética: mirrorX(x, w) = W - x - w
-// sobre el ancho total W — sin importar qué tan rara resulte la
-// disposición (esquinero + repetidos), la cota y la etiqueta de cada
-// pieza SIEMPRE quedan exactamente donde está su pieza porque comparten
-// el mismo cálculo de coordenadas, nunca dos rutas de layout separadas
-// que puedan desalinearse entre sí.
-import { Page, View, Text, StyleSheet } from '@react-pdf/renderer'
+// Reescrito 2026-09-03. TODO el dibujo — piezas, líneas de cota,
+// etiquetas — vive dentro de UN SOLO <Svg>, con coordenadas derivadas
+// de la MISMA fuente (splitSofaLayout + tileSize) para piezas y cotas a
+// la vez. Adentro de un <Svg>, react-pdf resuelve todo por el motor de
+// SVG (resolveSvg), NUNCA por Yoga — así se evita el motor que venía
+// desalineando cotas y piezas en los dos intentos anteriores (ver
+// historial de commits).
+//
+// Espejo: el layout se calcula SIEMPRE en coordenadas normales — como
+// si nunca hubiera espejo, igual que ModularesConfigurador.jsx/
+// renderPlano() — y el espejo se aplica UNA sola vez, como transform de
+// UN <G> que envuelve TODA la figura (piezas + cota vertical, si la
+// hay): mismo truco que ".mod-plano-mirrored { transform: scaleX(-1) }"
+// en ModularesConfigurador.css, que espeja mod-plano-figure completo
+// (nunca la cota horizontal, que es hermana, no hija, de la figura).
+// Cada etiqueta de texto (100cm, Total: X m) se contra-espeja con su
+// propio <G transform="scale(-1,1)"> anidado para que el texto no
+// salga al revés. Las siluetas de las piezas SÍ heredan el espejo sin
+// contra-espejarse, igual que en pantalla.
+//
+// NOTA DE RENDIMIENTO (2026-09-03/04, pendiente, ver PROJECT.md /
+// conversación con JL): `pdf().toBlob()` con esta estructura tarda
+// ~40-90s (antes del rewrite tardaba ~2-4s). Se probó aplanar el
+// anidamiento (un <G> por pieza con el espejo resuelto a mano en JS en
+// vez de un <G> envolvente + contra-espejo por etiqueta) esperando que
+// fuera la causa — el resultado fue PEOR (nunca terminó, >4 minutos,
+// tab sin responder). No se identificó la causa raíz todavía; queda
+// pendiente como tarea aparte, priorizada después de cerrar la
+// geometría. No repetir el aplanado sin antes entender por qué empeoró.
+import { Page, View, Text, Svg, G, StyleSheet } from '@react-pdf/renderer'
 import { splitSofaLayout } from '../ModularesConfigurador'
 import PiezaSvgPdf from './PiezaSvgPdf'
 import { DimLineH, DimLineV } from './DimLinePdf'
@@ -34,10 +42,10 @@ import { COLORS, BLUEPRINT_PIEZA_COLORS, PAGE_PADDING } from './pdfTheme'
 import { fmtFecha } from './fmtPdf'
 
 const TILE_PT = 64
-const LABEL_H_PT = 10
-const TOP_PAD_PT = 22 // espacio reservado arriba para DimLineH (label + línea)
+const LABEL_BAND_PT = 10 // franja reservada abajo de cada pieza para su medida — mismo criterio que LABEL_H en pantalla
+const TOP_PAD_PT = 22 // espacio arriba de las piezas para la cota horizontal
 const DIMV_GAP_PT = 10 // mismo valor que margin-left:10px de .mod-dim-v-anchor en pantalla
-const DIMV_WIDTH_PT = 24 // ancho aprox. de DimLineV (línea + texto rotado), mismo criterio que el anchor en pantalla
+const DIMV_LABEL_PT = 24 // espacio reservado para la línea + etiqueta rotada de la cota vertical
 
 const s = StyleSheet.create({
   page: { padding: PAGE_PADDING, fontFamily: 'Poppins', fontSize: 9, color: COLORS.ink },
@@ -53,8 +61,6 @@ const s = StyleSheet.create({
     backgroundColor: COLORS.panelBg, borderRadius: 8, padding: 20,
     minHeight: 300, alignItems: 'center', justifyContent: 'center',
   },
-  tileWrap: { position: 'absolute' },
-  tileDim: { textAlign: 'center', fontSize: 7, fontWeight: 600, color: COLORS.inkMuted, marginTop: 1 },
   cards: { flexDirection: 'row', gap: 10, marginTop: 18 },
   card: { flex: 1, backgroundColor: COLORS.fillNeutro, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 10 },
   cardLabel: { fontSize: 7, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.8, marginBottom: 3 },
@@ -67,124 +73,126 @@ const s = StyleSheet.create({
   footerRight: { fontSize: 8, color: COLORS.inkMuted, textAlign: 'right' },
 })
 
-// `mirrored` pasa directo a PiezaSvgPdf, que espeja la silueta con el
-// atributo SVG nativo `transform` (ruta de render distinta a la de View,
-// sí funciona) — la etiqueta de texto ("100cm") no se contra-espeja
-// porque nunca hay ningún transform en sus contenedores padres.
-function Tile({ piece, variant, x, y, widthPt, heightPt, label, mirrored }) {
-  const svgH = heightPt - LABEL_H_PT
-  return (
-    <View style={[s.tileWrap, { left: x, top: y, width: widthPt, height: heightPt }]}>
-      <View style={{ position: 'absolute', left: 0, top: 0, width: widthPt, height: svgH }}>
-        <PiezaSvgPdf type={variant || piece.type} width={widthPt} height={svgH} colors={BLUEPRINT_PIEZA_COLORS} mirrored={mirrored} />
-      </View>
-      <Text style={[s.tileDim, { position: 'absolute', left: 0, top: svgH + 1, width: widthPt }]}>{label}</Text>
-    </View>
-  )
+const tieneAncho = (type) => type === 'center' || type === 'puff'
+function tileSize(piece) {
+  if (!tieneAncho(piece.type)) return TILE_PT
+  return Math.round(TILE_PT * ((piece.ancho ?? 100) / 100))
+}
+function labelDe(piece) {
+  return `${tieneAncho(piece.type) ? (piece.ancho ?? 100) : 100}cm`
 }
 
-function tileSize(piece) {
-  const anchoable = piece.type === 'center' || piece.type === 'puff'
-  if (!anchoable) return TILE_PT
-  const escala = (piece.ancho ?? 100) / 100
-  return Math.round(TILE_PT * escala)
+// Una pieza: su silueta (hereda el espejo del <G> padre, sin contra-
+// espejarse) + su etiqueta de medida (SÍ se contra-espeja, ver nota de
+// arriba). x/y/w/h ya vienen en coordenadas normales (pre-espejo).
+function Tile({ x, y, w, h, type, label, mirrored }) {
+  const artH = h - LABEL_BAND_PT
+  return (
+    <>
+      <G transform={`translate(${x},${y}) scale(${w / 120},${artH / 120})`}>
+        <PiezaSvgPdf type={type} colors={BLUEPRINT_PIEZA_COLORS} />
+      </G>
+      <G transform={`translate(${x + w / 2},${y + artH + LABEL_BAND_PT - 2})`}>
+        <G transform={mirrored ? 'scale(-1,1)' : undefined}>
+          <Text x={0} y={0} textAnchor="middle" style={{ fontSize: 7, fontWeight: 600, fontFamily: 'Poppins', color: COLORS.inkMuted }}>{label}</Text>
+        </G>
+      </G>
+    </>
+  )
 }
 
 export default function PlanoPagePdf({ data, empresa }) {
   const { sofaPiezas, puffs, cornerIdx, hasCorner } = splitSofaLayout(data.sequence)
   const mirrored = !!data.mirrored
-  // mx(x, w): posición espejada de una pieza que originalmente iba en x
-  // (ancho w) dentro de un total W — misma pieza, lado contrario.
-  const mx = (W) => (x, w) => (mirrored ? W - x - w : x)
 
-  let tiles = [] // { key, piece, variant, x, y, w, h, label }
-  let dimH, dimV
-  let containerWidthPt, containerHeightPt
+  // Todo lo de abajo se calcula en coordenadas NORMALES (como si nunca
+  // hubiera espejo) — ver nota grande arriba del archivo.
+  let tiles = [] // { key, x, y, w, h, type, label } — en coords normales
+  let figureWidth, figureHeight
+  let dimHWidth
+  let dimV = null // { x, y, height, label } o null si no aplica
 
   if (!hasCorner) {
-    const W = sofaPiezas.reduce((sum, p) => sum + tileSize(p), 0)
-    const mirrorX = mx(W)
     let cursor = 0
     sofaPiezas.forEach(p => {
       const w = tileSize(p)
-      tiles.push({ key: p.id, piece: p, x: mirrorX(cursor, w), y: TOP_PAD_PT, w, h: TILE_PT, label: `${p.ancho ?? 100}cm` })
+      tiles.push({ key: p.id, x: cursor, y: 0, w, h: TILE_PT, type: p.type, label: labelDe(p) })
       cursor += w
     })
+    const sofaRowWidth = cursor
+    let puffRowWidth = 0
+    let puffRowY = 0
     if (puffs.length > 0) {
+      // A ras de la fila de sofá, sin hueco — igual que .mod-plano (flex
+      // column sin gap) en pantalla (reportado por JL, 2026-09-04).
+      puffRowY = TILE_PT
       let pCursor = 0
-      const puffsRowY = TOP_PAD_PT + TILE_PT + 2
       puffs.forEach(p => {
         const w = tileSize(p)
-        tiles.push({ key: p.id, piece: p, x: mirrorX(pCursor, w), y: puffsRowY, w, h: TILE_PT, label: `${p.ancho ?? 100}cm` })
+        tiles.push({ key: p.id, x: pCursor, y: puffRowY, w, h: TILE_PT, type: p.type, label: labelDe(p) })
         pCursor += w
       })
+      puffRowWidth = pCursor
     }
-    // BUG CONOCIDO (2026-09-02, sin causa raíz identificada): con esta
-    // secuencia de piezas (sin Esquinero: Chaise, Tres/Dos plazas) y
-    // Espejo activado, esta línea de cota horizontal (DimLineH) se
-    // renderiza desalineada del bloque de piezas — el ancho coincide
-    // (dimH.width === W, la misma suma que ocupan las piezas) pero la
-    // posición X no, pese a que la aritmética es idéntica a la del caso
-    // CON Esquinero (que sí funciona, ver rama `else` abajo). Se probó:
-    //   - x:0 vs x:0.01 (epsilon) → mismo resultado, no es un problema de
-    //     "0 es falsy" en algún punto del pipeline de react-pdf.
-    //   - dar más ancho de sobra al contenedor relativo (containerWidthPt
-    //     = W + 50 en vez de exactamente W) → tampoco cambia nada.
-    // La diferencia con el caso CON Esquinero es que ahí dimH.x siempre
-    // usa un valor NO constante (xOffset + mirrorX(...), nunca 0 literal
-    // ni igual al ancho total del contenedor) — mismo patrón de código
-    // (View position:'absolute', left/width), así que no es obviamente
-    // un bug de "layout de piezas" sino algo específico de este caso
-    // particular que aún no se diagnosticó. Pendiente: diagnosticar con
-    // calma (posiblemente aislar con un harness de Node/esbuild fuera
-    // del navegador, más rápido que el ciclo Supabase->descarga->PDF).
-    dimH = { x: 0, width: W, label: `${(data.huellaAnchoCm / 100).toFixed(2)} m` }
-    dimV = null
-    containerWidthPt = W
-    containerHeightPt = TOP_PAD_PT + TILE_PT + (puffs.length > 0 ? 2 + TILE_PT : 0)
+    dimHWidth = sofaRowWidth // la cota horizontal solo mide la fila de sofá, igual que anchoTotalPx en pantalla
+    figureWidth = Math.max(sofaRowWidth, puffRowWidth)
+    figureHeight = puffs.length > 0 ? puffRowY + TILE_PT : TILE_PT
   } else {
     const topRow = sofaPiezas.slice(0, cornerIdx)
     const corner = sofaPiezas[cornerIdx]
     const botRow = sofaPiezas.slice(cornerIdx + 1)
-    const topRowWidthPt = topRow.reduce((sum, p) => sum + tileSize(p), 0)
-    const cornerWidthPt = tileSize(corner) // siempre TILE_PT — el esquinero no escala por ancho
-    const W = topRowWidthPt + cornerWidthPt
-    const mirrorX = mx(W)
-    const xOffset = mirrored ? DIMV_WIDTH_PT + DIMV_GAP_PT : 0
 
     let cursor = 0
     topRow.forEach(p => {
       const w = tileSize(p)
-      tiles.push({ key: p.id, piece: p, x: xOffset + mirrorX(cursor, w), y: TOP_PAD_PT, w, h: TILE_PT, label: `${p.ancho ?? 100}cm` })
+      tiles.push({ key: p.id, x: cursor, y: 0, w, h: TILE_PT, type: p.type, label: labelDe(p) })
       cursor += w
     })
-    tiles.push({ key: corner.id, piece: corner, x: xOffset + mirrorX(topRowWidthPt, cornerWidthPt), y: TOP_PAD_PT, w: cornerWidthPt, h: TILE_PT, label: '100cm' })
+    const topRowWidth = cursor
+    tiles.push({ key: corner.id, x: topRowWidth, y: 0, w: TILE_PT, h: TILE_PT, type: 'corner', label: '100cm' })
 
-    const botColX = xOffset + mirrorX(topRowWidthPt, TILE_PT) // esquinero y columna vertical comparten x — quedan a ras
-    let rowY = TOP_PAD_PT + TILE_PT
+    // La columna vertical cuelga directo debajo del Esquinero (mismo x),
+    // igual que marginLeft:topRowWidth en pantalla — quedan a ras. Los
+    // Puffs siguen apilados en la MISMA columna, sin hueco (rowY sigue
+    // corriendo sin saltos entre botRow y puffs).
+    let rowY = TILE_PT
     botRow.forEach(p => {
-      tiles.push({ key: p.id, piece: p, variant: p.type === 'right' ? 'right_v' : 'center_v', x: botColX, y: rowY, w: TILE_PT, h: TILE_PT, label: `${p.ancho ?? 100}cm` })
-      rowY += TILE_PT
+      const h = tileSize(p)
+      const variant = p.type === 'right' ? 'right_v' : 'center_v'
+      tiles.push({ key: p.id, x: topRowWidth, y: rowY, w: TILE_PT, h, type: variant, label: labelDe(p) })
+      rowY += h
     })
     puffs.forEach(p => {
-      tiles.push({ key: p.id, piece: p, x: botColX, y: rowY, w: TILE_PT, h: TILE_PT, label: `${p.ancho ?? 100}cm` })
-      rowY += TILE_PT
+      const h = tileSize(p)
+      tiles.push({ key: p.id, x: topRowWidth, y: rowY, w: TILE_PT, h, type: p.type, label: labelDe(p) })
+      rowY += h
     })
+    // Decisión de JL (2026-09-04): la cota vertical mide la columna
+    // COMPLETA (Esquinero + botRow + Puffs) — antes excluía los Puffs
+    // (igual que hacía botColHeight en pantalla), lo que contradecía la
+    // tarjeta "Profundidad total" (que sí los suma). rowY ya incluye
+    // todo en este punto, así que la cota es simplemente rowY.
+    const columnaCompletaHeight = rowY
 
-    dimH = { x: xOffset, width: W, label: `${(data.huellaAnchoCm / 100).toFixed(2)} m` }
-    // Altura de DimLineV = esquinero + SOLO botRow (sin puffs) — mismo
-    // criterio que botColHeight en ModularesConfigurador.jsx (el Puff no
-    // suma a la cota vertical ahí tampoco, aunque sí se dibuja debajo).
-    const dimVHeightPt = TILE_PT + botRow.length * TILE_PT
-    dimV = {
-      x: mirrored ? 0 : xOffset + W + DIMV_GAP_PT,
-      y: TOP_PAD_PT,
-      height: dimVHeightPt,
-      label: `Total: ${(data.huellaProfundidadCm / 100).toFixed(2)} m`,
+    figureWidth = topRowWidth + TILE_PT
+    figureHeight = rowY
+    dimHWidth = figureWidth
+
+    if (columnaCompletaHeight > TILE_PT) {
+      dimV = {
+        x: figureWidth + DIMV_GAP_PT,
+        y: 0,
+        height: columnaCompletaHeight,
+        label: `Total: ${(data.huellaProfundidadCm / 100).toFixed(2)} m`,
+      }
     }
-    containerWidthPt = W + DIMV_GAP_PT + DIMV_WIDTH_PT
-    containerHeightPt = TOP_PAD_PT + TILE_PT * (1 + botRow.length + puffs.length)
   }
+
+  const hasDimV = !!dimV
+  const sideMargin = hasDimV ? DIMV_GAP_PT + DIMV_LABEL_PT : 0
+  const svgWidth = sideMargin + figureWidth + sideMargin
+  const svgHeight = TOP_PAD_PT + figureHeight + 4
+  const dimHLabel = `${(data.huellaAnchoCm / 100).toFixed(2)} m`
 
   return (
     <Page size="LETTER" style={s.page}>
@@ -201,19 +209,21 @@ export default function PlanoPagePdf({ data, empresa }) {
       <View style={s.hr} />
 
       <View style={s.panel}>
-        <View style={{ width: containerWidthPt, height: containerHeightPt, position: 'relative' }}>
-          <View style={{ position: 'absolute', left: dimH.x, top: 0, width: dimH.width }}>
-            <DimLineH widthPt={dimH.width} label={dimH.label} />
-          </View>
-          {tiles.map(t => (
-            <Tile key={t.key} piece={t.piece} variant={t.variant} x={t.x} y={t.y} widthPt={t.w} heightPt={t.h} label={t.label} mirrored={mirrored} />
-          ))}
-          {dimV && (
-            <View style={{ position: 'absolute', left: dimV.x, top: dimV.y }}>
-              <DimLineV heightPt={dimV.height} label={dimV.label} />
-            </View>
-          )}
-        </View>
+        <Svg width={svgWidth} height={svgHeight}>
+          <G transform={`translate(${sideMargin},${TOP_PAD_PT})`}>
+            {/* Cota horizontal: SIEMPRE en coordenadas normales, nunca
+                dentro del <G> espejado — igual que en pantalla, donde es
+                hermana de mod-plano-figure, no hija. */}
+            <DimLineH x={0} y={-6} width={dimHWidth} label={dimHLabel} />
+
+            <G transform={mirrored ? `translate(${figureWidth},0) scale(-1,1)` : undefined}>
+              {tiles.map(t => (
+                <Tile key={t.key} x={t.x} y={t.y} w={t.w} h={t.h} type={t.type} label={t.label} mirrored={mirrored} />
+              ))}
+              {dimV && <DimLineV x={dimV.x} y={dimV.y} height={dimV.height} label={dimV.label} mirrored={mirrored} />}
+            </G>
+          </G>
+        </Svg>
       </View>
 
       <View style={s.cards}>
