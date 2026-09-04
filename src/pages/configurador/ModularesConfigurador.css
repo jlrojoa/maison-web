@@ -282,7 +282,15 @@
 .mod-plano-titleblock-sub { font-size: 12px; color: #5B5449; margin-top: 3px; }
 .mod-plano-titleblock-brand { font-size: 12px; color: #5B5449; text-align: right; line-height: 1.5; }
 .mod-plano-titleblock-rev { color: var(--copper-text); font-weight: 700; }
-.mod-plano-canvas { overflow-x: auto; padding-bottom: 4px; }
+/* padding-left: con Espejo activo, mod-dim-v-anchor (left:100% del
+   propio mod-plano-figure) termina espejada hacia la IZQUIERDA del
+   contenedor — sin este espacio, cae en x negativo respecto al padding-
+   box de mod-plano-canvas y overflow-x:auto la recorta sin forma de
+   hacer scroll hasta ahí (scrollLeft no llega a negativo en LTR).
+   Reportado por JL, 2026-09-04: la cota vertical "Total: X m"
+   desaparecía por completo en modo Espejo. 40px cubre el ancho medido
+   de mod-dim-v (22px) + su margin-left (10px) + margen de sobra. */
+.mod-plano-canvas { overflow-x: auto; padding-bottom: 4px; padding-left: 40px; }
 .mod-plano-legend {
   display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center;
   padding-top: 12px; margin-top: 14px; border-top: 1px solid rgba(201,124,74,.4);
