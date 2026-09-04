@@ -43,6 +43,12 @@ import { fmtFecha } from './fmtPdf'
 
 const TILE_PT = 64
 const LABEL_BAND_PT = 10 // franja reservada abajo de cada pieza para su medida — mismo criterio que LABEL_H en pantalla
+// Franja LATERAL (no debajo) para la medida de piezas apiladas en
+// columna — mismo motivo y mismo criterio que LABEL_SIDE_W en
+// ModularesConfigurador.jsx: con la medida debajo, la franja de la
+// pieza de arriba quedaba ENTRE dos siluetas apiladas (hueco aparente
+// aunque las cajas están a ras). Reportado por JL, 2026-09-04.
+const LABEL_SIDE_PT = 12
 const TOP_PAD_PT = 22 // espacio arriba de las piezas para la cota horizontal
 const DIMV_GAP_PT = 10 // mismo valor que margin-left:10px de .mod-dim-v-anchor en pantalla
 const DIMV_LABEL_PT = 24 // espacio reservado para la línea + etiqueta rotada de la cota vertical
@@ -85,16 +91,29 @@ function labelDe(piece) {
 // Una pieza: su silueta (hereda el espejo del <G> padre, sin contra-
 // espejarse) + su etiqueta de medida (SÍ se contra-espeja, ver nota de
 // arriba). x/y/w/h ya vienen en coordenadas normales (pre-espejo).
-function Tile({ x, y, w, h, type, label, mirrored }) {
-  const artH = h - LABEL_BAND_PT
+// `vertical` (piezas apiladas en columna, ver LABEL_SIDE_PT): la franja
+// de medida va al COSTADO en vez de abajo, con el texto girado -90°
+// (mismo recurso que ya usa DimLineV para su etiqueta rotada).
+function Tile({ x, y, w, h, type, label, mirrored, vertical }) {
+  const artW = vertical ? w - LABEL_SIDE_PT : w
+  const artH = vertical ? h : h - LABEL_BAND_PT
+  const labelX = vertical ? x + artW + LABEL_SIDE_PT / 2 : x + w / 2
+  const labelY = vertical ? y + h / 2 : y + artH + LABEL_BAND_PT - 2
+  const labelStyle = { fontSize: 7, fontWeight: 600, fontFamily: 'Poppins', color: COLORS.inkMuted }
   return (
     <>
-      <G transform={`translate(${x},${y}) scale(${w / 120},${artH / 120})`}>
+      <G transform={`translate(${x},${y}) scale(${artW / 120},${artH / 120})`}>
         <PiezaSvgPdf type={type} colors={BLUEPRINT_PIEZA_COLORS} />
       </G>
-      <G transform={`translate(${x + w / 2},${y + artH + LABEL_BAND_PT - 2})`}>
+      <G transform={`translate(${labelX},${labelY})`}>
         <G transform={mirrored ? 'scale(-1,1)' : undefined}>
-          <Text x={0} y={0} textAnchor="middle" style={{ fontSize: 7, fontWeight: 600, fontFamily: 'Poppins', color: COLORS.inkMuted }}>{label}</Text>
+          {vertical ? (
+            <G transform="rotate(-90)">
+              <Text x={0} y={0} textAnchor="middle" style={labelStyle}>{label}</Text>
+            </G>
+          ) : (
+            <Text x={0} y={0} textAnchor="middle" style={labelStyle}>{label}</Text>
+          )}
         </G>
       </G>
     </>
@@ -159,12 +178,12 @@ export default function PlanoPagePdf({ data, empresa }) {
     botRow.forEach(p => {
       const h = tileSize(p)
       const variant = p.type === 'right' ? 'right_v' : 'center_v'
-      tiles.push({ key: p.id, x: topRowWidth, y: rowY, w: TILE_PT, h, type: variant, label: labelDe(p) })
+      tiles.push({ key: p.id, x: topRowWidth, y: rowY, w: TILE_PT, h, type: variant, label: labelDe(p), vertical: true })
       rowY += h
     })
     puffs.forEach(p => {
       const h = tileSize(p)
-      tiles.push({ key: p.id, x: topRowWidth, y: rowY, w: TILE_PT, h, type: p.type, label: labelDe(p) })
+      tiles.push({ key: p.id, x: topRowWidth, y: rowY, w: TILE_PT, h, type: p.type, label: labelDe(p), vertical: true })
       rowY += h
     })
     // Decisión de JL (2026-09-04): la cota vertical mide la columna
@@ -218,7 +237,7 @@ export default function PlanoPagePdf({ data, empresa }) {
 
             <G transform={mirrored ? `translate(${figureWidth},0) scale(-1,1)` : undefined}>
               {tiles.map(t => (
-                <Tile key={t.key} x={t.x} y={t.y} w={t.w} h={t.h} type={t.type} label={t.label} mirrored={mirrored} />
+                <Tile key={t.key} x={t.x} y={t.y} w={t.w} h={t.h} type={t.type} label={t.label} mirrored={mirrored} vertical={t.vertical} />
               ))}
               {dimV && <DimLineV x={dimV.x} y={dimV.y} height={dimV.height} label={dimV.label} mirrored={mirrored} />}
             </G>

@@ -189,6 +189,18 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
   const [sequence, setSequence] = useState([]) // [{ id, type, configuracionId, modeloId, ancho? }]
   const pidRef = useRef(0)
   const [mirrored, setMirrored] = useState(false)
+  // Con Espejo activo, tener el plano espejado (scaleX(-1)) VISIBLE EN
+  // PANTALLA al mismo tiempo que corre pdf() cuelga la generación del
+  // PDF en el navegador — causa exacta sin identificar (no es el
+  // mecanismo de espejo del PDF en sí: se probó tanto <G
+  // transform="scale(-1,1)"> como resolver el espejo por coordenadas, y
+  // los dos se cuelgan igual mientras el plano espejado esté pintado en
+  // pantalla; ver conversación con JL, 2026-09-04). Salida pragmática:
+  // confirmarCotizacion() prende esto y renderPlano() desmonta el plano
+  // ENTERO (return null, no solo le quita la clase — quitar nada más la
+  // clase no evitó el cuelgue) mientras dura toda la función, apagándolo
+  // siempre en un finally, incluso si algo falla a medias.
+  const [suprimirEspejoParaPdf, setSuprimirEspejoParaPdf] = useState(false)
 
   // Ancho "pendiente" — el que se le va a dar a la PRÓXIMA pieza que se
   // agregue desde la tarjeta de selección de arriba (Central/Puff). Vive
@@ -364,6 +376,14 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
   // el SVG, se resta esta franja de la altura real del dibujo (que se
   // escala un poco más angosto) y el texto vive debajo, en espacio propio.
   const LABEL_H = 14
+  // Franja lateral (no debajo) para la medida de piezas APILADAS EN
+  // COLUMNA (mod-plano-botcol) — con la medida debajo, la franja de la
+  // pieza de arriba quedaba ENTRE dos siluetas apiladas, dando
+  // apariencia de hueco aunque las cajas están a ras (reportado por JL,
+  // 2026-09-04). Las piezas en fila horizontal no cambian — ahí la
+  // franja de cada pieza cae en su propia fila de etiquetas, debajo de
+  // TODAS las piezas a la vez, nunca entre dos siluetas.
+  const LABEL_SIDE_W = 16
   const { sofaPiezas, puffs: puffsSeq, cornerIdx, hasCorner } = splitSofaLayout(sequence)
 
   const getTileSize = (piece, variant) => {
@@ -398,27 +418,31 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
     </div>
   )
 
-  const renderTile = (piece, variant) => {
+  const renderTile = (piece, variant, vertical) => {
     const { width, height } = getTileSize(piece, variant)
-    const artHeight = height - LABEL_H
+    const artWidth = vertical ? width - LABEL_SIDE_W : width
+    const artHeight = vertical ? height : height - LABEL_H
     const label = tieneAncho(piece.type) ? `${piece.ancho ?? 100}cm` : '100cm'
     return (
       <div className="mod-plano-tile" key={piece.id} style={{ width, height }}>
         <button
           type="button"
-          className="mod-plano-tile-btn"
+          className={`mod-plano-tile-btn${vertical ? ' mod-plano-tile-btn-vertical' : ''}`}
           title={`Quitar ${NOMBRE_POR_TIPO[piece.type]}${piece.type !== 'puff' ? ' (y todo lo que sigue)' : ''}`}
           onClick={() => quitarDesde(piece.id)}
         >
-          <PiezaSVG type={variant || piece.type} width={width} height={artHeight} colors={BLUEPRINT_COLORS} />
+          <PiezaSVG type={variant || piece.type} width={artWidth} height={artHeight} colors={BLUEPRINT_COLORS} />
           {/* El plano ya no controla el ancho — solo lo muestra. Elegir
               100cm/80cm vive en la tarjeta de selección de arriba (mod-pieza-
               anchos, define el ancho de la PRÓXIMA pieza) y, para ajustar una
               instancia ya colocada, en "Ancho de piezas" dentro de "Tu
               armado" (mod-anchos). Así el plano queda puramente de lectura y
               sin el hit-target chico que antes competía con el botón de
-              quitar. */}
-          <span className="mod-plano-tile-dim" style={{ height: LABEL_H }}>{label}</span>
+              quitar. Piezas apiladas en columna (vertical=true): la franja
+              va al COSTADO en vez de abajo, ver LABEL_SIDE_W arriba. */}
+          {vertical
+            ? <span className="mod-plano-tile-dim mod-plano-tile-dim-side" style={{ width: LABEL_SIDE_W }}>{label}</span>
+            : <span className="mod-plano-tile-dim" style={{ height: LABEL_H }}>{label}</span>}
           <span className="mod-preview-remove">×</span>
         </button>
       </div>
@@ -426,6 +450,14 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
   }
 
   const renderPlano = () => {
+    // Desmonta el plano ENTERO (no solo le quita la clase de espejo)
+    // mientras dura confirmarCotizacion() — ver nota grande en la
+    // declaración de suprimirEspejoParaPdf. Quitar nada más la clase
+    // mod-plano-mirrored (probado primero) no evitó el cuelgue; quitar
+    // el nodo del DOM por completo es la versión más segura de "oculta
+    // o desmonta" que pidió JL. El modal de confirmación ya está abierto
+    // encima en ese momento, así que no se alcanza a ver el hueco.
+    if (suprimirEspejoParaPdf) return null
     if (!hasCorner) {
       // Sin esquinero no hay nada que "doble" que orientar — pero Espejo
       // igual aplica acá: voltea el armado completo de lado a lado (ej.
@@ -482,8 +514,8 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
               {renderTile(corner)}
             </div>
             <div className="mod-plano-botcol" style={{ marginLeft: topRowWidth }}>
-              {botRow.map(p => renderTile(p, p.type === 'right' ? 'right_v' : 'center_v'))}
-              {puffsSeq.map(p => renderTile(p))}
+              {botRow.map(p => renderTile(p, p.type === 'right' ? 'right_v' : 'center_v', true))}
+              {puffsSeq.map(p => renderTile(p, undefined, true))}
             </div>
           </div>
           {botColHeight > 0 && (
@@ -523,6 +555,18 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
   const confirmarCotizacion = async () => {
     if (!cotizForm.cliente_nombre.trim()) return alert('El nombre del cliente es obligatorio.')
     setCotizSaving(true)
+    // Desmonta el plano espejado EN PANTALLA para TODA la duración de
+    // confirmarCotizacion (no solo alrededor de pdf()) — ver nota grande
+    // en la declaración de suprimirEspejoParaPdf más arriba. Se prende
+    // lo antes posible (antes de cualquier llamada a Supabase) para no
+    // depender de en qué punto exacto ocurre el cuelgue; un intento
+    // anterior que solo lo prendía justo antes de pdf() (con 2 rAF de
+    // margen) NO evitó el cuelgue — quedó documentado que la ventana de
+    // "antes/durante" no es confiable, así que se desmonta con el mayor
+    // margen posible en vez de acotarlo.
+    setSuprimirEspejoParaPdf(true)
+    await new Promise(r => requestAnimationFrame(r))
+    await new Promise(r => requestAnimationFrame(r))
     try {
       const textilNombre = `${telaSel.nombre} (${telaSel.grado}) · ${colorSel.nombre}`
 
@@ -590,6 +634,7 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
       alert(`Error al guardar la cotización: ${err.message}`)
     } finally {
       setCotizSaving(false)
+      setSuprimirEspejoParaPdf(false)
     }
   }
 

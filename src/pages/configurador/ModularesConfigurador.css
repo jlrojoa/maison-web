@@ -363,6 +363,18 @@
 }
 .mod-plano-mirrored .mod-plano-tile-dim { transform: scaleX(-1); }
 
+/* Piezas apiladas en columna (mod-plano-botcol): la franja de medida va
+   al COSTADO en vez de abajo — con la medida debajo, la franja de la
+   pieza de arriba quedaba ENTRE dos siluetas apiladas, dando apariencia
+   de hueco aunque las cajas están a ras (reportado por JL, 2026-09-04).
+   flex-direction:row pone [silueta][franja] lado a lado; la franja usa
+   writing-mode para que el texto quepa girado en un ancho angosto —
+   mismo recurso que ya usa mod-dim-v-label para la cota vertical. El
+   contra-espejo de mod-plano-mirrored .mod-plano-tile-dim (arriba) ya
+   aplica también aquí, porque comparte la misma clase base. */
+.mod-plano-tile-btn-vertical { flex-direction: row; }
+.mod-plano-tile-dim-side { flex: none; writing-mode: vertical-rl; text-orientation: mixed; }
+
 .mod-resumen { display: flex; flex-direction: column; gap: 6px; }
 .mod-resumen-row {
   display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; color: #334155;
