@@ -288,9 +288,11 @@
    box de mod-plano-canvas y overflow-x:auto la recorta sin forma de
    hacer scroll hasta ahí (scrollLeft no llega a negativo en LTR).
    Reportado por JL, 2026-09-04: la cota vertical "Total: X m"
-   desaparecía por completo en modo Espejo. 40px cubre el ancho medido
-   de mod-dim-v (22px) + su margin-left (10px) + margen de sobra. */
-.mod-plano-canvas { overflow-x: auto; padding-bottom: 4px; padding-left: 40px; }
+   desaparecía por completo en modo Espejo. 80px cubre el ancho de la
+   cadena de dos columnas mod-dim-chain-v (DIM_CHAIN_V_WIDTH, 58px tras
+   el rediseño de cotas de dos niveles) + su margin-left (10px) + margen
+   de sobra. */
+.mod-plano-canvas { overflow-x: auto; padding-bottom: 4px; padding-left: 80px; }
 .mod-plano-legend {
   display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center;
   padding-top: 12px; margin-top: 14px; border-top: 1px solid rgba(201,124,74,.4);
@@ -323,6 +325,37 @@
 .mod-dim-v .mod-dim-label { writing-mode: vertical-rl; margin-bottom: 0; margin-left: 3px; }
 .mod-plano-with-dims { display: inline-block; }
 
+/* Cotas arquitectónicas de dos niveles (rediseño 2026-09-04, referencia
+   Veka — ver captura guardada por JL): en vez de una sola cota que solo
+   mostraba el total, cada pieza tiene su propia línea de cota
+   individual (misma distancia respecto a las piezas, formando una
+   cadena continua) MÁS una cota "Total" aparte, más alejada, que cubre
+   el tramo completo. Reutiliza <DimLine> (línea+flechas+etiqueta) tal
+   cual para cada segmento — solo agrega el layout de dos filas/columnas
+   y las líneas de extensión finas que conectan cada pieza con su cota.
+   mod-dim-chain-h: fila Total arriba, fila individual justo encima de
+   las piezas (mismo orden que la referencia). */
+.mod-dim-chain { position: relative; }
+.mod-dim-chain-h { display: flex; flex-direction: column; }
+.mod-dim-row-total { margin-bottom: 10px; }
+.mod-dim-row-individual { display: flex; flex-direction: row; }
+.mod-dim-ext-layer { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.mod-dim-ext-line { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--copper-line); opacity: .35; }
+.mod-dim-chain-h .mod-dim-row { position: relative; z-index: 1; }
+
+/* mod-dim-chain-v: columna individual pegada a las piezas + columna
+   Total más alejada, una al lado de la otra (ancho fijo reservado por
+   DIM_CHAIN_V_WIDTH en JS). Ambas se posicionan absolutas dentro del
+   wrapper para que la individual pueda arrancar con un offset vertical
+   (el Esquinero, que no tiene cota individual propia — su tramo ya
+   queda cubierto por la cota horizontal) mientras el Total cubre el
+   tramo completo desde arriba. */
+.mod-dim-chain-v { position: relative; }
+.mod-dim-col-individual { position: absolute; left: 0; display: flex; flex-direction: column; z-index: 1; }
+.mod-dim-col-total { position: absolute; z-index: 1; }
+.mod-dim-ext-layer-v { position: absolute; left: 0; right: 0; pointer-events: none; z-index: 0; }
+.mod-dim-ext-line-v { position: absolute; left: 0; right: 0; height: 1px; background: var(--copper-line); opacity: .35; }
+
 /* La cota vertical se ancla a left:100% de ESTE contenedor — el mismo
    elemento cuyo ancho real ocupan las piezas — así queda flush contra el
    borde derecho verdadero, no contra un cálculo de ancho aparte que podría
@@ -350,30 +383,13 @@
 .mod-plano-tile:hover .mod-preview-remove { opacity: 1; }
 .mod-plano-tile-btn svg { display: block; flex-shrink: 0; }
 
-/* El plano ya no controla el ancho, solo lo documenta — elegir 100cm/80cm
-   vive en la tarjeta de selección de arriba (mod-pieza-anchos) y, por
-   instancia ya colocada, en "Tu armado" (mod-anchos). La medida se dibuja en
-   una franja propia DEBAJO del dibujo (PiezaSVG recibe la altura del tile
-   menos esta franja) en vez de superpuesta encima — así nunca se encima con
-   las líneas de la pieza, sea cual sea el tamaño del tile. */
-.mod-plano-tile-dim {
-  display: flex; align-items: center; justify-content: center; flex: 1;
-  color: #5B5449; font-size: 11px; font-weight: 600; line-height: 1; white-space: nowrap;
-  font-family: 'Poppins', sans-serif; pointer-events: none;
-}
-.mod-plano-mirrored .mod-plano-tile-dim { transform: scaleX(-1); }
-
-/* Piezas apiladas en columna (mod-plano-botcol): la franja de medida va
-   al COSTADO en vez de abajo — con la medida debajo, la franja de la
-   pieza de arriba quedaba ENTRE dos siluetas apiladas, dando apariencia
-   de hueco aunque las cajas están a ras (reportado por JL, 2026-09-04).
-   flex-direction:row pone [silueta][franja] lado a lado; la franja usa
-   writing-mode para que el texto quepa girado en un ancho angosto —
-   mismo recurso que ya usa mod-dim-v-label para la cota vertical. El
-   contra-espejo de mod-plano-mirrored .mod-plano-tile-dim (arriba) ya
-   aplica también aquí, porque comparte la misma clase base. */
-.mod-plano-tile-btn-vertical { flex-direction: row; }
-.mod-plano-tile-dim-side { flex: none; writing-mode: vertical-rl; text-orientation: mixed; }
+/* El plano ya no muestra la medida de cada pieza en texto plano dentro
+   de su propio tile (eso duplicaba la cadena de cotas de dos niveles,
+   DimChainH/DimChainV arriba, y encogía el dibujo innecesariamente para
+   dejarle una franja — reportado por JL, 2026-09-04). Elegir 100cm/80cm
+   sigue viviendo en la tarjeta de selección de arriba (mod-pieza-anchos)
+   y en "Ancho de piezas" dentro de "Tu armado" (mod-anchos); la medida
+   ya dibujada solo se lee en la cadena de cotas. */
 
 .mod-resumen { display: flex; flex-direction: column; gap: 6px; }
 .mod-resumen-row {

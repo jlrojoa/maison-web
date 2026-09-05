@@ -370,20 +370,6 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
   // ese tamaño según su ancho elegido (100/80cm) para que el rectángulo
   // refleje el ancho relativo, también aproximado.
   const TILE_PX = 84
-  // Franja reservada para la medida al pie de cada pieza — JL pidió que el
-  // plano deje de ser interactivo y solo muestre la medida ya elegida, sin
-  // encimarse con las líneas del dibujo. En vez de superponer el texto sobre
-  // el SVG, se resta esta franja de la altura real del dibujo (que se
-  // escala un poco más angosto) y el texto vive debajo, en espacio propio.
-  const LABEL_H = 14
-  // Franja lateral (no debajo) para la medida de piezas APILADAS EN
-  // COLUMNA (mod-plano-botcol) — con la medida debajo, la franja de la
-  // pieza de arriba quedaba ENTRE dos siluetas apiladas, dando
-  // apariencia de hueco aunque las cajas están a ras (reportado por JL,
-  // 2026-09-04). Las piezas en fila horizontal no cambian — ahí la
-  // franja de cada pieza cae en su propia fila de etiquetas, debajo de
-  // TODAS las piezas a la vez, nunca entre dos siluetas.
-  const LABEL_SIDE_W = 16
   const { sofaPiezas, puffs: puffsSeq, cornerIdx, hasCorner } = splitSofaLayout(sequence)
 
   const getTileSize = (piece, variant) => {
@@ -417,32 +403,89 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
       <span className="mod-dim-line" />
     </div>
   )
+  const metrosLabel = (p) => `${metrosDePieza(p).toFixed(2)} m`
 
-  const renderTile = (piece, variant, vertical) => {
+  // Ancho reservado para la cota vertical de dos niveles: columna
+  // individual (pegada a las piezas) + separación + columna Total (más
+  // alejada) — mismos ~22px por columna que ya median mod-dim-v antes
+  // del rediseño (línea + etiqueta rotada), ver comentario de
+  // .mod-plano-canvas arriba.
+  const DIM_CHAIN_V_COL_W = 22
+  const DIM_CHAIN_V_GAP = 14
+  const DIM_CHAIN_V_WIDTH = DIM_CHAIN_V_COL_W * 2 + DIM_CHAIN_V_GAP
+
+  // Cadena de cotas horizontal: cota Total (arriba, cubre todo el
+  // tramo) + una fila de cotas individuales (una por pieza, mismo
+  // offset, justo encima de las piezas) + líneas de extensión que
+  // conectan cada borde de pieza con ambas cotas — ver comentario CSS
+  // grande en mod-dim-chain-h.
+  const DimChainH = ({ pieces, widthOf, labelOf, totalWidthPx, totalLabel }) => {
+    let cursor = 0
+    const boundaries = [0]
+    pieces.forEach(p => { cursor += widthOf(p); boundaries.push(cursor) })
+    return (
+      <div className="mod-dim-chain mod-dim-chain-h" style={{ width: totalWidthPx }}>
+        <div className="mod-dim-row mod-dim-row-total">
+          <DimLine sizePx={totalWidthPx} label={totalLabel} />
+        </div>
+        <div className="mod-dim-row mod-dim-row-individual">
+          {pieces.map(p => <DimLine key={p.id} sizePx={widthOf(p)} label={labelOf(p)} />)}
+        </div>
+        <div className="mod-dim-ext-layer">
+          {boundaries.map((x, i) => <span key={i} className="mod-dim-ext-line" style={{ left: x }} />)}
+        </div>
+      </div>
+    )
+  }
+
+  // Cadena de cotas vertical: misma idea en columna, pero la columna
+  // individual arranca con un offset (individualOffsetPx) porque el
+  // Esquinero no tiene cota individual propia — su tramo ya lo cubre la
+  // cota horizontal (es parte de la fila de arriba). El Total sí cubre
+  // el tramo completo desde y=0.
+  const DimChainV = ({ pieces, heightOf, labelOf, totalHeightPx, totalLabel, individualOffsetPx = 0 }) => {
+    let cursor = individualOffsetPx
+    const boundaries = individualOffsetPx > 0 ? [0, individualOffsetPx] : [0]
+    pieces.forEach(p => { cursor += heightOf(p); boundaries.push(cursor) })
+    return (
+      <div className="mod-dim-chain mod-dim-chain-v" style={{ width: DIM_CHAIN_V_WIDTH, height: totalHeightPx }}>
+        <div
+          className="mod-dim-col mod-dim-col-individual"
+          style={{ top: individualOffsetPx, height: totalHeightPx - individualOffsetPx, width: DIM_CHAIN_V_COL_W }}
+        >
+          {pieces.map(p => <DimLine key={p.id} sizePx={heightOf(p)} label={labelOf(p)} vertical />)}
+        </div>
+        <div
+          className="mod-dim-col mod-dim-col-total"
+          style={{ left: DIM_CHAIN_V_COL_W + DIM_CHAIN_V_GAP, top: 0, width: DIM_CHAIN_V_COL_W, height: totalHeightPx }}
+        >
+          <DimLine sizePx={totalHeightPx} label={totalLabel} vertical />
+        </div>
+        <div className="mod-dim-ext-layer-v">
+          {boundaries.map((y, i) => <span key={i} className="mod-dim-ext-line-v" style={{ top: y }} />)}
+        </div>
+      </div>
+    )
+  }
+
+  // Sin etiqueta de medida propia — esa información ahora la da
+  // exclusivamente la cadena de cotas (DimChainH/DimChainV, arriba).
+  // Antes cada pieza reservaba una franja interna (debajo o al costado)
+  // para su propio "100cm" en texto plano; con la cadena de cotas ya
+  // afuera del dibujo, esa franja quedaba duplicando la misma medida Y
+  // encogiendo el dibujo sin necesidad (reportado por JL, 2026-09-04).
+  // El arte ahora ocupa el tile COMPLETO — sin reservar nada.
+  const renderTile = (piece, variant) => {
     const { width, height } = getTileSize(piece, variant)
-    const artWidth = vertical ? width - LABEL_SIDE_W : width
-    const artHeight = vertical ? height : height - LABEL_H
-    const label = tieneAncho(piece.type) ? `${piece.ancho ?? 100}cm` : '100cm'
     return (
       <div className="mod-plano-tile" key={piece.id} style={{ width, height }}>
         <button
           type="button"
-          className={`mod-plano-tile-btn${vertical ? ' mod-plano-tile-btn-vertical' : ''}`}
+          className="mod-plano-tile-btn"
           title={`Quitar ${NOMBRE_POR_TIPO[piece.type]}${piece.type !== 'puff' ? ' (y todo lo que sigue)' : ''}`}
           onClick={() => quitarDesde(piece.id)}
         >
-          <PiezaSVG type={variant || piece.type} width={artWidth} height={artHeight} colors={BLUEPRINT_COLORS} />
-          {/* El plano ya no controla el ancho — solo lo muestra. Elegir
-              100cm/80cm vive en la tarjeta de selección de arriba (mod-pieza-
-              anchos, define el ancho de la PRÓXIMA pieza) y, para ajustar una
-              instancia ya colocada, en "Ancho de piezas" dentro de "Tu
-              armado" (mod-anchos). Así el plano queda puramente de lectura y
-              sin el hit-target chico que antes competía con el botón de
-              quitar. Piezas apiladas en columna (vertical=true): la franja
-              va al COSTADO en vez de abajo, ver LABEL_SIDE_W arriba. */}
-          {vertical
-            ? <span className="mod-plano-tile-dim mod-plano-tile-dim-side" style={{ width: LABEL_SIDE_W }}>{label}</span>
-            : <span className="mod-plano-tile-dim" style={{ height: LABEL_H }}>{label}</span>}
+          <PiezaSVG type={variant || piece.type} width={width} height={height} colors={BLUEPRINT_COLORS} />
           <span className="mod-preview-remove">×</span>
         </button>
       </div>
@@ -471,7 +514,15 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
       const anchoTotalPx = sofaPiezas.reduce((sum, p) => sum + getTileSize(p).width, 0)
       return (
         <div className="mod-plano-with-dims">
-          {anchoTotalPx > 0 && <DimLine sizePx={anchoTotalPx} label={`${totalHorizontalM.toFixed(2)} m`} />}
+          {anchoTotalPx > 0 && (
+            <DimChainH
+              pieces={sofaPiezas}
+              widthOf={(p) => getTileSize(p).width}
+              labelOf={metrosLabel}
+              totalWidthPx={anchoTotalPx}
+              totalLabel={`Total: ${totalHorizontalM.toFixed(2)} m`}
+            />
+          )}
           <div className={`mod-plano-figure ${mirrored ? 'mod-plano-mirrored' : ''}`}>
             <div className="mod-plano">
               <div className="mod-plano-row">{sofaPiezas.map(p => renderTile(p))}</div>
@@ -504,9 +555,19 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
     // espeja — no solo la figura — para que la cota se quede pegada al
     // esquinero también en modo Espejo; el texto se contra-espeja aparte
     // (si no, saldría al revés).
+    const botRowIds = new Set(botRow.map(p => p.id))
+    const columnPieces = [...botRow, ...puffsSeq]
+    const heightOfColumnPiece = (p) => getTileSize(p, botRowIds.has(p.id) ? (p.type === 'right' ? 'right_v' : 'center_v') : undefined).height
+
     return (
       <div className="mod-plano-with-dims">
-        <DimLine sizePx={topRowWidth + cornerWidth} label={`${totalHorizontalM.toFixed(2)} m`} />
+        <DimChainH
+          pieces={[...topRow, corner]}
+          widthOf={(p) => getTileSize(p).width}
+          labelOf={metrosLabel}
+          totalWidthPx={topRowWidth + cornerWidth}
+          totalLabel={`Total: ${totalHorizontalM.toFixed(2)} m`}
+        />
         <div className={`mod-plano-figure ${mirrored ? 'mod-plano-mirrored' : ''}`}>
           <div className="mod-plano">
             <div className="mod-plano-row">
@@ -514,13 +575,20 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
               {renderTile(corner)}
             </div>
             <div className="mod-plano-botcol" style={{ marginLeft: topRowWidth }}>
-              {botRow.map(p => renderTile(p, p.type === 'right' ? 'right_v' : 'center_v', true))}
-              {puffsSeq.map(p => renderTile(p, undefined, true))}
+              {botRow.map(p => renderTile(p, p.type === 'right' ? 'right_v' : 'center_v'))}
+              {puffsSeq.map(p => renderTile(p))}
             </div>
           </div>
           {botColHeight > 0 && (
             <div className="mod-dim-v-anchor" style={{ height: cornerWidth + botColHeight }}>
-              <DimLine sizePx={cornerWidth + botColHeight} label={`${totalVerticalM.toFixed(2)} m`} vertical />
+              <DimChainV
+                pieces={columnPieces}
+                heightOf={heightOfColumnPiece}
+                labelOf={metrosLabel}
+                totalHeightPx={cornerWidth + botColHeight}
+                totalLabel={`Total: ${totalVerticalM.toFixed(2)} m`}
+                individualOffsetPx={cornerWidth}
+              />
             </div>
           )}
         </div>

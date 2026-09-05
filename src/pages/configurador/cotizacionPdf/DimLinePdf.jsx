@@ -60,3 +60,39 @@ export function DimLineV({ x, y, height, label, mirrored }) {
     </>
   )
 }
+
+// Cotas arquitectónicas de dos niveles (rediseño 2026-09-04, referencia
+// Veka) — puerto exacto de DimChainH/DimChainV en ModularesConfigurador.jsx
+// a primitivos SVG: una cota Total (más alejada) + una fila/columna de
+// cotas individuales (una por pieza, mismo offset, formando una cadena
+// contigua reutilizando DimLineH/DimLineV para cada segmento) + líneas
+// de extensión finas que conectan cada borde de pieza con ambas cotas.
+// Debe verse IDÉNTICO a su contraparte de pantalla — mismo criterio de
+// paridad screen/PDF que el resto de este archivo.
+export function DimChainH({ segments, innerY, outerY, pieceEdgeY, totalWidth, totalLabel }) {
+  const boundaries = [0, ...segments.map(s => s.x + s.width)]
+  return (
+    <>
+      <DimLineH x={0} y={outerY} width={totalWidth} label={totalLabel} />
+      {segments.map((s, i) => <DimLineH key={i} x={s.x} y={innerY} width={s.width} label={s.label} />)}
+      {boundaries.map((x, i) => (
+        <Line key={i} x1={x} y1={outerY} x2={x} y2={pieceEdgeY} stroke={COLORS.copperLine} strokeWidth={0.5} strokeOpacity={0.4} />
+      ))}
+    </>
+  )
+}
+
+export function DimChainV({ segments, innerX, outerX, pieceEdgeX, totalHeight, totalLabel, individualOffset = 0, mirrored }) {
+  const boundaries = individualOffset > 0 ? [0, individualOffset] : [0]
+  let cursor = individualOffset
+  segments.forEach(s => { cursor += s.height; boundaries.push(cursor) })
+  return (
+    <>
+      {segments.map((s, i) => <DimLineV key={i} x={innerX} y={s.y} height={s.height} label={s.label} mirrored={mirrored} />)}
+      <DimLineV x={outerX} y={0} height={totalHeight} label={totalLabel} mirrored={mirrored} />
+      {boundaries.map((y, i) => (
+        <Line key={i} x1={pieceEdgeX} y1={y} x2={outerX} y2={y} stroke={COLORS.copperLine} strokeWidth={0.5} strokeOpacity={0.4} />
+      ))}
+    </>
+  )
+}
