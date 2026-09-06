@@ -395,7 +395,19 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
   // configuración (300x200 aquí vs. 300x300 en el PDF para Escuadra con
   // puff). Corregido para que coincidan siempre — reportado por JL,
   // 2026-09-01.
-  const totalVerticalM = hasCorner ? 1 + botRowSeq.reduce((sum, p) => sum + metrosDePieza(p), 0) + (puffsSeq.length > 0 ? 1 : 0) : 0
+  // Sin Esquinero pero CON Puff (ej. Chaise): el Puff cae en su propia
+  // fila, debajo de la fila principal — hay profundidad de sobra
+  // (fila principal + Puff) igual que con Esquinero, solo que sin
+  // columna. Antes esta cuenta daba 0 en ese caso (bug reportado por
+  // JL, 2026-09-05: "Profundidad total" no reflejaba el Puff y la cota
+  // vertical ni se dibujaba — ver DimChainV más abajo). Ambas franjas
+  // son de profundidad FIJA (1 tile = 1.00m cada una; el "ancho"
+  // configurable del Puff nunca afecta esta medida, solo su ancho
+  // horizontal), a diferencia de botRowSeq (con Esquinero) que sí varía
+  // por pieza.
+  const totalVerticalM = hasCorner
+    ? 1 + botRowSeq.reduce((sum, p) => sum + metrosDePieza(p), 0) + (puffsSeq.length > 0 ? 1 : 0)
+    : (puffsSeq.length > 0 ? 2 : 0)
 
   const DimLine = ({ sizePx, label, vertical }) => (
     <div className={`mod-dim ${vertical ? 'mod-dim-v' : 'mod-dim-h'}`} style={vertical ? { height: sizePx } : { width: sizePx }}>
@@ -528,6 +540,26 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
               <div className="mod-plano-row">{sofaPiezas.map(p => renderTile(p))}</div>
               {puffsSeq.length > 0 && <div className="mod-plano-row mod-plano-row-puffs">{puffsSeq.map(p => renderTile(p))}</div>}
             </div>
+            {/* Cota vertical del Puff cuando NO hay Esquinero (ej.
+                Chaise): antes esta cota solo existía en la rama CON
+                columna/Esquinero, así que un Puff suelto en su propia
+                fila se quedaba sin ninguna cota de profundidad — bug
+                reportado por JL, 2026-09-05. La franja del Puff es de
+                profundidad FIJA (1 tile), por eso un solo segmento
+                sintético en vez de mapear puffsSeq (que están lado a
+                lado, no apilados, así que comparten la misma franja). */}
+            {puffsSeq.length > 0 && (
+              <div className="mod-dim-v-anchor" style={{ height: TILE_PX * 2 }}>
+                <DimChainV
+                  pieces={[{ id: 'puff-depth' }]}
+                  heightOf={() => TILE_PX}
+                  labelOf={() => '1.00 m'}
+                  totalHeightPx={TILE_PX * 2}
+                  totalLabel={`Total: ${totalVerticalM.toFixed(2)} m`}
+                  individualOffsetPx={TILE_PX}
+                />
+              </div>
+            )}
           </div>
         </div>
       )

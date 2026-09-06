@@ -146,6 +146,22 @@ export default function PlanoPagePdf({ data, empresa }) {
     dimHWidth = sofaRowWidth // la cota horizontal solo mide la fila de sofá, igual que anchoTotalPx en pantalla
     figureWidth = Math.max(sofaRowWidth, puffRowWidth)
     figureHeight = puffs.length > 0 ? puffRowY + TILE_PT : TILE_PT
+
+    // Cota vertical del Puff cuando NO hay Esquinero (ej. Chaise): antes
+    // dimV solo se calculaba en la rama CON Esquinero/columna, así que
+    // un Puff suelto en su propia fila se quedaba sin ninguna cota de
+    // profundidad — bug reportado por JL, 2026-09-05. Un solo segmento
+    // sintético (no uno por pieza de puffs[]) porque los puffs de esta
+    // rama van lado a lado, no apilados, y comparten la misma franja de
+    // profundidad FIJA (1 tile).
+    if (puffs.length > 0) {
+      dimV = {
+        individualSegments: [{ y: puffRowY, height: TILE_PT, label: '1.00 m' }],
+        individualOffset: TILE_PT,
+        totalHeight: figureHeight,
+        totalLabel: `Total: ${(data.huellaProfundidadCm / 100).toFixed(2)} m`,
+      }
+    }
   } else {
     const topRow = sofaPiezas.slice(0, cornerIdx)
     const corner = sofaPiezas[cornerIdx]
