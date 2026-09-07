@@ -32,7 +32,28 @@ export default function Colecciones() {
         // subir), que es una foto distinta a la que el admin realmente eligió como
         // "Imagen principal". isometrico_url manda; la galería es solo respaldo si
         // el producto no tiene imagen principal capturada todavía.
-        const galeria = p.imagenes?.find(i => i.es_principal) ?? p.imagenes?.[0] ?? null
+        //
+        // Excepción puntual (Modulares, 2026-09-06): NO ES UN BUG, no borrar
+        // pensando que sobra. Regla: más de 1 imagen es_principal para el
+        // mismo producto = fotos sin curar de un import masivo (llegaron en
+        // bloque, cada una con el flag por defecto), NO una portada real
+        // elegida a propósito. Caso concreto: Cubo y Milan no tienen
+        // isometrico_url, y su producto_imagenes son fotos sueltas por
+        // pieza (brazo/centro/esquinero) importadas de Shopify — TODAS con
+        // es_principal=true porque nadie eligió una en particular. Sin esta
+        // condición, el fallback de arriba tomaba la primera sin más y
+        // mostraba un brazo aislado como si fuera la portada del sofá
+        // armado. Nube sí tiene una galería curada de verdad (exactamente 1
+        // es_principal, subida a propósito) y por eso NO cae en esta regla
+        // — sigue mostrando su foto normalmente. Cuando Cubo/Milan tengan
+        // una foto real armada y se marque UNA sola como principal (o se
+        // capture isometrico_url desde el admin), esta condición deja de
+        // aplicarles solo y automáticamente, sin tocar código de nuevo.
+        // Acotado a Modulares a propósito — el resto del catálogo sigue
+        // usando el fallback de siempre, sin cambios.
+        const principalesSinCurar = p.categoria?.slug === 'modulares'
+          && (p.imagenes?.filter(i => i.es_principal).length ?? 0) > 1
+        const galeria = principalesSinCurar ? null : (p.imagenes?.find(i => i.es_principal) ?? p.imagenes?.[0] ?? null)
         return {
           ...p,
           imagen_principal: p.isometrico_url
@@ -94,7 +115,7 @@ export default function Colecciones() {
                 </div>
                 <div className="pg5">
                   {matched.map(product => (
-                    <Link key={product.id} className="pc" to={configuradorUrl(product)}>
+                    <Link key={product.id} className={`pc${cat.slug === 'modulares' ? ' pc-mod' : ''}`} to={configuradorUrl(product)}>
                       <div className="pci">
                         <div className="pci-bg">
                           {product.imagen_principal
