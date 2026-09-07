@@ -89,18 +89,6 @@ nav.s .nbtn{background:var(--charcoal);border-color:var(--charcoal)}
    reconocía). Con contain se ve la foto completa, con relleno neutro a los lados. */
 .pci-bg img{width:100%;height:100%;object-fit:contain;object-position:center;transition:transform .8s cubic-bezier(.25,.46,.45,.94)}
 .pc:hover .pci-bg img{transform:scale(1.05)}
-/* Modulares (Cubo/Milan/Nube, 2026-09-06): sus fotos hoy vienen de fuentes
-   dispares — piezas sueltas de Shopify (Cubo, Milan) con su propio margen
-   blanco variable, o una foto ya compuesta subida a mano (Nube) — así que
-   con "contain" cada una llena el cuadro 1:1 a una escala distinta (relleno
-   gris de sobra en unas, otra que se ve más grande). Acá SÍ conviene cover
-   (recorta al cuadro completo, tamaño idéntico sin importar la proporción de
-   origen) porque son fotos de producto aislado sobre blanco, no las
-   composiciones de sofá completo del resto del catálogo que motivaron
-   preferir contain arriba (ver nota de "toma la segunda imagen" — un
-   recorte agresivo ahí sí volvía la foto irreconocible). Solo esta
-   categoría, para no revivir ese problema en las demás. */
-.pc-mod .pci-bg img{object-fit:cover}
 .pbg{position:absolute;top:16px;left:16px;z-index:2;background:var(--charcoal);color:#fff;font-family:var(--sans);font-size:9px;letter-spacing:.2em;text-transform:uppercase;padding:5px 11px}
 .pov{position:absolute;inset:0;z-index:3;display:flex;align-items:flex-end;justify-content:center;padding-bottom:26px;background:rgba(26,23,21,0);transition:background .4s}
 .pc:hover .pov{background:rgba(26,23,21,.3)}
