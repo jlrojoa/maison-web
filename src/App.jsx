@@ -24,7 +24,8 @@ const AdminLayout = lazy(() => import('./admin/catalogo/AdminLayout'))
 const AdminLogin = lazy(() => import('./admin/catalogo/AdminLogin'))
 const Dashboard = lazy(() => import('./admin/catalogo/Dashboard'))
 const AdminProducts = lazy(() => import('./admin/catalogo/AdminProducts'))
-const AdminLeads = lazy(() => import('./admin/AdminLeads'))
+const SalesDashboard = lazy(() => import('./admin/sales/SalesDashboard'))
+const SalesProspectos = lazy(() => import('./admin/sales/SalesProspectos'))
 const AdminDistribuidores = lazy(() => import('./admin/AdminDistribuidores'))
 const AdminCatalogos = lazy(() => import('./admin/AdminCatalogos'))
 
@@ -64,7 +65,9 @@ export default function App() {
           >
             <Route index element={<Suspense fallback={<AdminFallback />}><Dashboard /></Suspense>} />
             <Route path="productos/*" element={<Suspense fallback={<AdminFallback />}><AdminProducts /></Suspense>} />
-            <Route path="leads" element={<Suspense fallback={<AdminFallback />}><AdminLeads /></Suspense>} />
+            <Route path="sales" element={<Suspense fallback={<AdminFallback />}><SalesDashboard /></Suspense>} />
+            <Route path="sales/prospectos" element={<Suspense fallback={<AdminFallback />}><SalesProspectos /></Suspense>} />
+            <Route path="leads" element={<Navigate to="/admin/sales/prospectos" replace />} />
             <Route path="distribuidores" element={<Suspense fallback={<AdminFallback />}><AdminDistribuidores /></Suspense>} />
             <Route path="catalogos" element={<Suspense fallback={<AdminFallback />}><AdminCatalogos /></Suspense>} />
           </Route>
