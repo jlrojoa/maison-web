@@ -1,7 +1,6 @@
 import { useReveal } from '../hooks/useReveal'
 import Nav from '../components/Nav'
 import Hero from '../components/Hero'
-import Marquee from '../components/Marquee'
 import Philosophy from '../components/Philosophy'
 import Collections from '../components/Collections'
 import Materials from '../components/Materials'
@@ -17,7 +16,6 @@ export default function Home() {
     <div id="mp">
       <Nav />
       <Hero />
-      <Marquee />
       <Philosophy />
       <Collections />
       <Materials />
