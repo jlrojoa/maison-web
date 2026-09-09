@@ -26,6 +26,12 @@ const COLOR_TIPO = {
   fabrica_muebles: '#059669', hotel: '#B45309', '': '#374151',
 }
 
+const SCORES = [
+  { value: 'A', label: 'A · Alto potencial' },
+  { value: 'B', label: 'B · Medio' },
+  { value: 'C', label: 'C · Bajo / dudoso' },
+]
+
 export default function SalesProspector() {
   const mapDivRef = useRef(null)
   const mapRef = useRef(null)
@@ -34,6 +40,7 @@ export default function SalesProspector() {
   const [filtros, setFiltros] = useState({ tipo: '', estado: '', municipio: '', colonia: '', textoLibre: '' })
   const [resultados, setResultados] = useState([])
   const [agregados, setAgregados] = useState(new Set())
+  const [scores, setScores] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -104,6 +111,7 @@ export default function SalesProspector() {
       lat: r.lat,
       lng: r.lng,
       fuente: 'google_places',
+      score: scores[r.google_place_id] || null,
     }, { onConflict: 'google_place_id' })
 
     if (!upsertError) setAgregados(prev => new Set(prev).add(r.google_place_id))
@@ -186,6 +194,17 @@ export default function SalesProspector() {
                 >
                   {agregados.has(r.google_place_id) ? '✓ Agregado' : '+ Agregar a Prospectos'}
                 </button>
+                {!agregados.has(r.google_place_id) && (
+                  <select
+                    className="adm-select"
+                    style={{ fontSize: 11.5, padding: '4px 6px', alignSelf: 'flex-start', marginTop: -4 }}
+                    value={scores[r.google_place_id] || ''}
+                    onChange={e => setScores(prev => ({ ...prev, [r.google_place_id]: e.target.value }))}
+                  >
+                    <option value="">Calificar antes de agregar (opcional)</option>
+                    {SCORES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
+                )}
               </div>
             ))}
           </div>

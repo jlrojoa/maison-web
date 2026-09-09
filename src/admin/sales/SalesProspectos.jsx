@@ -2,45 +2,56 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import './sales.css'
 
-// Los prospectos que ves aquí SÍ son reales: vienen de la tabla `leads`
-// (los mensajes del formulario de contacto del sitio). Todos entran en
-// la etapa "Nuevo" porque hoy la tabla `leads` no tiene columna de etapa,
-// score ni tipo de prospecto — eso es trabajo aparte (migración de Supabase)
-// que falta aprobar antes de que el cambio de etapa se pueda guardar de verdad.
-// Por ahora el selector de etapa es solo visual (no persiste).
-
 const ETAPAS = ['Nuevo', 'Contactado', 'Interesado', 'Muestrario', 'Cotización', 'Negociación', 'Cliente']
+const TIPOS = [
+  { value: 'mueblería', label: 'Mueblería' },
+  { value: 'diseñador_interior', label: 'Diseñador de interiores' },
+  { value: 'arquitecto', label: 'Arquitecto' },
+  { value: 'fabrica_muebles', label: 'Fábrica de muebles' },
+  { value: 'hotel', label: 'Hotel' },
+  { value: 'otro', label: 'Otro' },
+]
+const tipoLabel = v => TIPOS.find(t => t.value === v)?.label ?? v
+const SCORE_COLOR = { A: '#059669', B: '#D97706', C: '#9CA3AF' }
 
 export default function SalesProspectos() {
-  const [leads, setLeads] = useState([])
+  const [prospectos, setProspectos] = useState([])
   const [loading, setLoading] = useState(true)
-  const [etapaLocal, setEtapaLocal] = useState({})
+  const [savingId, setSavingId] = useState(null)
 
-  useEffect(() => {
+  const cargar = () => {
+    setLoading(true)
     supabase
-      .from('leads')
+      .from('prospectos')
       .select('*')
       .order('created_at', { ascending: false })
       .then(({ data }) => {
-        setLeads(data ?? [])
+        setProspectos(data ?? [])
         setLoading(false)
       })
-  }, [])
+  }
 
-  const setEtapa = (id, etapa) => setEtapaLocal(prev => ({ ...prev, [id]: etapa }))
+  useEffect(cargar, [])
+
+  const actualizar = async (id, campo, valor) => {
+    setSavingId(id)
+    setProspectos(prev => prev.map(p => (p.id === id ? { ...p, [campo]: valor } : p)))
+    await supabase.from('prospectos').update({ [campo]: valor, updated_at: new Date().toISOString() }).eq('id', id)
+    setSavingId(null)
+  }
 
   return (
     <div>
       <div className="adm-topbar">
         <div>
           <div className="adm-page-title">Prospectos</div>
-          <div className="adm-breadcrumb">Sales Tools <b>› Prospectos</b> · {leads.length} registro{leads.length !== 1 ? 's' : ''}</div>
+          <div className="adm-breadcrumb">Sales Tools <b>› Prospectos</b> · {prospectos.length} registro{prospectos.length !== 1 ? 's' : ''}</div>
         </div>
       </div>
 
       <div className="adm-content">
         <div className="sls-note">
-          Estos son los mensajes reales recibidos por el formulario de contacto del sitio. La etapa de pipeline es editable aquí pero <b>no se guarda todavía</b> — falta agregar la columna <code>etapa</code> a la tabla <code>leads</code> en Supabase.
+          Aquí caen dos fuentes: los mensajes reales del formulario del sitio (fuente "Sitio web") y lo que agregues desde el <b>Prospector</b>. Etapa y calificación se guardan de verdad.
         </div>
 
         <div className="adm-card" style={{ margin: 0, overflowX: 'auto' }}>
@@ -49,36 +60,54 @@ export default function SalesProspectos() {
               <tr>
                 <th>Fecha</th>
                 <th>Nombre</th>
-                <th>Email</th>
-                <th>Teléfono</th>
-                <th>Producto</th>
-                <th>Tejido</th>
-                <th>Mensaje</th>
+                <th>Tipo</th>
+                <th>Ubicación</th>
+                <th>Contacto</th>
+                <th>Fuente</th>
+                <th>Score</th>
                 <th>Etapa</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr><td colSpan={8} style={{ textAlign: 'center', color: '#9CA3AF' }}>Cargando…</td></tr>
-              ) : leads.length === 0 ? (
-                <tr><td colSpan={8} style={{ textAlign: 'center', color: '#9CA3AF' }}>No hay prospectos aún</td></tr>
-              ) : leads.map(l => (
-                <tr key={l.id}>
+              ) : prospectos.length === 0 ? (
+                <tr><td colSpan={8} style={{ textAlign: 'center', color: '#9CA3AF' }}>No hay prospectos aún — agrega desde el Prospector</td></tr>
+              ) : prospectos.map(p => (
+                <tr key={p.id}>
                   <td style={{ whiteSpace: 'nowrap', color: '#9CA3AF' }}>
-                    {new Date(l.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    {new Date(p.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                   </td>
-                  <td style={{ fontWeight: 500 }}>{l.nombre}</td>
-                  <td><a href={`mailto:${l.email}`} style={{ color: '#111827' }}>{l.email}</a></td>
-                  <td style={{ color: '#9CA3AF' }}>{l.telefono ?? '—'}</td>
-                  <td>{l.producto_interes ?? '—'}</td>
-                  <td style={{ color: '#9CA3AF' }}>{l.textile_interes ?? '—'}</td>
-                  <td style={{ maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#6B7280' }}>{l.mensaje ?? '—'}</td>
+                  <td style={{ fontWeight: 500 }}>
+                    {p.sitio_web ? <a href={p.sitio_web} target="_blank" rel="noreferrer" style={{ color: '#111827' }}>{p.nombre} ↗</a> : p.nombre}
+                  </td>
+                  <td style={{ color: '#6B7280' }}>{tipoLabel(p.tipo)}</td>
+                  <td style={{ color: '#9CA3AF' }}>{[p.colonia, p.municipio, p.estado].filter(Boolean).join(', ') || '—'}</td>
+                  <td>
+                    {p.telefono && <div>{p.telefono}</div>}
+                    {p.email && <a href={`mailto:${p.email}`} style={{ color: '#111827' }}>{p.email}</a>}
+                    {!p.telefono && !p.email && '—'}
+                  </td>
+                  <td><span className="sls-etapa-badge">{p.fuente === 'leads_sitio' ? 'Sitio web' : p.fuente === 'google_places' ? 'Google' : 'Manual'}</span></td>
                   <td>
                     <select
                       className="adm-select"
-                      style={{ minWidth: 0, padding: '6px 8px', fontSize: 12 }}
-                      value={etapaLocal[l.id] ?? 'Nuevo'}
-                      onChange={e => setEtapa(l.id, e.target.value)}
+                      style={{ minWidth: 0, padding: '6px 8px', fontSize: 12, color: p.score ? SCORE_COLOR[p.score] : undefined, fontWeight: p.score ? 700 : 400 }}
+                      value={p.score ?? ''}
+                      onChange={e => actualizar(p.id, 'score', e.target.value || null)}
+                    >
+                      <option value="">Sin calificar</option>
+                      <option value="A">A</option>
+                      <option value="B">B</option>
+                      <option value="C">C</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select
+                      className="adm-select"
+                      style={{ minWidth: 0, padding: '6px 8px', fontSize: 12, opacity: savingId === p.id ? 0.5 : 1 }}
+                      value={p.etapa}
+                      onChange={e => actualizar(p.id, 'etapa', e.target.value)}
                     >
                       {ETAPAS.map(e => <option key={e} value={e}>{e}</option>)}
                     </select>
