@@ -1,16 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { supabase } from '../../lib/supabase'
 import './sales.css'
-
-const ESTADOS_MX = [
-  'Aguascalientes', 'Baja California', 'Baja California Sur', 'Campeche', 'Chiapas',
-  'Chihuahua', 'Ciudad de México', 'Coahuila', 'Colima', 'Durango', 'Guanajuato',
-  'Guerrero', 'Hidalgo', 'Jalisco', 'México', 'Michoacán', 'Morelos', 'Nayarit',
-  'Nuevo León', 'Oaxaca', 'Puebla', 'Querétaro', 'Quintana Roo', 'San Luis Potosí',
-  'Sinaloa', 'Sonora', 'Tabasco', 'Tamaulipas', 'Tlaxcala', 'Veracruz', 'Yucatán', 'Zacatecas',
-]
 
 const TIPOS = [
   { value: '', label: 'Todos / texto libre' },
@@ -35,17 +27,25 @@ const SCORES = [
 export default function SalesProspector() {
   const mapDivRef = useRef(null)
   const mapRef = useRef(null)
-  const markersRef = useRef([])
+  const markersRef = useRef({}) // google_place_id -> marker
+  const itemRefs = useRef({}) // google_place_id -> DOM node
 
   const [filtros, setFiltros] = useState({ tipo: '', estado: '', municipio: '', colonia: '', textoLibre: '' })
+  const [estados, setEstados] = useState([])
+  const [municipios, setMunicipios] = useState([])
+  const [colonias, setColonias] = useState([])
+  const [colomex, setColomex] = useState(null) // JSON completo, cargado una vez
+
   const [resultados, setResultados] = useState([])
   const [agregados, setAgregados] = useState(new Set())
   const [scores, setScores] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [seleccionado, setSeleccionado] = useState(null)
 
+  // Mapa Leaflet
   useEffect(() => {
-    mapRef.current = L.map(mapDivRef.current).setView([23.6345, -102.5528], 5) // centro de México
+    mapRef.current = L.map(mapDivRef.current).setView([23.6345, -102.5528], 5)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
       maxZoom: 19,
@@ -53,9 +53,32 @@ export default function SalesProspector() {
     return () => mapRef.current?.remove()
   }, [])
 
+  // Estados: de la tabla mx_municipios (evita mantener una lista aparte)
+  useEffect(() => {
+    supabase.from('mx_municipios').select('estado').then(({ data }) => {
+      const unicos = [...new Set((data ?? []).map(d => d.estado))].sort()
+      setEstados(unicos)
+    })
+    fetch('/data/colonias-mx.json').then(r => r.json()).then(setColomex).catch(() => {})
+  }, [])
+
+  // Municipios en cascada según estado elegido
+  useEffect(() => {
+    if (!filtros.estado) { setMunicipios([]); return }
+    supabase.from('mx_municipios').select('municipio').eq('estado', filtros.estado).order('municipio')
+      .then(({ data }) => setMunicipios((data ?? []).map(d => d.municipio)))
+  }, [filtros.estado])
+
+  // Colonias en cascada según municipio elegido (del JSON ya cargado, sin llamada extra)
+  useEffect(() => {
+    if (!filtros.estado || !filtros.municipio || !colomex) { setColonias([]); return }
+    const lista = colomex[`${filtros.estado}|${filtros.municipio}`] ?? []
+    setColonias(lista)
+  }, [filtros.estado, filtros.municipio, colomex])
+
   const pintarMarcadores = (results) => {
-    markersRef.current.forEach(m => m.remove())
-    markersRef.current = []
+    Object.values(markersRef.current).forEach(m => m.remove())
+    markersRef.current = {}
     const bounds = []
     results.forEach(r => {
       if (r.lat == null || r.lng == null) return
@@ -66,10 +89,23 @@ export default function SalesProspector() {
       })
       const marker = L.marker([r.lat, r.lng], { icon }).addTo(mapRef.current)
       marker.bindPopup(`<b>${r.nombre}</b><br>${r.direccion ?? ''}`)
-      markersRef.current.push(marker)
+      marker.on('click', () => {
+        setSeleccionado(r.google_place_id)
+        itemRefs.current[r.google_place_id]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
+      markersRef.current[r.google_place_id] = marker
       bounds.push([r.lat, r.lng])
     })
     if (bounds.length) mapRef.current.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 })
+  }
+
+  const seleccionarDesdeLista = (id) => {
+    setSeleccionado(id)
+    const marker = markersRef.current[id]
+    if (marker) {
+      mapRef.current.setView(marker.getLatLng(), Math.max(mapRef.current.getZoom(), 14))
+      marker.openPopup()
+    }
   }
 
   const buscar = async (e) => {
@@ -77,6 +113,7 @@ export default function SalesProspector() {
     setLoading(true)
     setError(null)
     setResultados([])
+    setSeleccionado(null)
     const { data: { session } } = await supabase.auth.getSession()
     try {
       const res = await fetch('/api/prospector-search', {
@@ -117,7 +154,14 @@ export default function SalesProspector() {
     if (!upsertError) setAgregados(prev => new Set(prev).add(r.google_place_id))
   }
 
-  const setF = (k, v) => setFiltros(prev => ({ ...prev, [k]: v }))
+  const setF = (k, v) => {
+    setFiltros(prev => {
+      const next = { ...prev, [k]: v }
+      if (k === 'estado') { next.municipio = ''; next.colonia = '' }
+      if (k === 'municipio') next.colonia = ''
+      return next
+    })
+  }
 
   return (
     <div>
@@ -141,16 +185,22 @@ export default function SalesProspector() {
               <div className="sls-pipeline-label" style={{ marginBottom: 4 }}>ESTADO</div>
               <select className="adm-select" style={{ width: '100%' }} value={filtros.estado} onChange={e => setF('estado', e.target.value)}>
                 <option value="">Todos</option>
-                {ESTADOS_MX.map(e => <option key={e} value={e}>{e}</option>)}
+                {estados.map(e => <option key={e} value={e}>{e}</option>)}
               </select>
             </div>
             <div>
-              <div className="sls-pipeline-label" style={{ marginBottom: 4 }}>CIUDAD / MUNICIPIO</div>
-              <input className="adm-select" style={{ width: '100%' }} placeholder="ej. Puebla" value={filtros.municipio} onChange={e => setF('municipio', e.target.value)} />
+              <div className="sls-pipeline-label" style={{ marginBottom: 4 }}>MUNICIPIO</div>
+              <select className="adm-select" style={{ width: '100%' }} value={filtros.municipio} onChange={e => setF('municipio', e.target.value)} disabled={!filtros.estado}>
+                <option value="">{filtros.estado ? 'Todos' : 'Elige un estado primero'}</option>
+                {municipios.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
             </div>
             <div>
               <div className="sls-pipeline-label" style={{ marginBottom: 4 }}>COLONIA</div>
-              <input className="adm-select" style={{ width: '100%' }} placeholder="ej. Polanco" value={filtros.colonia} onChange={e => setF('colonia', e.target.value)} />
+              <select className="adm-select" style={{ width: '100%' }} value={filtros.colonia} onChange={e => setF('colonia', e.target.value)} disabled={!filtros.municipio}>
+                <option value="">{filtros.municipio ? 'Todas' : 'Elige un municipio primero'}</option>
+                {colonias.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
             <button type="submit" className="adm-btn adm-btn-dark" disabled={loading}>{loading ? 'Buscando…' : 'Buscar'}</button>
           </form>
@@ -173,7 +223,17 @@ export default function SalesProspector() {
               <div style={{ fontSize: 12.5, color: '#9CA3AF' }}>Ajusta los filtros y dale a Buscar.</div>
             )}
             {resultados.map(r => (
-              <div key={r.google_place_id} className="sls-list-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
+              <div
+                key={r.google_place_id}
+                ref={el => { itemRefs.current[r.google_place_id] = el }}
+                className="sls-list-item"
+                onClick={() => seleccionarDesdeLista(r.google_place_id)}
+                style={{
+                  flexDirection: 'column', alignItems: 'stretch', gap: 6, cursor: 'pointer',
+                  background: seleccionado === r.google_place_id ? '#F3F4F6' : 'transparent',
+                  borderRadius: 8, padding: '10px 8px', margin: '0 -8px',
+                }}
+              >
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                   <div>
                     <div className="sls-list-title">{r.nombre}</div>
@@ -183,14 +243,14 @@ export default function SalesProspector() {
                 </div>
                 <div style={{ fontSize: 11.5, color: '#6B7280', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                   {r.telefono && <span>☎ {r.telefono}</span>}
-                  {r.sitio_web && <a href={r.sitio_web} target="_blank" rel="noreferrer" style={{ color: '#111827' }}>Sitio web ↗</a>}
+                  {r.sitio_web && <a href={r.sitio_web} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: '#111827' }}>Sitio web ↗</a>}
                 </div>
                 <button
                   type="button"
                   className="adm-btn"
                   style={{ alignSelf: 'flex-start', fontSize: 12, padding: '5px 12px' }}
                   disabled={agregados.has(r.google_place_id)}
-                  onClick={() => agregar(r)}
+                  onClick={e => { e.stopPropagation(); agregar(r) }}
                 >
                   {agregados.has(r.google_place_id) ? '✓ Agregado' : '+ Agregar a Prospectos'}
                 </button>
@@ -199,6 +259,7 @@ export default function SalesProspector() {
                     className="adm-select"
                     style={{ fontSize: 11.5, padding: '4px 6px', alignSelf: 'flex-start', marginTop: -4 }}
                     value={scores[r.google_place_id] || ''}
+                    onClick={e => e.stopPropagation()}
                     onChange={e => setScores(prev => ({ ...prev, [r.google_place_id]: e.target.value }))}
                   >
                     <option value="">Calificar antes de agregar (opcional)</option>

@@ -2,8 +2,11 @@ import { createClient } from '@supabase/supabase-js'
 
 // Endpoint protegido: solo usuarios autenticados que además estén en admin_users
 // pueden usarlo. La API key de Google nunca sale del servidor.
+// Trae TODAS las páginas disponibles (hasta 60 resultados, tope real de Google
+// Places Text Search — 3 páginas de 20). Cada página es una búsqueda facturada.
 
 const FIELD_MASK = [
+  'nextPageToken',
   'places.id',
   'places.displayName',
   'places.formattedAddress',
@@ -24,9 +27,26 @@ const TERMINO_POR_TIPO = {
   otro: '',
 }
 
+const MAX_PAGINAS = 3
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
 function extraeComponente(addressComponents, tipos) {
   const c = (addressComponents || []).find(c => tipos.some(t => c.types?.includes(t)))
   return c?.longText ?? null
+}
+
+async function llamarGoogle(body) {
+  const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': process.env.GOOGLE_PLACES_API_KEY,
+      'X-Goog-FieldMask': FIELD_MASK,
+    },
+    body: JSON.stringify(body),
+  })
+  const data = await res.json()
+  return { ok: res.ok, data }
 }
 
 export default async function handler(req, res) {
@@ -69,23 +89,37 @@ export default async function handler(req, res) {
   }
 
   try {
-    const googleRes = await fetch('https://places.googleapis.com/v1/places:searchText', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': process.env.GOOGLE_PLACES_API_KEY,
-        'X-Goog-FieldMask': FIELD_MASK,
-      },
-      body: JSON.stringify({ textQuery, languageCode: 'es', regionCode: 'MX' }),
-    })
+    const vistos = new Set()
+    const todos = []
+    let pageToken = null
+    let paginas = 0
 
-    const data = await googleRes.json()
-    if (!googleRes.ok) {
-      res.status(502).json({ error: data?.error?.message || 'Error consultando Google Places' })
-      return
-    }
+    do {
+      const body = pageToken
+        ? { pageToken }
+        : { textQuery, languageCode: 'es', regionCode: 'MX' }
 
-    const results = (data.places || []).map(p => ({
+      if (pageToken) await sleep(400)
+
+      const { ok, data } = await llamarGoogle(body)
+      paginas += 1
+
+      if (!ok) {
+        if (todos.length > 0) break // ya tenemos algo útil, no truena la búsqueda completa
+        res.status(502).json({ error: data?.error?.message || 'Error consultando Google Places' })
+        return
+      }
+
+      for (const p of data.places || []) {
+        if (vistos.has(p.id)) continue
+        vistos.add(p.id)
+        todos.push(p)
+      }
+
+      pageToken = data.nextPageToken ?? null
+    } while (pageToken && paginas < MAX_PAGINAS)
+
+    const results = todos.map(p => ({
       google_place_id: p.id,
       nombre: p.displayName?.text ?? '(sin nombre)',
       direccion: p.formattedAddress ?? null,
@@ -101,7 +135,7 @@ export default async function handler(req, res) {
       lng: p.location?.longitude ?? null,
     }))
 
-    res.status(200).json({ results })
+    res.status(200).json({ results, paginasConsultadas: paginas, truncado: results.length >= 60 })
   } catch (err) {
     res.status(500).json({ error: 'Error inesperado', detail: String(err) })
   }
