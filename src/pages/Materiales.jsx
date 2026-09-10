@@ -1,9 +1,11 @@
 // src/pages/Materiales.jsx
 //
 // Portada de Materiales: una tarjeta por colección (no todos los colores de
-// una vez). Cada tarjeta usa como portada la foto del primer color activo de
-// esa colección. Clic en la tarjeta -> /materiales/coleccion/:slug, la página
-// de la colección con su ficha técnica y el grid completo de sus colores.
+// una vez), agrupadas en su propia fila por categoría (AA, A, B, C), cada
+// grupo con su propio título "Categoría X". Cada tarjeta usa como portada la
+// foto del primer color activo, recortada a cuadro (object-fit: cover, clase
+// .pci-cover-fill — no toca el .pci-bg img{contain} global de las fichas de
+// producto). Clic en la tarjeta -> /materiales/coleccion/:slug.
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -16,6 +18,8 @@ export default function Materiales() {
   const [telas, setTelas] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtroGrado, setFiltroGrado] = useState('')
+  const [filtroTela, setFiltroTela] = useState('')
+  const [filtroColor, setFiltroColor] = useState('')
 
   useEffect(() => {
     async function load() {
@@ -35,10 +39,22 @@ export default function Materiales() {
     load()
   }, [])
 
-  const visibles = useMemo(
-    () => telas.filter(t => !filtroGrado || t.grado === filtroGrado),
-    [telas, filtroGrado]
-  )
+  // "Buscar color" ya no filtra colores sueltos (aquí solo se ven portadas) —
+  // filtra qué COLECCIONES tienen al menos un color con ese nombre.
+  const visibles = useMemo(() => {
+    const texto = filtroColor.trim().toLowerCase()
+    return telas
+      .filter(t => !filtroGrado || t.grado === filtroGrado)
+      .filter(t => !filtroTela || t.id === filtroTela)
+      .filter(t => !texto || t.colores.some(c => c.nombre?.toLowerCase().includes(texto)))
+  }, [telas, filtroGrado, filtroTela, filtroColor])
+
+  // Agrupadas por categoría, cada grupo en su propia fila con su propio título.
+  const grupos = useMemo(() => {
+    return GRADOS_ORDEN
+      .map(g => ({ grado: g, items: visibles.filter(t => t.grado === g) }))
+      .filter(g => g.items.length > 0)
+  }, [visibles])
 
   return (
     <div id="mp">
@@ -55,37 +71,57 @@ export default function Materiales() {
               <option value="">Categoría — todas</option>
               {GRADOS_ORDEN.map(g => <option key={g} value={g}>Categoría {g}</option>)}
             </select>
+            <select className="so" value={filtroTela} onChange={e => setFiltroTela(e.target.value)} style={{ padding: '10px 14px' }}>
+              <option value="">Catálogo — todos</option>
+              {telas.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+            </select>
+            <input
+              className="so"
+              type="text"
+              placeholder="Buscar color (ej. Beige)…"
+              value={filtroColor}
+              onChange={e => setFiltroColor(e.target.value)}
+              style={{ padding: '10px 14px', minWidth: 200 }}
+            />
           </div>
         )}
 
         {loading ? (
           <div className="cat-loading">CARGANDO…</div>
-        ) : visibles.length === 0 ? (
+        ) : grupos.length === 0 ? (
           <p style={{ color: 'var(--taupe)', fontSize: 13, padding: '0 24px' }}>
-            {telas.length === 0 ? 'Aún no hay telas cargadas.' : 'Ninguna colección coincide con ese filtro.'}
+            {telas.length === 0 ? 'Aún no hay telas cargadas.' : 'Ninguna colección coincide con esos filtros.'}
           </p>
         ) : (
-          <div className="pg5" style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px' }}>
-            {visibles.map(t => {
-              const portada = t.colores[0]
-              return (
-                <Link key={t.id} className="pc" to={`/materiales/coleccion/${t.slug ?? t.id}`}>
-                  <div className="pci">
-                    <div className="pci-bg">
-                      {portada?.imagen_url ? (
-                        <img src={portada.imagen_url} alt={t.nombre} />
-                      ) : (
-                        <div className="pc-init"><span>{t.nombre?.[0]}</span></div>
-                      )}
-                    </div>
-                    <div className="pov"><span className="pct">Ver Colección</span></div>
-                  </div>
-                  <div className="ptg">Categoría {t.grado}</div>
-                  <div className="pnm">{t.nombre} · {t.colores.length} colores</div>
-                </Link>
-              )
-            })}
-          </div>
+          grupos.map(({ grado, items }) => (
+            <div key={grado} className="cat-sec">
+              <div className="cat-sec-hd">
+                <h2 className="cat-sec-title">Categoría {grado}</h2>
+                <span className="cat-sec-count">{items.length} colección{items.length !== 1 ? 'es' : ''}</span>
+              </div>
+              <div className="pg5">
+                {items.map(t => {
+                  const portada = t.colores[0]
+                  return (
+                    <Link key={t.id} className="pc" to={`/materiales/coleccion/${t.slug ?? t.id}`}>
+                      <div className="pci">
+                        <div className="pci-bg">
+                          {portada?.imagen_url ? (
+                            <img className="pci-cover-fill" src={portada.imagen_url} alt={t.nombre} />
+                          ) : (
+                            <div className="pc-init"><span>{t.nombre?.[0]}</span></div>
+                          )}
+                        </div>
+                        <div className="pov"><span className="pct">Ver Colección</span></div>
+                      </div>
+                      <div className="ptg">{t.nombre}</div>
+                      <div className="pnm">{t.colores.length} colores</div>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          ))
         )}
       </div>
       <Footer />
