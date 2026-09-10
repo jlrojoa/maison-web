@@ -5,6 +5,7 @@ import { AdminAuthProvider } from './admin/catalogo/AdminAuthContext'
 import Home from './pages/Home'
 import Colecciones from './pages/Colecciones'
 import Materiales from './pages/Materiales'
+import MaterialColeccion from './pages/MaterialColeccion'
 import MaterialDetalle from './pages/MaterialDetalle'
 import ProductPage from './pages/ProductPage'
 import Distribuidores from './pages/Distribuidores'
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/colecciones" element={<Colecciones />} />
           <Route path="/materiales" element={<Materiales />} />
+          <Route path="/materiales/coleccion/:slug" element={<MaterialColeccion />} />
           <Route path="/materiales/:idOrSlug" element={<MaterialDetalle />} />
           <Route path="/producto/:slug" element={<ProductPage />} />
           <Route path="/distribuidores" element={<Distribuidores />} />

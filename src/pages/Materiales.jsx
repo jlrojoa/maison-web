@@ -1,10 +1,9 @@
 // src/pages/Materiales.jsx
 //
-// Biblioteca pública de telas, agrupada por catálogo (telas.nombre), catálogos
-// ordenados por categoría (telas.grado: AA→A→B→C, el mismo campo que usa el
-// configurador para precio) y luego por su propio orden. Dentro de cada
-// catálogo, sus colores (tela_colores) en su orden ya definido en el admin.
-// Mismas tablas que alimentan el configurador — sin tabla ni admin aparte.
+// Portada de Materiales: una tarjeta por colección (no todos los colores de
+// una vez). Cada tarjeta usa como portada la foto del primer color activo de
+// esa colección. Clic en la tarjeta -> /materiales/coleccion/:slug, la página
+// de la colección con su ficha técnica y el grid completo de sus colores.
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -17,8 +16,6 @@ export default function Materiales() {
   const [telas, setTelas] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtroGrado, setFiltroGrado] = useState('')
-  const [filtroTela, setFiltroTela] = useState('')
-  const [filtroColor, setFiltroColor] = useState('')
 
   useEffect(() => {
     async function load() {
@@ -38,17 +35,10 @@ export default function Materiales() {
     load()
   }, [])
 
-  // Los 3 filtros se combinan con AND. El de Color no oculta catálogos completos —
-  // filtra los colores DENTRO de cada catálogo por coincidencia parcial de nombre
-  // (case-insensitive) y solo oculta el catálogo si ninguno de sus colores calza.
-  const visibles = useMemo(() => {
-    const texto = filtroColor.trim().toLowerCase()
-    return telas
-      .filter(t => !filtroGrado || t.grado === filtroGrado)
-      .filter(t => !filtroTela || t.id === filtroTela)
-      .map(t => ({ ...t, colores: texto ? t.colores.filter(c => c.nombre?.toLowerCase().includes(texto)) : t.colores }))
-      .filter(t => t.colores.length > 0)
-  }, [telas, filtroGrado, filtroTela, filtroColor])
+  const visibles = useMemo(
+    () => telas.filter(t => !filtroGrado || t.grado === filtroGrado),
+    [telas, filtroGrado]
+  )
 
   return (
     <div id="mp">
@@ -65,18 +55,6 @@ export default function Materiales() {
               <option value="">Categoría — todas</option>
               {GRADOS_ORDEN.map(g => <option key={g} value={g}>Categoría {g}</option>)}
             </select>
-            <select className="so" value={filtroTela} onChange={e => setFiltroTela(e.target.value)} style={{ padding: '10px 14px' }}>
-              <option value="">Catálogo — todos</option>
-              {telas.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-            </select>
-            <input
-              className="so"
-              type="text"
-              placeholder="Buscar color (ej. Beige)…"
-              value={filtroColor}
-              onChange={e => setFiltroColor(e.target.value)}
-              style={{ padding: '10px 14px', minWidth: 200 }}
-            />
           </div>
         )}
 
@@ -84,35 +62,30 @@ export default function Materiales() {
           <div className="cat-loading">CARGANDO…</div>
         ) : visibles.length === 0 ? (
           <p style={{ color: 'var(--taupe)', fontSize: 13, padding: '0 24px' }}>
-            {telas.length === 0 ? 'Aún no hay telas cargadas.' : 'Ningún color coincide con esos filtros.'}
+            {telas.length === 0 ? 'Aún no hay telas cargadas.' : 'Ninguna colección coincide con ese filtro.'}
           </p>
         ) : (
-          visibles.map(t => (
-            <div key={t.id} className="cat-sec">
-              <div className="cat-sec-hd">
-                <h2 className="cat-sec-title">{t.nombre}</h2>
-                <span className="cat-sec-count">Categoría {t.grado} · {t.colores.length}</span>
-              </div>
-              <div className="pg5">
-                {t.colores.map(c => (
-                  <Link key={c.id} className="pc" to={`/materiales/${c.slug ?? c.id}`}>
-                    <div className="pci">
-                      <div className="pci-bg">
-                        {c.imagen_url ? (
-                          <img src={c.imagen_url} alt={c.nombre} />
-                        ) : (
-                          <div className="pc-init" style={{ background: c.codigo_hex || undefined }}><span>{c.nombre?.[0]}</span></div>
-                        )}
-                      </div>
-                      <div className="pov"><span className="pct">Ver Detalle</span></div>
+          <div className="pg5" style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px' }}>
+            {visibles.map(t => {
+              const portada = t.colores[0]
+              return (
+                <Link key={t.id} className="pc" to={`/materiales/coleccion/${t.slug ?? t.id}`}>
+                  <div className="pci">
+                    <div className="pci-bg">
+                      {portada?.imagen_url ? (
+                        <img src={portada.imagen_url} alt={t.nombre} />
+                      ) : (
+                        <div className="pc-init"><span>{t.nombre?.[0]}</span></div>
+                      )}
                     </div>
-                    <div className="ptg">{t.nombre}</div>
-                    <div className="pnm">{c.nombre}</div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))
+                    <div className="pov"><span className="pct">Ver Colección</span></div>
+                  </div>
+                  <div className="ptg">Categoría {t.grado}</div>
+                  <div className="pnm">{t.nombre} · {t.colores.length} colores</div>
+                </Link>
+              )
+            })}
+          </div>
         )}
       </div>
       <Footer />
