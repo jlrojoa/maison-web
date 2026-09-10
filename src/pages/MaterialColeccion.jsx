@@ -82,6 +82,7 @@ export default function MaterialColeccion() {
   }
 
   const ficha = colores[0] // specs técnicas idénticas en todos los colores de la colección
+  const portada = colores.find(c => c.es_portada) ?? colores[0]
 
   return (
     <div id="mp">
@@ -97,7 +98,7 @@ export default function MaterialColeccion() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, marginBottom: 64 }}>
           <div style={{ aspectRatio: '1/1', borderRadius: 4, overflow: 'hidden' }}>
-            {ficha.imagen_url && <img src={ficha.imagen_url} alt={tela.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+            {portada.imagen_url && <img src={portada.imagen_url} alt={tela.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
           </div>
 
           <div>

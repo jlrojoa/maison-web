@@ -28,10 +28,11 @@ export default function Materiales() {
         .select('*, colores:tela_colores(*)')
         .eq('activo', true)
         .order('orden')
-      const conColoresActivos = (data ?? []).map(t => ({
-        ...t,
-        colores: (t.colores ?? []).filter(c => c.activo).sort((a, b) => a.orden - b.orden),
-      })).filter(t => t.colores.length > 0)
+      const conColoresActivos = (data ?? []).map(t => {
+        const colores = (t.colores ?? []).filter(c => c.activo).sort((a, b) => a.orden - b.orden)
+        const portada = colores.find(c => c.es_portada) ?? colores[0]
+        return { ...t, colores, portada }
+      }).filter(t => t.colores.length > 0)
       conColoresActivos.sort((a, b) => GRADOS_ORDEN.indexOf(a.grado) - GRADOS_ORDEN.indexOf(b.grado) || a.orden - b.orden)
       setTelas(conColoresActivos)
       setLoading(false)
@@ -101,7 +102,7 @@ export default function Materiales() {
               </div>
               <div className="pg5">
                 {items.map(t => {
-                  const portada = t.colores[0]
+                  const portada = t.portada
                   return (
                     <Link key={t.id} className="pc" to={`/materiales/coleccion/${t.slug ?? t.id}`}>
                       <div className="pci">
