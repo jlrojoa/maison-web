@@ -1,8 +1,8 @@
 const TILES = [
   {
     id: 1,
-    nombre: 'Lino Belga',
-    descripcion: 'Tejido natural de fibra larga, transpirable. Se vuelve más suave con cada lavado.',
+    nombre: 'Telas Residencial & Contract',
+    descripcion: 'Telas seleccionadas para uso residencial y contract, con la resistencia que exigen espacios de alto tráfico como hoteles y desarrollos.',
     animClass: 'rv',
     icon: (
       <svg className="mico" viewBox="0 0 48 48">
@@ -13,8 +13,8 @@ const TILES = [
   },
   {
     id: 2,
-    nombre: 'Bouclé Italiano',
-    descripcion: 'Tela estructurada de alta textura importada de Milán. Resistente al uso diario.',
+    nombre: 'Mano de Obra Calificada',
+    descripcion: 'Cada pieza pasa por manos con años de oficio en tapicería — el detalle que distingue una pieza hecha a mano de una producida en serie.',
     animClass: 'rv d1',
     icon: (
       <svg className="mico" viewBox="0 0 48 48">
@@ -26,8 +26,8 @@ const TILES = [
   },
   {
     id: 3,
-    nombre: 'Espuma HR 45 kg',
-    descripcion: 'Alta resiliencia. Mantiene su forma original por más de 10 años de uso diario.',
+    nombre: 'Espuma de Alta Resiliencia',
+    descripcion: 'Espumas de alta resiliencia que mantienen su forma y comodidad después de años de uso diario, sin perder soporte.',
     animClass: 'rv d2',
     icon: (
       <svg className="mico" viewBox="0 0 48 48">
@@ -38,8 +38,8 @@ const TILES = [
   },
   {
     id: 4,
-    nombre: 'Madera de Fresno',
-    descripcion: 'Estructura en fresno macizo con refuerzo metálico. Garantía estructural 10 años.',
+    nombre: 'Madera Certificada FSC',
+    descripcion: 'Estructuras en madera certificada FSC, con trazabilidad responsable y la resistencia que respalda una garantía estructural de 10 años.',
     animClass: 'rv d3',
     icon: (
       <svg className="mico" viewBox="0 0 48 48">
