@@ -30,10 +30,10 @@ export default function Footer() {
         <div>
           <p className="fct">Contacto</p>
           <ul className="fll">
-            <li><a href="#" onClick={e => e.preventDefault()}>Puebla, México</a></li>
-            <li><a href="#" onClick={e => e.preventDefault()}>hola@maison.mx</a></li>
-            <li><a href="#" onClick={e => e.preventDefault()}>+52 222 000 0000</a></li>
-            <li><a href="#" onClick={e => e.preventDefault()}>@maison.mx</a></li>
+            <li><a href="#" onClick={e => e.preventDefault()}>CDMX, Polanco</a></li>
+            <li><a href="#" onClick={e => e.preventDefault()}>info@brendell.mx</a></li>
+            <li><a href="#" onClick={e => e.preventDefault()}>+52 561 925 5395</a></li>
+            <li><a href="#" onClick={e => e.preventDefault()}>@brendellsofa</a></li>
           </ul>
         </div>
       </div>
