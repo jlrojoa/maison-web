@@ -19,7 +19,7 @@ export default function Editorial() {
         </div>
       </div>
       <div className="edit-r rv">
-        <img src="/images/editorial-bruma.png" alt="Cama Bruma Maison" />
+        <img src="/images/editorial-bruma.png" alt="Cama Bruma Brendell" />
       </div>
     </section>
   )

@@ -25,7 +25,7 @@ export default function AdminDashboard() {
   return (
     <div>
       <h1 style={{ fontFamily: 'var(--serif)', fontWeight: 300, fontSize: 38, color: 'var(--ink)', marginBottom: 8 }}>Dashboard</h1>
-      <p style={{ fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--taupe)', letterSpacing: '.1em', marginBottom: 40 }}>Panel de administración Maison</p>
+      <p style={{ fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--taupe)', letterSpacing: '.1em', marginBottom: 40 }}>Panel de administración Brendell</p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 24 }}>
         {tiles.map(t => (
           <a key={t.label} href={t.link} style={{ textDecoration: 'none' }}>

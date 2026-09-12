@@ -36,7 +36,7 @@ export function DistribuidorProvider({ children }) {
 
   const signUp = async (email, password) => {
     const { data: invitado } = await supabase.rpc('distribuidor_invitado', { p_email: email })
-    if (!invitado) return { error: { message: 'Cuenta no autorizada. Contacta a Maison.' } }
+    if (!invitado) return { error: { message: 'Cuenta no autorizada. Contacta a Brendell.' } }
     return supabase.auth.signUp({ email, password })
   }
 

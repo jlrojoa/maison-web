@@ -6,7 +6,7 @@ export default function Footer() {
     <footer>
       <div className="fg">
         <div>
-          <p className="fl">Maison<b>.</b></p>
+          <p className="fl">Brendell<b>.</b></p>
           <p className="ft">Alta tapicería mexicana con alma italiana. Diseño modular para espacios que merecen lo mejor.</p>
         </div>
         <div>
@@ -38,7 +38,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="fb">
-        <p className="fc">© 2025 Maison Alta Tapicería. Todos los derechos reservados.</p>
+        <p className="fc">© 2025 Brendell Alta Tapicería. Todos los derechos reservados.</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
           <p className="fc">Diseñado y fabricado en México.</p>
           <a

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 
 const SLIDES = [
-  { src: '/images/hero.png', alt: 'Maison hero' },
-  { src: '/images/hero-2.png', alt: 'Sala con olivo y sillones Maison' },
+  { src: '/images/hero.png', alt: 'Brendell hero' },
+  { src: '/images/hero-2.png', alt: 'Sala con olivo y sillones Brendell' },
 ]
 
 const INTERVALO_MS = 6000

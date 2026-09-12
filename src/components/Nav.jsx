@@ -20,7 +20,7 @@ export default function Nav({ solid = false }) {
   return (
     <nav id="nav" className={scrolled ? 's' : ''}>
       <a href="/" onClick={e => { e.preventDefault(); navigate('/') }} className="logo">
-        Maison<b>.</b>
+        Brendell<b>.</b>
       </a>
       <ul className="nav-ul">
         <li><a href="/colecciones" onClick={e => { e.preventDefault(); navigate('/colecciones') }}>Colecciones</a></li>

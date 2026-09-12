@@ -14,7 +14,7 @@ export default function AdminLayout() {
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'var(--sans)' }}>
       <aside style={{ width: 220, background: 'var(--warm)', borderRight: '1px solid var(--sand)', padding: '36px 24px', display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
         <div style={{ fontFamily: 'var(--serif)', fontSize: 22, color: 'var(--ink)', letterSpacing: '.2em', marginBottom: 32 }}>
-          Maison<span style={{ color: 'var(--gold)' }}>.</span>
+          Brendell<span style={{ color: 'var(--gold)' }}>.</span>
         </div>
         {LINKS.map(l => (
           <NavLink key={l.to} to={l.to} end={l.end}
