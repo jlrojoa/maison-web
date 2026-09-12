@@ -55,7 +55,7 @@ export default function SalesProspector() {
 
   // Estados: de la tabla mx_municipios (evita mantener una lista aparte)
   useEffect(() => {
-    supabase.from('mx_municipios').select('estado').then(({ data }) => {
+    supabase.from('mx_municipios').select('estado').limit(5000).then(({ data }) => {
       const unicos = [...new Set((data ?? []).map(d => d.estado))].sort()
       setEstados(unicos)
     })
