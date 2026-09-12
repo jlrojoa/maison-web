@@ -35,6 +35,29 @@ function extraeComponente(addressComponents, tipos) {
   return c?.longText ?? null
 }
 
+// Google Places Text Search es una búsqueda por relevancia sobre el texto
+// completo, no un filtro geográfico real (no soporta AND estricto por
+// estado/municipio). Por eso puede regresar resultados de otro estado —
+// ej. "Bosque de las Lomas" existe como colonia real tanto en Miguel
+// Hidalgo (CDMX) como en Sahuayo (Michoacán); Google puede rankear alto un
+// negocio de ese segundo lugar aunque el texto también mencione CDMX.
+// Filtramos aquí, comparando el estado/municipio que Google geocodificó
+// para CADA resultado (addressComponents), contra lo que pidió el usuario.
+function normaliza(s) {
+  return (s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+function coincideUbicacion(valorResultado, valorFiltro) {
+  if (!valorFiltro) return true
+  if (!valorResultado) return true // Google no siempre geocodifica ese nivel; no descartamos por falta de dato
+  const a = normaliza(valorResultado)
+  const b = normaliza(valorFiltro)
+  return a === b || a.startsWith(b) || b.startsWith(a) || a.includes(b) || b.includes(a)
+}
+
 async function llamarGoogle(body) {
   const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
     method: 'POST',
@@ -119,21 +142,31 @@ export default async function handler(req, res) {
       pageToken = data.nextPageToken ?? null
     } while (pageToken && paginas < MAX_PAGINAS)
 
-    const results = todos.map(p => ({
-      google_place_id: p.id,
-      nombre: p.displayName?.text ?? '(sin nombre)',
-      direccion: p.formattedAddress ?? null,
-      estado: extraeComponente(p.addressComponents, ['administrative_area_level_1']),
-      municipio: extraeComponente(p.addressComponents, ['locality', 'administrative_area_level_2']),
-      colonia: extraeComponente(p.addressComponents, ['sublocality_level_1', 'neighborhood', 'sublocality']),
-      codigo_postal: extraeComponente(p.addressComponents, ['postal_code']),
-      telefono: p.nationalPhoneNumber ?? null,
-      sitio_web: p.websiteUri ?? null,
-      rating: p.rating ?? null,
-      rating_count: p.userRatingCount ?? null,
-      lat: p.location?.latitude ?? null,
-      lng: p.location?.longitude ?? null,
-    }))
+    const results = todos
+      .map(p => ({
+        google_place_id: p.id,
+        nombre: p.displayName?.text ?? '(sin nombre)',
+        direccion: p.formattedAddress ?? null,
+        estado: extraeComponente(p.addressComponents, ['administrative_area_level_1']),
+        municipio: extraeComponente(p.addressComponents, ['locality', 'administrative_area_level_2']),
+        colonia: extraeComponente(p.addressComponents, ['sublocality_level_1', 'neighborhood', 'sublocality']),
+        codigo_postal: extraeComponente(p.addressComponents, ['postal_code']),
+        telefono: p.nationalPhoneNumber ?? null,
+        sitio_web: p.websiteUri ?? null,
+        rating: p.rating ?? null,
+        rating_count: p.userRatingCount ?? null,
+        lat: p.location?.latitude ?? null,
+        lng: p.location?.longitude ?? null,
+      }))
+      // Google Text Search no filtra estrictamente por ubicación (ver nota
+      // arriba de coincideUbicacion) — descartamos aquí lo que Google marcó
+      // en otro estado del que pidió el usuario. Solo a nivel estado: a nivel
+      // municipio, Google frecuentemente etiqueta direcciones de CDMX con
+      // locality/administrative_area_level_2 = "Ciudad de México" en vez de
+      // la alcaldía real (ej. "Miguel Hidalgo") — filtrar por municipio ahí
+      // descartaría TODOS los resultados reales, un falso negativo peor que
+      // el bug original.
+      .filter(r => coincideUbicacion(r.estado, estado))
 
     res.status(200).json({ results, paginasConsultadas: paginas, truncado: results.length >= 60 })
   } catch (err) {

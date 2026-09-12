@@ -53,12 +53,26 @@ export default function SalesProspector() {
     return () => mapRef.current?.remove()
   }, [])
 
-  // Estados: de la tabla mx_municipios (evita mantener una lista aparte)
+  // Estados: de la tabla mx_municipios (evita mantener una lista aparte).
+  // mx_municipios tiene ~2457 filas — el .limit() del cliente NO basta,
+  // PostgREST tiene su propio tope de fila (db-max-rows, 1000 por defecto en
+  // Supabase) que lo ignora y corta la respuesta ahí de todos modos. Hay que
+  // paginar con .range() y acumular hasta que una página venga incompleta.
   useEffect(() => {
-    supabase.from('mx_municipios').select('estado').limit(5000).then(({ data }) => {
-      const unicos = [...new Set((data ?? []).map(d => d.estado))].sort()
-      setEstados(unicos)
-    })
+    async function cargarEstados() {
+      const porPagina = 1000
+      let desde = 0
+      let filas = []
+      while (true) {
+        const { data, error } = await supabase.from('mx_municipios').select('estado').range(desde, desde + porPagina - 1)
+        if (error || !data || data.length === 0) break
+        filas = filas.concat(data)
+        if (data.length < porPagina) break
+        desde += data.length
+      }
+      setEstados([...new Set(filas.map(d => d.estado))].sort())
+    }
+    cargarEstados()
     fetch('/data/colonias-mx.json').then(r => r.json()).then(setColomex).catch(() => {})
   }, [])
 
