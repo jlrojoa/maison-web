@@ -14,13 +14,14 @@ const TILES = [
   {
     id: 2,
     nombre: 'Mano de Obra Calificada',
-    descripcion: 'Cada pieza pasa por manos con años de oficio en tapicería — el detalle que distingue una pieza hecha a mano de una producida en serie.',
+    descripcion: 'Combinamos maquinaria de precisión con personal capacitado y años de oficio en tapicería — el balance que distingue una pieza bien hecha.',
     animClass: 'rv d1',
     icon: (
       <svg className="mico" viewBox="0 0 48 48">
-        <circle cx="24" cy="24" r="14" />
-        <circle cx="24" cy="24" r="7" />
-        <circle cx="24" cy="24" r="2" />
+        <path d="M14 42V22a2.5 2.5 0 015 0v6" />
+        <path d="M19 28v-8a2.5 2.5 0 015 0v8" />
+        <path d="M24 28v-7a2.5 2.5 0 015 0v9" />
+        <path d="M29 30v-5a2.5 2.5 0 015 0v9c0 6-4 10-10 10h-3c-4 0-6-2-8-6l-3-6a2.2 2.2 0 014-2l2 3" />
       </svg>
     ),
   },

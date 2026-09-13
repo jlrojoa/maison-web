@@ -109,7 +109,7 @@ nav.s .nbtn{background:var(--charcoal);border-color:var(--charcoal)}
 .ppr small{font-family:var(--sans);font-size:10px;font-weight:300;color:var(--taupe)}
 
 /* MATERIALS */
-.mts{padding:110px 52px;background:var(--charcoal);position:relative;overflow:hidden}
+.mts{padding:110px 52px;background:#423C36;position:relative;overflow:hidden}
 .mts::before{content:'BRENDELL';position:absolute;font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;font-size:200px;font-weight:500;color:rgba(255,255,255,.025);top:50%;left:50%;transform:translate(-50%,-50%);letter-spacing:.3em;white-space:nowrap;pointer-events:none}
 .mh{text-align:center;margin-bottom:68px}
 .mh .sl{color:var(--gold-l)}
@@ -119,8 +119,8 @@ nav.s .nbtn{background:var(--charcoal);border-color:var(--charcoal)}
 .mitem{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);padding:42px 30px;transition:background .3s,border-color .3s}
 .mitem:hover{background:rgba(184,151,106,.1);border-color:rgba(184,151,106,.3)}
 .mico{width:42px;height:42px;margin-bottom:20px;stroke:var(--gold);fill:none;stroke-width:1.2;opacity:.7}
-.mnm{font-family:var(--serif);font-size:19px;font-weight:300;color:#fff;margin-bottom:9px}
-.mds{font-family:var(--sans);font-size:12px;font-weight:300;line-height:1.85;color:rgba(255,255,255,.37)}
+.mnm{font-family:var(--serif);font-size:25px;font-weight:300;color:#fff;margin-bottom:9px}
+.mds{font-family:var(--sans);font-size:15px;font-weight:300;line-height:1.85;color:rgba(255,255,255,.37)}
 
 
 /* EDITORIAL */
