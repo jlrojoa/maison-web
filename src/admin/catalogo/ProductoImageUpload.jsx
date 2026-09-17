@@ -34,9 +34,11 @@ function PencilIcon() {
   )
 }
 
-// Isometric image: shows the saved image, or a local blob preview of a pending
-// (not-yet-uploaded) file. Never uploads by itself — the parent's save() does.
-export function IsometricoPicker({ currentUrl, fallbackUrl, pendingFile, pendingPreviewUrl, onFileSelected }) {
+// Portada (cover) image: shows the saved image, or a local blob preview of a
+// pending (not-yet-uploaded) file. Never uploads by itself — the parent's
+// save() does. Separate from the detail/carousel gallery below — this is the
+// single image used on catalog cards (Colecciones, Modulares, etc.).
+export function PortadaPicker({ currentUrl, fallbackUrl, pendingFile, pendingPreviewUrl, onFileSelected }) {
   const inputRef = useRef()
   const usingFallback = !currentUrl && !pendingPreviewUrl && !!fallbackUrl
   const displayUrl = pendingPreviewUrl || currentUrl || fallbackUrl
@@ -63,8 +65,8 @@ export function IsometricoPicker({ currentUrl, fallbackUrl, pendingFile, pending
         {pendingFile
           ? `${pendingFile.name} — se subirá al guardar`
           : usingFallback
-          ? 'Sin imagen principal guardada — mostrando la "Principal" de la galería como referencia. Sube una para fijarla aquí.'
-          : 'Recomendado 1200×1200px, fondo neutro.'}
+          ? 'Sin imagen de portada guardada — mostrando la "Principal" de la galería como referencia. Sube una para fijarla aquí.'
+          : 'Esta imagen se usa en las tarjetas de catálogo — recomienda margen blanco alrededor de la pieza.'}
       </div>
     </div>
   )

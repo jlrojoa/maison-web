@@ -26,17 +26,15 @@ export default function Colecciones() {
       ])
 
       const prods = (prodRes.data ?? []).map(p => {
-        // "Imagen principal" en el admin escribe en productos.isometrico_url — esa es
-        // la que el usuario elige a propósito para esta tarjeta. Antes esto se ignoraba
-        // y se usaba en su lugar la galería (es_principal, marcada automáticamente al
-        // subir), que es una foto distinta a la que el admin realmente eligió como
-        // "Imagen principal". isometrico_url manda; la galería es solo respaldo si
-        // el producto no tiene imagen principal capturada todavía.
+        // "Imagen de portada" en el admin escribe en productos.imagen_portada_url —
+        // esa es la que el usuario elige a propósito para esta tarjeta, separada
+        // del carrusel de detalle (producto_imagenes). La galería es solo
+        // respaldo si el producto no tiene portada capturada todavía.
         const galeria = p.imagenes?.find(i => i.es_principal) ?? p.imagenes?.[0] ?? null
         return {
           ...p,
-          imagen_principal: p.isometrico_url
-            ? { url: p.isometrico_url, alt: p.nombre }
+          imagen_principal: p.imagen_portada_url
+            ? { url: p.imagen_portada_url, alt: p.nombre }
             : galeria,
         }
       })

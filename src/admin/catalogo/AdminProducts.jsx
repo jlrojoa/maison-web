@@ -10,7 +10,7 @@ import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import NuevoProductoDrawer from './NuevoProductoDrawer'
 import MedidaModal from './MedidaModal'
-import { IsometricoPicker, GaleriaPicker, uploadProductoImage } from './ProductoImageUpload'
+import { PortadaPicker, GaleriaPicker, uploadProductoImage } from './ProductoImageUpload'
 
 const ORIENTACION_SLUGS = ['escuadras-l', 'chaise-lounge']
 const BUCKET_TELAS = 'telas'
@@ -288,8 +288,8 @@ function InformacionGeneral({ productos, categorias, selectedId, onSelectProduct
   const [saving, setSaving] = useState(false)
 
   const [imagenes, setImagenes] = useState([])
-  const [isoFile, setIsoFile] = useState(null)
-  const [isoPreview, setIsoPreview] = useState(null)
+  const [portadaFile, setPortadaFile] = useState(null)
+  const [portadaPreview, setPortadaPreview] = useState(null)
   const [pendingImages, setPendingImages] = useState([])
 
   const [creatingCategoria, setCreatingCategoria] = useState(false)
@@ -307,8 +307,8 @@ function InformacionGeneral({ productos, categorias, selectedId, onSelectProduct
       descripcion: producto.descripcion ?? '',
       activo: producto.activo ?? true,
     })
-    setIsoFile(null)
-    setIsoPreview(null)
+    setPortadaFile(null)
+    setPortadaPreview(null)
     setPendingImages([])
     setCreatingCategoria(false)
     const [specsRes, orientRes, imgRes] = await Promise.all([
@@ -330,8 +330,8 @@ function InformacionGeneral({ productos, categorias, selectedId, onSelectProduct
     setForm(f => ({ ...f, nombre: '', descripcion: '' }))
     setSpecs([])
     setOrientaciones([])
-    setIsoFile(null)
-    setIsoPreview(null)
+    setPortadaFile(null)
+    setPortadaPreview(null)
     setPendingImages([])
     setCreatingCategoria(false)
   }
@@ -384,7 +384,7 @@ function InformacionGeneral({ productos, categorias, selectedId, onSelectProduct
     setImagenes(data ?? [])
   }
 
-  const onIsoSelected = (file) => { setIsoFile(file); setIsoPreview(URL.createObjectURL(file)) }
+  const onPortadaSelected = (file) => { setPortadaFile(file); setPortadaPreview(URL.createObjectURL(file)) }
 
   const onFilesAdded = (files) => {
     const items = files.map(file => ({ localId: Math.random().toString(36).slice(2), file, previewUrl: URL.createObjectURL(file) }))
@@ -409,13 +409,18 @@ function InformacionGeneral({ productos, categorias, selectedId, onSelectProduct
       }).eq('id', producto.id)
       if (prodErr) throw prodErr
 
-      if (isoFile) {
-        const ext = isoFile.name.split('.').pop().toLowerCase()
-        const url = await uploadProductoImage(isoFile, `productos/iso-${producto.id}-${Date.now()}.${ext}`)
-        const { error: isoDbErr } = await supabase.from('productos').update({ isometrico_url: url }).eq('id', producto.id)
-        if (isoDbErr) throw isoDbErr
-        setIsoFile(null)
-        setIsoPreview(null)
+      if (portadaFile) {
+        const ext = portadaFile.name.split('.').pop().toLowerCase()
+        const url = await uploadProductoImage(portadaFile, `productos/portada-${producto.id}-${Date.now()}.${ext}`)
+        // isometrico_url se mantiene en sync con imagen_portada_url para no
+        // desincronizar al Configurador/StickyConfigurador/useProductoConfig/
+        // useCotizacion, que siguen leyendo isometrico_url directamente.
+        const { error: portadaDbErr } = await supabase.from('productos')
+          .update({ imagen_portada_url: url, isometrico_url: url })
+          .eq('id', producto.id)
+        if (portadaDbErr) throw portadaDbErr
+        setPortadaFile(null)
+        setPortadaPreview(null)
       }
 
       if (pendingImages.length > 0) {
@@ -586,22 +591,22 @@ function InformacionGeneral({ productos, categorias, selectedId, onSelectProduct
 
         <div>
           <div className="adm-card">
-            <div className="adm-card-title" style={{ marginBottom: 4 }}>Imagen principal</div>
-            <div className="adm-card-sub">Se usa en tarjetas de Colecciones y carousel del configurador.</div>
-            <IsometricoPicker
-              currentUrl={producto.isometrico_url}
-              fallbackUrl={producto.isometrico_url ? null : (imagenes.find(i => i.es_principal)?.url ?? imagenes[0]?.url ?? null)}
-              pendingFile={isoFile}
-              pendingPreviewUrl={isoPreview}
-              onFileSelected={onIsoSelected}
+            <div className="adm-card-title" style={{ marginBottom: 4 }}>Imagen de portada</div>
+            <div className="adm-card-sub">Esta imagen se usa en las tarjetas de catálogo — recomienda margen blanco alrededor de la pieza.</div>
+            <PortadaPicker
+              currentUrl={producto.imagen_portada_url}
+              fallbackUrl={producto.imagen_portada_url ? null : (imagenes.find(i => i.es_principal)?.url ?? imagenes[0]?.url ?? null)}
+              pendingFile={portadaFile}
+              pendingPreviewUrl={portadaPreview}
+              onFileSelected={onPortadaSelected}
             />
           </div>
 
           <div className="adm-card">
             <div className="adm-card-header">
-              <div className="adm-card-title">Galería de imágenes</div>
+              <div className="adm-card-title">Imágenes de detalle / carrusel</div>
             </div>
-            <div className="adm-card-sub">Aparecen como thumbnails debajo del carousel. Se suben al guardar.</div>
+            <div className="adm-card-sub">Aparecen en el carousel de la ficha de producto. Se suben al guardar.</div>
             <GaleriaPicker
               existingImages={imagenes}
               pendingImages={pendingImages}
