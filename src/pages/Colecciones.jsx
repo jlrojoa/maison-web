@@ -94,7 +94,7 @@ export default function Colecciones() {
                   {matched.map(product => (
                     <Link key={product.id} className="pc" to={configuradorUrl(product)}>
                       <div className="pci">
-                        <div className="pci-bg">
+                        <div className={`pci-bg ${cat.slug === 'modulares' ? 'pci-bg-modulares' : ''}`}>
                           {product.imagen_principal
                             ? <img src={product.imagen_principal.url} alt={product.imagen_principal.alt || product.nombre} />
                             : <div className="pc-init"><span>{product.nombre?.[0]}</span></div>
