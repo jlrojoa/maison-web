@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 const SLIDES = [
   { src: '/images/hero.png', alt: 'Brendell hero' },
   { src: '/images/hero-2.png', alt: 'Sala con olivo y sillones Brendell' },
+  { src: '/images/hero-3.png', alt: 'Sala con sofá seccional ALEX Brendell' },
 ]
 
 const INTERVALO_MS = 6000
