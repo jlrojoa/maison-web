@@ -47,3 +47,19 @@
 
 .sls-etapa-badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; background: #F3F4F6; color: #4B5563; white-space: nowrap; }
 .sls-note { font-size: 11.5px; color: #9CA3AF; background: #F9FAFB; border: 1px dashed #E5E7EB; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; }
+
+/* Prospector: mapa + botón flotante "Buscar en esta zona" */
+.sls-map-wrap { position: relative; }
+/* 56px de left deja el botón justo a la derecha del control de zoom de Leaflet (mismo patrón que Airbnb/Zillow). */
+.sls-map-search-area {
+  position: absolute; top: 10px; left: 56px; z-index: 1000;
+  background: #fff; border: 1px solid #E5E7EB; border-radius: 6px; padding: 7px 14px;
+  font-size: 12px; font-weight: 600; color: #111827; box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  cursor: pointer; display: flex; align-items: center; gap: 6px;
+}
+.sls-map-search-area:hover { background: #F9FAFB; }
+.sls-map-search-area:disabled { opacity: 0.6; cursor: default; }
+
+.sls-colonia-toggle { font-size: 11px; color: #6B7280; cursor: pointer; margin-top: 6px; display: flex; align-items: center; gap: 5px; user-select: none; }
+.sls-colonia-toggle input { cursor: pointer; margin: 0; }
+.sls-colonia-empty-hint { font-size: 11px; color: #9CA3AF; margin-top: 4px; }

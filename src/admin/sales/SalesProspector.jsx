@@ -34,7 +34,9 @@ export default function SalesProspector() {
   const [estados, setEstados] = useState([])
   const [municipios, setMunicipios] = useState([])
   const [colonias, setColonias] = useState([])
-  const [colomex, setColomex] = useState(null) // JSON completo, cargado una vez
+  const [colomex, setColomex] = useState(null) // JSON completo (todas las colonias), cargado una vez
+  const [zonasPremium, setZonasPremium] = useState([]) // filas de zonas_premium, cargadas una vez
+  const [verTodasColonias, setVerTodasColonias] = useState(false)
 
   const [resultados, setResultados] = useState([])
   const [agregados, setAgregados] = useState(new Set())
@@ -43,14 +45,45 @@ export default function SalesProspector() {
   const [error, setError] = useState(null)
   const [seleccionado, setSeleccionado] = useState(null)
 
+  // "Buscar en esta zona": solo aparece cuando el usuario mueve/hace zoom al
+  // mapa a mano. suppressAutoMoveRef evita que nuestros propios fitBounds/
+  // setView (al pintar resultados o seleccionar un pin) lo disparen.
+  //
+  // OJO: no basta con poner suppressAutoMoveRef=true y esperar a que el
+  // siguiente 'moveend' lo regrese a false. Leaflet NO dispara 'moveend' si
+  // el setView/fitBounds resulta ser un no-op (el pin clickeado ya estaba
+  // en el centro/zoom actual — típico justo después de un fitBounds). Si
+  // eso pasa, el flag se queda atorado en true y el próximo movimiento real
+  // del usuario también se suprime — el botón nunca aparece. Por eso la
+  // supresión se limpia sola con un timeout, no depende de que 'moveend'
+  // llegue a apagarla.
+  const suppressAutoMoveRef = useRef(false)
+  const suppressTimeoutRef = useRef(null)
+  const [showBuscarZona, setShowBuscarZona] = useState(false)
+
+  const suprimirProximoMovimiento = () => {
+    suppressAutoMoveRef.current = true
+    clearTimeout(suppressTimeoutRef.current)
+    // 400ms > duración por defecto de las animaciones de pan/zoom de Leaflet (250ms).
+    suppressTimeoutRef.current = setTimeout(() => { suppressAutoMoveRef.current = false }, 400)
+  }
+
   // Mapa Leaflet
   useEffect(() => {
+    suprimirProximoMovimiento() // el setView inicial también dispara 'moveend' (async) — no es el usuario
     mapRef.current = L.map(mapDivRef.current).setView([23.6345, -102.5528], 5)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
       maxZoom: 19,
     }).addTo(mapRef.current)
-    return () => mapRef.current?.remove()
+    mapRef.current.on('moveend', () => {
+      if (suppressAutoMoveRef.current) return
+      setShowBuscarZona(true)
+    })
+    return () => {
+      clearTimeout(suppressTimeoutRef.current)
+      mapRef.current?.remove()
+    }
   }, [])
 
   // Estados: de la tabla mx_municipios (evita mantener una lista aparte).
@@ -74,6 +107,8 @@ export default function SalesProspector() {
     }
     cargarEstados()
     fetch('/data/colonias-mx.json').then(r => r.json()).then(setColomex).catch(() => {})
+    supabase.from('zonas_premium').select('estado, municipio, colonia, nivel').order('colonia')
+      .then(({ data }) => setZonasPremium(data ?? []))
   }, [])
 
   // Municipios en cascada según estado elegido
@@ -83,14 +118,26 @@ export default function SalesProspector() {
       .then(({ data }) => setMunicipios((data ?? []).map(d => d.municipio)))
   }, [filtros.estado])
 
-  // Colonias en cascada según municipio elegido (del JSON ya cargado, sin llamada extra)
+  // Colonias en cascada según municipio elegido. Por default solo se ofrecen
+  // las zonas curadas en zonas_premium (evita que aparezcan colonias sin
+  // filtrar, ej. Tepito, entre miles de opciones de mx_colonias). El toggle
+  // "Ver todas las colonias" cambia a la lista completa del JSON.
   useEffect(() => {
-    if (!filtros.estado || !filtros.municipio || !colomex) { setColonias([]); return }
-    const lista = colomex[`${filtros.estado}|${filtros.municipio}`] ?? []
-    setColonias(lista)
-  }, [filtros.estado, filtros.municipio, colomex])
+    if (!filtros.estado || !filtros.municipio) { setColonias([]); return }
+    if (verTodasColonias) {
+      const lista = colomex ? (colomex[`${filtros.estado}|${filtros.municipio}`] ?? []) : []
+      setColonias(lista)
+    } else {
+      const lista = zonasPremium
+        .filter(z => z.estado === filtros.estado && z.municipio === filtros.municipio)
+        .map(z => z.colonia)
+      setColonias(lista)
+    }
+  }, [filtros.estado, filtros.municipio, colomex, zonasPremium, verTodasColonias])
 
-  const pintarMarcadores = (results) => {
+  // fit=false cuando los resultados vienen de "Buscar en esta zona": el
+  // usuario ya dejó el mapa donde quería verlo, no se debe reencuadrar.
+  const pintarMarcadores = (results, { fit = true } = {}) => {
     Object.values(markersRef.current).forEach(m => m.remove())
     markersRef.current = {}
     const bounds = []
@@ -110,13 +157,17 @@ export default function SalesProspector() {
       markersRef.current[r.google_place_id] = marker
       bounds.push([r.lat, r.lng])
     })
-    if (bounds.length) mapRef.current.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 })
+    if (fit && bounds.length) {
+      suprimirProximoMovimiento()
+      mapRef.current.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 })
+    }
   }
 
   const seleccionarDesdeLista = (id) => {
     setSeleccionado(id)
     const marker = markersRef.current[id]
     if (marker) {
+      suprimirProximoMovimiento()
       mapRef.current.setView(marker.getLatLng(), Math.max(mapRef.current.getZoom(), 14))
       marker.openPopup()
     }
@@ -128,6 +179,7 @@ export default function SalesProspector() {
     setError(null)
     setResultados([])
     setSeleccionado(null)
+    setShowBuscarZona(false)
     const { data: { session } } = await supabase.auth.getSession()
     try {
       const res = await fetch('/api/prospector-search', {
@@ -139,6 +191,36 @@ export default function SalesProspector() {
       if (!res.ok) { setError(data.error || 'Error en la búsqueda'); return }
       setResultados(data.results)
       pintarMarcadores(data.results)
+    } catch {
+      setError('No se pudo conectar con el buscador')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Botón "Buscar en esta zona": ignora estado/municipio/colonia del
+  // formulario y usa los límites (bounds) actuales del mapa visible.
+  const buscarEnZona = async () => {
+    setLoading(true)
+    setError(null)
+    setSeleccionado(null)
+    const b = mapRef.current.getBounds()
+    const { data: { session } } = await supabase.auth.getSession()
+    try {
+      const res = await fetch('/api/prospector-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({
+          tipo: filtros.tipo,
+          textoLibre: filtros.textoLibre,
+          bounds: { north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() },
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Error en la búsqueda'); return }
+      setResultados(data.results)
+      pintarMarcadores(data.results, { fit: false })
+      setShowBuscarZona(false)
     } catch {
       setError('No se pudo conectar con el buscador')
     } finally {
@@ -215,6 +297,13 @@ export default function SalesProspector() {
                 <option value="">{filtros.municipio ? 'Todas' : 'Elige un municipio primero'}</option>
                 {colonias.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
+              <label className="sls-colonia-toggle">
+                <input type="checkbox" checked={verTodasColonias} onChange={e => setVerTodasColonias(e.target.checked)} />
+                Ver todas las colonias
+              </label>
+              {!verTodasColonias && filtros.municipio && colonias.length === 0 && (
+                <div className="sls-colonia-empty-hint">Sin zonas premium en este municipio — prueba "Ver todas las colonias".</div>
+              )}
             </div>
             <button type="submit" className="adm-btn adm-btn-dark" disabled={loading}>{loading ? 'Buscando…' : 'Buscar'}</button>
           </form>
@@ -228,7 +317,19 @@ export default function SalesProspector() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20 }}>
           <div className="adm-card" style={{ margin: 0, padding: 0, overflow: 'hidden' }}>
-            <div ref={mapDivRef} style={{ height: 520, width: '100%' }} />
+            <div className="sls-map-wrap">
+              <div ref={mapDivRef} style={{ height: 520, width: '100%' }} />
+              {showBuscarZona && (
+                <button
+                  type="button"
+                  className="sls-map-search-area"
+                  onClick={buscarEnZona}
+                  disabled={loading}
+                >
+                  {loading ? 'Buscando…' : '🔍 Buscar en esta zona'}
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="adm-card" style={{ margin: 0, maxHeight: 520, overflowY: 'auto' }}>

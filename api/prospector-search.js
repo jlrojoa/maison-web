@@ -100,11 +100,20 @@ export default async function handler(req, res) {
     return
   }
 
-  const { tipo, estado, municipio, colonia, textoLibre } = req.body || {}
+  const { tipo, estado, municipio, colonia, textoLibre, bounds } = req.body || {}
   const termino = TERMINO_POR_TIPO[tipo] ?? ''
-  const textQuery = [termino, textoLibre, colonia, municipio, estado, estado ? null : 'México']
-    .filter(Boolean)
-    .join(', ')
+
+  // "Buscar en esta zona": manda el rectángulo visible del mapa, no el
+  // estado/municipio/colonia del formulario. textQuery sigue siendo
+  // obligatorio para la API de Google, así que si el usuario no puso tipo
+  // ni texto libre usamos un término genérico del negocio.
+  const usaBounds = bounds && [bounds.north, bounds.south, bounds.east, bounds.west].every(v => typeof v === 'number')
+  const textQuery = usaBounds
+    ? [termino, textoLibre].filter(Boolean).join(', ') || 'muebles, diseño de interiores'
+    : [termino, textoLibre, colonia, municipio, estado, estado ? null : 'México'].filter(Boolean).join(', ')
+  const locationRestriction = usaBounds
+    ? { rectangle: { low: { latitude: bounds.south, longitude: bounds.west }, high: { latitude: bounds.north, longitude: bounds.east } } }
+    : null
 
   if (!textQuery.trim()) {
     res.status(400).json({ error: 'Agrega al menos un filtro de tipo o ubicación' })
@@ -120,7 +129,7 @@ export default async function handler(req, res) {
     do {
       const body = pageToken
         ? { pageToken }
-        : { textQuery, languageCode: 'es', regionCode: 'MX' }
+        : { textQuery, languageCode: 'es', regionCode: 'MX', ...(locationRestriction ? { locationRestriction } : {}) }
 
       if (pageToken) await sleep(400)
 
@@ -165,8 +174,9 @@ export default async function handler(req, res) {
       // locality/administrative_area_level_2 = "Ciudad de México" en vez de
       // la alcaldía real (ej. "Miguel Hidalgo") — filtrar por municipio ahí
       // descartaría TODOS los resultados reales, un falso negativo peor que
-      // el bug original.
-      .filter(r => coincideUbicacion(r.estado, estado))
+      // el bug original. En modo bounds no hay un "estado esperado" — el
+      // rectángulo ya es el filtro geográfico real.
+      .filter(r => usaBounds || coincideUbicacion(r.estado, estado))
 
     res.status(200).json({ results, paginasConsultadas: paginas, truncado: results.length >= 60 })
   } catch (err) {
