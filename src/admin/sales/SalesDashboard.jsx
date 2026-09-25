@@ -1,66 +1,30 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+import { supabase } from '../../lib/supabase'
 import './sales.css'
 
-// Datos de ejemplo — este dashboard aún no está conectado a Supabase.
-// Ver nota en SalesProspectos.jsx sobre qué sí es real.
+// Dashboard conectado a la tabla real 'prospectos' (Supabase). Todo lo que
+// se muestra aquí sale de esa tabla — no hay valores de $ de pipeline ni
+// "próximas acciones" inventadas, porque esos datos (monto por deal,
+// agenda de tareas) todavía no existen en el esquema. Si se agregan esas
+// columnas/tabla más adelante, este dashboard es el lugar para conectarlas.
 
-const kpis = [
-  { icon: '👤', label: 'PROSPECTOS ENCONTRADOS', value: '217', delta: '+18% vs mes anterior' },
-  { icon: '★', label: 'CALIFICADOS (A)', value: '83', delta: '+12% vs mes anterior' },
-  { icon: '☎', label: 'CONTACTADOS', value: '52', delta: '+22% vs mes anterior' },
-  { icon: '💬', label: 'CONVERSACIONES', value: '19', delta: '+27% vs mes anterior' },
-  { icon: '📄', label: 'COTIZACIONES', value: '7', delta: '+16% vs mes anterior' },
-  { icon: '🤝', label: 'CLIENTES NUEVOS', value: '3', delta: '+50% vs mes anterior' },
-]
-
-const pipelineTotal = { value: '$486,000', sub: 'MXN', delta: '+31% vs mes anterior' }
-
-const proximasAcciones = [
-  { icon: '☎', title: 'Llamar a Estudio Legorreta', sub: 'Polanco, CDMX', when: 'Hoy', time: '10:00 AM' },
-  { icon: '📦', title: 'Enviar muestrario Nantes', sub: 'Taller de Mobiliario', when: 'Hoy', time: '12:30 PM' },
-  { icon: '📄', title: 'Dar seguimiento a cotización', sub: 'Casa Mirador', when: 'Mañana', time: '09:00 AM' },
-  { icon: '📅', title: 'Visita a showroom Brendell', sub: 'Arquitectura 911', when: 'Mañana', time: '04:00 PM' },
-  { icon: '✉', title: 'Enviar catálogo Didot', sub: 'Studio Indigo', when: '22 Mayo', time: '11:00 AM' },
-]
-
-const actividadReciente = [
-  { icon: '📝', text: 'Mariana Gómez agregó una nota a', bold: 'Estudio Legorreta', when: 'Hace 1 hora' },
-  { icon: '📦', text: 'José Luis Rojo envió catálogo a', bold: 'Taller de Mobiliario', when: 'Hace 3 horas' },
-  { icon: '↻', text: 'Alejandra Díaz cambió etapa de', bold: 'Casa Mirador → Cotización', when: 'Ayer' },
-  { icon: '📅', text: 'Mariana Gómez agendó visita con', bold: 'Arquitectura 911', when: 'Ayer' },
-  { icon: '＋', text: 'José Luis Rojo creó nuevo contacto', bold: 'Studio Indigo', when: 'Hace 2 días' },
-]
-
-const pipelineStages = [
-  { label: 'NUEVO', count: 52, value: '$0' },
-  { label: 'CONTACTADO', count: 52, value: '$36,000' },
-  { label: 'INTERESADO', count: 19, value: '$96,000' },
-  { label: 'MUESTRARIO', count: 11, value: '$128,000' },
-  { label: 'COTIZACIÓN', count: 7, value: '$148,000' },
-  { label: 'NEGOCIACIÓN', count: 4, value: '$76,000' },
-  { label: 'CLIENTE', count: 3, value: '$0' },
-]
-
-const prospectosPorTipo = [
-  { name: 'Interioristas', pct: 38, val: 82, color: '#111827' },
-  { name: 'Arquitectos', pct: 27, val: 58, color: '#9CA3AF' },
-  { name: 'Mueblerías', pct: 18, val: 39, color: '#D1D5DB' },
-  { name: 'Desarrolladores', pct: 10, val: 22, color: '#6B7280' },
-  { name: 'Hoteles / Hospitality', pct: 7, val: 16, color: '#E5E7EB' },
-]
-
-const topZonas = [
-  { zona: 'CDMX - Polanco / Lomas', prospectos: 47, conversaciones: 9 },
-  { zona: 'Monterrey - San Pedro', prospectos: 31, conversaciones: 5 },
-  { zona: 'Guadalajara - Providencia', prospectos: 28, conversaciones: 3 },
-  { zona: 'Cancún - Zona Hotelera', prospectos: 18, conversaciones: 2 },
-  { zona: 'Querétaro - Juriquilla', prospectos: 15, conversaciones: 1 },
-]
-
-const pins = [
-  { x: 30, y: 30, tier: 'A' }, { x: 45, y: 40, tier: 'B' }, { x: 55, y: 55, tier: 'A' },
-  { x: 65, y: 35, tier: 'C' }, { x: 25, y: 60, tier: 'C' }, { x: 75, y: 65, tier: 'B' },
-]
-const tierColor = { A: '#111827', B: '#6B7280', C: '#D1D5DB' }
+const ETAPAS = ['Nuevo', 'Contactado', 'Interesado', 'Muestrario', 'Cotización', 'Negociación', 'Cliente']
+const ETAPA_COLOR = {
+  Nuevo: '#9CA3AF', Contactado: '#2563EB', Interesado: '#7C3AED', Muestrario: '#DB2777',
+  Cotización: '#D97706', Negociación: '#EA580C', Cliente: '#059669',
+}
+const SCORE_COLOR = { A: '#059669', B: '#D97706', C: '#9CA3AF' }
+const SCORE_LABEL = { A: 'Alto potencial', B: 'Medio potencial', C: 'Bajo potencial' }
+const TIPO_LABEL = {
+  'mueblería': 'Mueblerías', diseñador_interior: 'Diseñadores de interiores', arquitecto: 'Arquitectos',
+  fabrica_muebles: 'Fábricas de muebles', hotel: 'Hoteles / Hospitality', otro: 'Otro',
+}
+const TIPO_COLOR = {
+  'mueblería': '#2563EB', diseñador_interior: '#7C3AED', arquitecto: '#059669',
+  fabrica_muebles: '#D97706', hotel: '#DC2626', otro: '#0EA5E9',
+}
 
 function donutGradient(data) {
   let acc = 0
@@ -69,11 +33,118 @@ function donutGradient(data) {
     acc += d.pct
     return `${d.color} ${start}% ${acc}%`
   })
-  return `conic-gradient(${stops.join(', ')})`
+  return stops.length ? `conic-gradient(${stops.join(', ')})` : '#F3F4F6'
 }
 
 export default function SalesDashboard() {
-  const total = prospectosPorTipo.reduce((s, d) => s + d.val, 0)
+  const mapDivRef = useRef(null)
+  const mapRef = useRef(null)
+  const markersRef = useRef([])
+  const [prospectos, setProspectos] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [filtroScore, setFiltroScore] = useState('todos') // todos | A | B | C | sin
+
+  useEffect(() => {
+    supabase.from('prospectos').select('*').order('created_at', { ascending: false })
+      .then(({ data }) => { setProspectos(data ?? []); setLoading(false) })
+  }, [])
+
+  const total = prospectos.length
+  const conUbicacion = useMemo(() => prospectos.filter(p => p.lat != null && p.lng != null), [prospectos])
+
+  const kpis = useMemo(() => {
+    const porScore = { A: 0, B: 0, C: 0 }
+    prospectos.forEach(p => { if (p.score) porScore[p.score] = (porScore[p.score] || 0) + 1 })
+    const nuevos = prospectos.filter(p => p.etapa === 'Nuevo').length
+    const clientes = prospectos.filter(p => p.etapa === 'Cliente').length
+    const conEmail = prospectos.filter(p => p.email).length
+    const pct = n => (total ? Math.round((n / total) * 100) : 0)
+    return [
+      { icon: '👥', label: 'PROSPECTOS TOTALES', value: total, color: '#111827' },
+      { icon: '🟢', label: 'SCORE A', value: porScore.A, color: SCORE_COLOR.A, pct: pct(porScore.A) },
+      { icon: '🟡', label: 'SCORE B', value: porScore.B, color: SCORE_COLOR.B, pct: pct(porScore.B) },
+      { icon: '⚪', label: 'SCORE C', value: porScore.C, color: SCORE_COLOR.C, pct: pct(porScore.C) },
+      { icon: '🆕', label: 'ETAPA NUEVO', value: nuevos, color: ETAPA_COLOR.Nuevo, pct: pct(nuevos) },
+      { icon: '🤝', label: 'CLIENTES', value: clientes, color: ETAPA_COLOR.Cliente, pct: pct(clientes) },
+    ]
+  }, [prospectos, total])
+
+  const conEmailCount = prospectos.filter(p => p.email).length
+
+  const pipelineStages = useMemo(() => ETAPAS.map(etapa => {
+    const count = prospectos.filter(p => p.etapa === etapa).length
+    return { label: etapa, count, pct: total ? Math.round((count / total) * 100) : 0, color: ETAPA_COLOR[etapa] }
+  }), [prospectos, total])
+
+  const prospectosPorTipo = useMemo(() => {
+    const conteo = {}
+    prospectos.forEach(p => { conteo[p.tipo] = (conteo[p.tipo] || 0) + 1 })
+    const totalTipo = Object.values(conteo).reduce((s, v) => s + v, 0)
+    return Object.entries(conteo)
+      .map(([tipo, val]) => ({
+        name: TIPO_LABEL[tipo] ?? tipo,
+        val,
+        pct: totalTipo ? Math.round((val / totalTipo) * 100) : 0,
+        color: TIPO_COLOR[tipo] ?? '#6B7280',
+      }))
+      .sort((a, b) => b.val - a.val)
+  }, [prospectos])
+
+  const topZonas = useMemo(() => {
+    const conteo = {}
+    prospectos.forEach(p => {
+      const zona = [p.municipio, p.estado].filter(Boolean).join(', ')
+      if (!zona) return
+      conteo[zona] = (conteo[zona] || 0) + 1
+    })
+    return Object.entries(conteo).map(([zona, count]) => ({ zona, count })).sort((a, b) => b.count - a.count).slice(0, 6)
+  }, [prospectos])
+
+  const pendientes = useMemo(() => [
+    { label: 'Nuevos sin contactar', count: prospectos.filter(p => p.etapa === 'Nuevo').length, color: ETAPA_COLOR.Nuevo },
+    { label: 'Sin calificar (score)', count: prospectos.filter(p => !p.score).length, color: '#9CA3AF' },
+    { label: 'Sin email', count: prospectos.filter(p => !p.email).length, color: '#D97706' },
+    { label: 'Sin ubicación en el mapa', count: prospectos.filter(p => p.lat == null || p.lng == null).length, color: '#9CA3AF' },
+  ], [prospectos])
+
+  // Mapa Leaflet real — se inicializa una sola vez.
+  useEffect(() => {
+    mapRef.current = L.map(mapDivRef.current).setView([23.6345, -102.5528], 5)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(mapRef.current)
+    return () => mapRef.current?.remove()
+  }, [])
+
+  // Pinta/actualiza los marcadores cuando cambian los datos o el filtro de score.
+  useEffect(() => {
+    if (!mapRef.current) return
+    markersRef.current.forEach(m => m.remove())
+    markersRef.current = []
+
+    const visibles = conUbicacion.filter(p => {
+      if (filtroScore === 'todos') return true
+      if (filtroScore === 'sin') return !p.score
+      return p.score === filtroScore
+    })
+
+    const bounds = []
+    visibles.forEach(p => {
+      const color = p.score ? SCORE_COLOR[p.score] : '#D1D5DB'
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.4);"></div>`,
+        iconSize: [16, 16],
+      })
+      const marker = L.marker([p.lat, p.lng], { icon }).addTo(mapRef.current)
+      marker.bindPopup(`<b>${p.nombre}</b><br>${[p.colonia, p.municipio, p.estado].filter(Boolean).join(', ')}<br>Etapa: ${p.etapa}${p.score ? ` · Score ${p.score}` : ''}`)
+      markersRef.current.push(marker)
+      bounds.push([p.lat, p.lng])
+    })
+
+    if (bounds.length) mapRef.current.fitBounds(bounds, { padding: [30, 30], maxZoom: 12 })
+  }, [conUbicacion, filtroScore])
 
   return (
     <div>
@@ -82,77 +153,103 @@ export default function SalesDashboard() {
           <div className="adm-page-title">Dashboard</div>
           <div className="adm-breadcrumb">Sales Tools <b>› Dashboard</b></div>
         </div>
-        <div className="adm-topbar-actions">
-          <button type="button" className="adm-btn adm-btn-dark">+ Nueva actividad</button>
-        </div>
       </div>
 
       <div className="adm-content">
-        <div className="sls-note">
-          Datos de ejemplo — este dashboard todavía no está conectado a Supabase. Los prospectos reales (mensajes del sitio) se ven en <b>Prospectos</b>.
-        </div>
+        {!loading && total > 0 && total <= 10 && (
+          <div className="sls-note">
+            Todavía hay pocos prospectos cargados ({total}) — las cifras de abajo son reales, no ejemplos, pero van a moverse rápido conforme agregues más desde el <b>Prospector</b>.
+          </div>
+        )}
+        {!loading && total === 0 && (
+          <div className="sls-note">No hay prospectos todavía — agrega desde el <b>Prospector</b> para que este dashboard empiece a mostrar datos.</div>
+        )}
 
-        <div className="sls-stat-grid" style={{ marginBottom: 20 }}>
+        <div className="sls-stat-grid" style={{ marginBottom: 20, gridTemplateColumns: 'repeat(7, 1fr)' }}>
           {kpis.map(k => (
             <div key={k.label} className="sls-stat-card">
               <div className="sls-stat-label">{k.label}</div>
-              <div className="sls-stat-num">{k.value}</div>
-              <div className="sls-stat-delta">↑ {k.delta}</div>
+              <div className="sls-stat-num" style={{ color: k.color }}>{k.value}</div>
+              {k.pct !== undefined && <div className="sls-kpi-pct">{k.pct}% del total</div>}
             </div>
           ))}
           <div className="sls-stat-card sls-dark">
-            <div className="sls-stat-label">PIPELINE TOTAL</div>
-            <div className="sls-stat-num">{pipelineTotal.value}</div>
-            <div className="sls-stat-delta">↑ {pipelineTotal.delta}</div>
+            <div className="sls-stat-label">LISTOS PARA CAMPAÑA</div>
+            <div className="sls-stat-num">{conEmailCount}</div>
+            <div className="sls-stat-delta">con email registrado</div>
           </div>
         </div>
 
         <div className="sls-grid-3">
           <div className="adm-card" style={{ margin: 0 }}>
             <div className="adm-card-header"><div className="adm-card-title">Mapa de prospectos</div></div>
-            <div className="sls-map-placeholder">
-              {pins.map((p, i) => (
-                <span key={i} className="sls-pin" style={{ left: `${p.x}%`, top: `${p.y}%`, width: 22, height: 22, background: tierColor[p.tier] }}>{p.tier}</span>
+            <div className="sls-map-filter-row">
+              {[
+                { key: 'todos', label: 'Todos', dot: '#111827' },
+                { key: 'A', label: 'Score A', dot: SCORE_COLOR.A },
+                { key: 'B', label: 'Score B', dot: SCORE_COLOR.B },
+                { key: 'C', label: 'Score C', dot: SCORE_COLOR.C },
+                { key: 'sin', label: 'Sin calificar', dot: '#D1D5DB' },
+              ].map(f => (
+                <button
+                  key={f.key}
+                  type="button"
+                  className={`sls-map-filter-chip ${filtroScore === f.key ? 'sls-active' : ''}`}
+                  onClick={() => setFiltroScore(f.key)}
+                >
+                  <span className="sls-map-filter-dot" style={{ background: f.dot }} />
+                  {f.label}
+                </button>
               ))}
-              <div className="sls-map-note">
-                <div className="sls-map-note-box">Mapa interactivo — próximamente (requiere geocodificar cada prospecto)</div>
-              </div>
             </div>
+            <div className="sls-dash-map" ref={mapDivRef} />
+            {conUbicacion.length < total && (
+              <div className="sls-colonia-empty-hint" style={{ marginTop: 8 }}>
+                {total - conUbicacion.length} prospecto{total - conUbicacion.length !== 1 ? 's' : ''} sin coordenadas — no aparece{total - conUbicacion.length !== 1 ? 'n' : ''} en el mapa (normalmente leads del sitio, sin geocodificar).
+              </div>
+            )}
             <div className="sls-legend">
-              <span className="sls-legend-dot"><span className="sls-legend-swatch" style={{ background: '#111827' }} /> Alto potencial</span>
-              <span className="sls-legend-dot"><span className="sls-legend-swatch" style={{ background: '#6B7280' }} /> Medio potencial</span>
-              <span className="sls-legend-dot"><span className="sls-legend-swatch" style={{ background: '#D1D5DB' }} /> Bajo potencial</span>
+              <span className="sls-legend-dot"><span className="sls-legend-swatch" style={{ background: SCORE_COLOR.A }} /> {SCORE_LABEL.A}</span>
+              <span className="sls-legend-dot"><span className="sls-legend-swatch" style={{ background: SCORE_COLOR.B }} /> {SCORE_LABEL.B}</span>
+              <span className="sls-legend-dot"><span className="sls-legend-swatch" style={{ background: SCORE_COLOR.C }} /> {SCORE_LABEL.C}</span>
+              <span className="sls-legend-dot"><span className="sls-legend-swatch" style={{ background: '#D1D5DB' }} /> Sin calificar</span>
             </div>
           </div>
 
           <div className="adm-card" style={{ margin: 0 }}>
-            <div className="adm-card-header"><div className="adm-card-title">Próximas acciones</div></div>
-            {proximasAcciones.map((a, i) => (
-              <div key={i} className="sls-list-item">
-                <div className="sls-list-icon">{a.icon}</div>
-                <div style={{ flex: 1 }}>
-                  <div className="sls-list-title">{a.title}</div>
-                  <div className="sls-list-sub">{a.sub}</div>
-                </div>
-                <div className="sls-list-meta">{a.when}<br />{a.time}</div>
+            <div className="adm-card-header"><div className="adm-card-title">Pendientes</div></div>
+            {pendientes.map(p => (
+              <div key={p.label} className="sls-pending-item">
+                <div className="sls-pending-count" style={{ color: p.color }}>{p.count}</div>
+                <div className="sls-pending-label">{p.label}</div>
               </div>
             ))}
-            <div className="sls-list-footer">Ver todas las acciones →</div>
           </div>
 
           <div className="adm-card" style={{ margin: 0 }}>
-            <div className="adm-card-header"><div className="adm-card-title">Actividad reciente</div></div>
-            {actividadReciente.map((a, i) => (
-              <div key={i} className="sls-list-item">
-                <div className="sls-list-icon">{a.icon}</div>
-                <div style={{ flex: 1 }}>
-                  <div className="sls-list-sub">{a.text}</div>
-                  <div className="sls-list-title">{a.bold}</div>
+            <div className="adm-card-header"><div className="adm-card-title">Prospectos por tipo</div></div>
+            {prospectosPorTipo.length === 0 ? (
+              <div style={{ fontSize: 12.5, color: '#9CA3AF', textAlign: 'center', padding: '20px 0' }}>Sin datos aún</div>
+            ) : (
+              <>
+                <div className="sls-donut-wrap">
+                  <div className="sls-donut" style={{ background: donutGradient(prospectosPorTipo) }}>
+                    <div className="sls-donut-hole">
+                      <div className="sls-donut-total">{total}</div>
+                      <div className="sls-donut-total-label">Total</div>
+                    </div>
+                  </div>
                 </div>
-                <div className="sls-list-meta">{a.when}</div>
-              </div>
-            ))}
-            <div className="sls-list-footer">Ver toda la actividad →</div>
+                {prospectosPorTipo.map(d => (
+                  <div key={d.name} className="sls-donut-legend-row">
+                    <span className="sls-legend-swatch" style={{ background: d.color }} />
+                    <span className="sls-donut-legend-name">{d.name}</span>
+                    <span className="sls-donut-legend-pct">{d.pct}%</span>
+                    <span className="sls-donut-legend-val">{d.val}</span>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         </div>
 
@@ -162,50 +259,31 @@ export default function SalesDashboard() {
             <div className="sls-pipeline-row" style={{ gridTemplateColumns: `repeat(${pipelineStages.length}, 1fr)` }}>
               {pipelineStages.map(s => (
                 <div key={s.label} className="sls-pipeline-stage">
-                  <div className="sls-pipeline-label">{s.label}</div>
-                  <div className="sls-pipeline-count">{s.count}</div>
-                  <div className="sls-pipeline-value">{s.value}</div>
+                  <div className="sls-pipeline-label">{s.label.toUpperCase()}</div>
+                  <div className="sls-pipeline-count" style={{ color: s.color }}>{s.count}</div>
+                  <div className="sls-pipeline-value">{s.pct}%</div>
                 </div>
               ))}
             </div>
-            <div className="adm-card-sub" style={{ marginBottom: 0 }}>Valor total del pipeline</div>
-            <div style={{ fontSize: 20, fontWeight: 700 }}>$486,000 <span style={{ fontSize: 12, fontWeight: 400, color: '#9CA3AF' }}>MXN</span></div>
           </div>
 
-          <div className="adm-card" style={{ margin: 0 }}>
-            <div className="adm-card-header"><div className="adm-card-title">Prospectos por tipo</div></div>
-            <div className="sls-donut-wrap">
-              <div className="sls-donut" style={{ background: donutGradient(prospectosPorTipo) }}>
-                <div className="sls-donut-hole">
-                  <div className="sls-donut-total">{total}</div>
-                  <div className="sls-donut-total-label">Total</div>
-                </div>
-              </div>
-            </div>
-            {prospectosPorTipo.map(d => (
-              <div key={d.name} className="sls-donut-legend-row">
-                <span className="sls-legend-swatch" style={{ background: d.color }} />
-                <span className="sls-donut-legend-name">{d.name}</span>
-                <span className="sls-donut-legend-pct">{d.pct}%</span>
-                <span className="sls-donut-legend-val">{d.val}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="adm-card" style={{ margin: 0 }}>
+          <div className="adm-card" style={{ margin: 0, gridColumn: 'span 2' }}>
             <div className="adm-card-header"><div className="adm-card-title">Top zonas</div></div>
-            <table className="adm-table">
-              <thead><tr><th>Zona</th><th>Prospectos</th><th>Conversac.</th></tr></thead>
-              <tbody>
-                {topZonas.map(z => (
-                  <tr key={z.zona}>
-                    <td>{z.zona}</td>
-                    <td>{z.prospectos}</td>
-                    <td style={{ color: '#9CA3AF' }}>{z.conversaciones}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {topZonas.length === 0 ? (
+              <div style={{ fontSize: 12.5, color: '#9CA3AF', textAlign: 'center', padding: '20px 0' }}>Sin ubicación registrada todavía</div>
+            ) : (
+              <table className="adm-table">
+                <thead><tr><th>Zona</th><th>Prospectos</th></tr></thead>
+                <tbody>
+                  {topZonas.map(z => (
+                    <tr key={z.zona}>
+                      <td>{z.zona}</td>
+                      <td style={{ fontWeight: 600 }}>{z.count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>
