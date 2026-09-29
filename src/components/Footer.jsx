@@ -31,9 +31,9 @@ export default function Footer() {
           <p className="fct">Contacto</p>
           <ul className="fll">
             <li><a href="#" onClick={e => e.preventDefault()}>CDMX, Polanco</a></li>
-            <li><a href="#" onClick={e => e.preventDefault()}>info@brendell.mx</a></li>
-            <li><a href="#" onClick={e => e.preventDefault()}>+52 561 925 5395</a></li>
-            <li><a href="#" onClick={e => e.preventDefault()}>@brendellsofa</a></li>
+            <li><a href="mailto:info@brendell.mx">info@brendell.mx</a></li>
+            <li><a href="tel:+525619255395">+52 561 925 5395</a></li>
+            <li><a href="https://instagram.com/brendellsofa" target="_blank" rel="noopener noreferrer">@brendellsofa</a></li>
           </ul>
         </div>
       </div>
