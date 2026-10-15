@@ -15,17 +15,12 @@
 // (no se usa cotizaciones.total, que se redondea en otro orden — sum(item
 // redondeado) puede diferir en unos pesos de round(sum(item)) — así el
 // número siempre coincide con el que mostró el PDF original).
-import { ARMADOS_SUGERIDOS } from '../modularesPresets'
+import { nombreDelArmado, notasArmado, esModular } from '../modularesNombre'
 import { splitSofaLayout } from '../ModularesConfigurador'
 
 const tieneAncho = (type) => type === 'center' || type === 'puff'
 const metrosDePieza = (p) => (tieneAncho(p.type) ? (p.ancho ?? 100) / 100 : 1)
 
-function nombreDelArmado(sequence) {
-  const tipos = sequence.map(p => p.type)
-  const preset = ARMADOS_SUGERIDOS.find(p => p.tipos.length === tipos.length && p.tipos.every((t, i) => t === tipos[i]))
-  return preset?.nombre ?? 'Personalizado'
-}
 
 function huellaAproxM(sequence) {
   const { sofaPiezas, puffs, cornerIdx, hasCorner } = splitSofaLayout(sequence)
@@ -93,43 +88,73 @@ export function buildCotizacionPdfDataFromCotizacion(cot, tiempoFabricacion) {
   }
 }
 
-// Datos para CotizacionSimplePdf (producto único, sin armado por piezas) a
-// partir de una cotización guardada — o de una recién creada con el mismo
-// shape (`items` ya con precio_cliente congelado).
+// Datos para la página del plano de un armado (PlanoPagePdf).
+export function datosPlano(armado, { folio, fecha, colorNombre, totalPiezas }) {
+  const sequence = armado.sequence.map((p, i) => ({ id: i, type: p.type, ancho: p.ancho ?? undefined }))
+  const { anchoM, profundidadM } = huellaAproxM(sequence)
+  return {
+    sequence, mirrored: !!armado.mirrored, folio, fecha, colorNombre, totalPiezas,
+    huellaAnchoCm: Math.round(anchoM * 100), huellaProfundidadCm: Math.round(profundidadM * 100),
+  }
+}
+
+// Datos para CotizacionSimplePdf a partir de una cotización guardada — o
+// de una recién creada con el mismo shape (`items` con precio_cliente
+// congelado). Muebles sueltos = una fila; las piezas de un armado de Modulares
+// (mismo id en `notas`) se agrupan en UNA fila con su lista de piezas, y se
+// devuelve `armados` para dibujar su plano al final.
 export function buildSimplePdfDataFromCotizacion(cot, tiempoFabricacion) {
   const items = cot.items ?? []
   if (items.length === 0) throw new Error('Esta cotización no tiene productos guardados.')
-  const filas = items.map(it => {
-    const precioUnitario = it.precio_cliente ?? it.precio_unitario ?? 0
-    return {
-      producto: it.producto_nombre ?? cot.nombre_proyecto ?? '',
-      configuracion: it.configuracion_nombre ?? '',
-      medidas: it.medidas ?? '',
-      textilCatalogo: parseTextilNombre(it.textil_nombre).catalogo,
-      textilGrado: parseTextilNombre(it.textil_nombre).grado,
-      textilColor: parseTextilNombre(it.textil_nombre).color,
-      imagenUrl: it.imagen_url ?? null,
-      productoId: it.producto_id ?? null,
-      cantidad: it.cantidad ?? 1,
-      precioUnitario,
-      subtotal: precioUnitario * (it.cantidad ?? 1),
+  const folio = cot.folio ? `BR-${cot.folio}` : 'BORRADOR'
+  const fecha = cot.emitida_at ? new Date(cot.emitida_at) : new Date(cot.created_at ?? Date.now())
+  const filas = []
+  const grupos = new Map()
+  for (const it of items) {
+    const precio = it.precio_cliente ?? it.precio_unitario ?? 0
+    const arm = notasArmado(it)
+    if (arm) {
+      let g = grupos.get(arm.id)
+      if (!g) {
+        g = { arm, items: [], fila: null }
+        grupos.set(arm.id, g)
+        g.fila = { esArmado: true, piezas: [], cantidad: arm.qty ?? 1, precioUnitario: 0 }
+        filas.push(g.fila)
+      }
+      g.items.push(it)
+      const qty = arm.qty ?? 1
+      g.fila.piezas.push({ nombre: it.configuracion_nombre, cantidad: Math.round((it.cantidad ?? 1) / qty) })
+      g.fila.precioUnitario += precio * Math.round((it.cantidad ?? 1) / qty)
+      continue
     }
-  })
+    const t = parseTextilNombre(it.textil_nombre)
+    filas.push({
+      producto: it.producto_nombre ?? cot.nombre_proyecto ?? '', configuracion: it.configuracion_nombre ?? '', medidas: it.medidas ?? '',
+      textilCatalogo: t.catalogo, textilGrado: t.grado, textilColor: t.color,
+      imagenUrl: it.imagen_url ?? null, productoId: it.producto_id ?? null,
+      cantidad: it.cantidad ?? 1, precioUnitario: precio,
+    })
+  }
+  const armados = []
+  for (const g of grupos.values()) {
+    const t = parseTextilNombre(g.items[0].textil_nombre)
+    const totalPiezas = g.fila.piezas.reduce((s, p) => s + p.cantidad, 0)
+    const plano = datosPlano(g.arm, { folio, fecha, colorNombre: t.color, totalPiezas })
+    Object.assign(g.fila, {
+      producto: `${g.items[0].producto_nombre ?? 'Modulares'} · ${g.arm.nombre ?? nombreDelArmado(g.arm.sequence)}`,
+      configuracion: 'Armado modular', medidas: `${plano.huellaAnchoCm} × ${plano.huellaProfundidadCm} cm aprox.`,
+      textilCatalogo: t.catalogo, textilGrado: t.grado, textilColor: t.color,
+      imagenUrl: g.items.find(i => i.imagen_url)?.imagen_url ?? null, productoId: g.items[0].producto_id ?? null,
+    })
+    armados.push(plano)
+  }
+  for (const f of filas) f.subtotal = f.precioUnitario * f.cantidad
   return {
-    folio: cot.folio ? `BR-${cot.folio}` : 'BORRADOR',
-    fecha: cot.emitida_at ? new Date(cot.emitida_at) : new Date(cot.created_at ?? Date.now()),
-    vigenciaDias: 15,
-    clienteNombre: cot.cliente_nombre ?? '',
-    clienteEmail: cot.cliente_email ?? '',
-    clienteTelefono: cot.cliente_telefono ?? '',
-    tiempoFabricacion,
-    filas,
+    folio, fecha, vigenciaDias: 15,
+    clienteNombre: cot.cliente_nombre ?? '', clienteEmail: cot.cliente_email ?? '', clienteTelefono: cot.cliente_telefono ?? '',
+    tiempoFabricacion, filas, armados,
     total: filas.reduce((sum, f) => sum + f.subtotal, 0),
   }
 }
 
-// Elige el PDF según el tipo de cotización: Modulares (tiene
-// secuencia_pdf) o producto único.
-export function esModular(cot) {
-  return !!cot.secuencia_pdf?.sequence?.length
-}
+export { esModular }

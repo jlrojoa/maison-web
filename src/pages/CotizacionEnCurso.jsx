@@ -11,10 +11,10 @@ import { useDistribuidor } from '../contexts/DistribuidorContext'
 import Nav from '../components/Nav'
 import ResultadoCotizacion from './configurador/ResultadoCotizacion'
 import { urlEditarLinea } from './configurador/useAgregarACotizacion'
-import { cotizacionAlCarrito, guardarCotizacionMulti } from './configurador/cotizacionEdit'
+import { cotizacionAlCarrito, guardarCotizacionMulti, refrescarPrecios, parseMargen, conMargen as aplicaMargen } from './configurador/cotizacionEdit'
 import { generarPdfDeCotizacion } from './configurador/cotizacionPdf/pdfActions'
 import { TIEMPO_FABRICACION } from './configurador/ModularesConfigurador'
-import { useCarrito, actualizarLinea, quitarLinea, setForm, cargarCarrito, vaciarCarrito } from '../lib/cotizacionCarrito'
+import { useCarrito, actualizarLinea, quitarLinea, setForm, setEdicion, cargarCarrito, vaciarCarrito } from '../lib/cotizacionCarrito'
 
 const fmt = v => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(v)
 const FORM_VACIO = { cliente_nombre: '', cliente_email: '', cliente_telefono: '', markup_pct: '0' }
@@ -42,7 +42,9 @@ export default function CotizacionEnCurso() {
   const [errorCarga, setErrorCarga] = useState(null)
   const [guardando, setGuardando] = useState(null) // 'borrador' | 'emitir'
   const [resultado, setResultado] = useState(null)
+  const [avisoPrecios, setAvisoPrecios] = useState([])
   const cargadaRef = useRef(false)
+  const refrescadoRef = useRef(false)
 
   useEffect(() => {
     if (!loading && !distribuidor) navigate('/distribuidores', { replace: true })
@@ -60,21 +62,42 @@ export default function CotizacionEnCurso() {
     })
   }, [email])
 
-  const markup = parseFloat(form.markup_pct) || 0
-  const precioCliente = l => Math.round(l.precioUnitario * (1 + markup / 100))
+  // Precios vigentes: al abrir la pantalla (con la cotización ya cargada) se
+  // vuelven a leer; si algo cambió se actualiza y se avisa.
+  const aplicarPrecios = async (lista) => {
+    const { lineas: nuevas, cambios } = await refrescarPrecios(lista)
+    nuevas.forEach((n, i) => {
+      if (n.precioUnitario !== lista[i].precioUnitario) actualizarLinea(email, n.key, n.tipo === 'modular' ? { piezas: n.piezas, precioUnitario: n.precioUnitario } : { precioUnitario: n.precioUnitario })
+    })
+    if (cambios.length) setAvisoPrecios(cambios)
+    return nuevas
+  }
+  useEffect(() => {
+    if (cargando || !email || refrescadoRef.current || lineas.length === 0) return
+    refrescadoRef.current = true
+    aplicarPrecios(lineas)
+  }, [cargando, email, lineas.length])
+
+  const markup = parseMargen(form.markup_pct)
+  const conMargen = precio => aplicaMargen(precio, markup)
+  // Armado: se redondea pieza por pieza, igual que al guardar, para que el total coincida con el PDF.
+  const precioCliente = l => (l.tipo === 'modular' ? l.piezas.reduce((sum, p) => sum + conMargen(p.precioUnitario) * p.cantidad, 0) : conMargen(l.precioUnitario))
   const subtotalDist = lineas.reduce((s, l) => s + l.precioUnitario * l.cantidad, 0)
   const totalCliente = lineas.reduce((s, l) => s + precioCliente(l) * l.cantidad, 0)
   const editandoBorrador = edicion?.modo === 'editar' && edicion.status === 'borrador'
 
   const cambiarForm = (campo, valor) => setForm(email, { ...form, [campo]: valor })
-  const cambiarCantidad = (l, d) => actualizarLinea(email, l.key, { cantidad: Math.max(1, l.cantidad + d) })
+  const cambiarCantidad = (l, d) => actualizarLinea(email, l.key, { cantidad: Math.min(99, Math.max(1, l.cantidad + d)) })
 
   const guardar = async (modo) => {
     if (lineas.length === 0) return
     if (!form.cliente_nombre.trim()) return alert('El nombre del cliente es obligatorio.')
     setGuardando(modo)
     try {
-      const { cot, items } = await guardarCotizacionMulti({ distribuidor, lineas, form, edicion })
+      const vigentes = await aplicarPrecios(lineas)
+      const { cot, items, total } = await guardarCotizacionMulti({ distribuidor, lineas: vigentes, form, edicion })
+      // Si algo falla de aquí en adelante, reintentar actualiza este mismo borrador (no crea otro).
+      setEdicion(email, { id: cot.id, modo: 'editar', status: 'borrador', folio: cot.folio })
       if (modo === 'emitir') {
         const { error } = await supabase.rpc('emitir_cotizacion', { cotizacion_uuid: cot.id })
         if (error) throw error
@@ -88,7 +111,7 @@ export default function CotizacionEnCurso() {
       } catch (err) { pdfError = err.message }
       setResultado({
         folio, modo, pdfBlob, pdfNombre, pdfError, nombre: form.cliente_nombre.trim(),
-        email: form.cliente_email.trim(), tel: form.cliente_telefono.trim(), precio: totalCliente,
+        email: form.cliente_email.trim(), tel: form.cliente_telefono.trim(), precio: total,
       })
       vaciarCarrito(email)
     } catch (err) {
@@ -114,6 +137,11 @@ export default function CotizacionEnCurso() {
               : `Basada en ${edicion.folio ? 'BR-' + edicion.folio : 'una cotización anterior'} — al guardar se crea una nueva.`)
             : 'Agrega todos los muebles que quiera tu cliente, ajusta cantidades y guarda una sola cotización.'}
         </p>
+        {avisoPrecios.length > 0 && (
+          <div role="status" style={{ ...card, padding: 14, background: '#FFFBEB', borderColor: '#FDE68A', color: '#92400E', marginBottom: 16, fontSize: 13 }}>
+            Actualizamos los precios vigentes de: {avisoPrecios.join(', ')}.
+          </div>
+        )}
         {errorCarga && <div style={{ ...card, padding: 16, color: '#B91C1C', background: '#FEF2F2', borderColor: '#FECACA', marginBottom: 16, fontSize: 13 }}>{errorCarga}</div>}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: 24, alignItems: 'start' }} className="cot-grid">
@@ -129,18 +157,30 @@ export default function CotizacionEnCurso() {
                   {l.imagenUrl ? <img src={l.imagenUrl} alt={l.productoNombre} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: 10, color: '#94A3B8' }}>Sin imagen</span>}
                 </div>
                 <div style={{ flex: 1, minWidth: 200 }}>
-                  <div style={{ fontSize: 15, fontWeight: 600 }}>{l.productoNombre} · {l.medidaNombre}</div>
-                  <div style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>
-                    {l.dimensiones ? `${l.dimensiones} · ` : ''}{l.telaNombre} ({l.telaGrado}) · {l.colorNombre}
-                  </div>
+                  {l.tipo === 'modular' ? (
+                    <>
+                      <div style={{ fontSize: 15, fontWeight: 600 }}>{l.productoNombre} · {l.nombreArmado} <span style={{ fontSize: 11, fontWeight: 400, color: '#64748B' }}>(armado modular{l.mirrored ? ', espejo' : ''})</span></div>
+                      <div style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>
+                        {l.piezas.map(p => `${p.cantidad} × ${p.nombre}`).join(' · ')}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>{l.telaNombre} ({l.telaGrado}) · {l.colorNombre}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 15, fontWeight: 600 }}>{l.productoNombre} · {l.medidaNombre}</div>
+                      <div style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>
+                        {l.dimensiones ? `${l.dimensiones} · ` : ''}{l.telaNombre} ({l.telaGrado}) · {l.colorNombre}
+                      </div>
+                    </>
+                  )}
                   <div style={{ fontSize: 12, color: '#64748B', marginTop: 6 }}>
-                    {fmt(precioCliente(l))} c/u{markup ? ` (con tu margen de ${markup}%)` : ''}
+                    {fmt(precioCliente(l))} {l.tipo === 'modular' ? 'por armado' : 'c/u'}{markup ? ` (con tu margen de ${markup}%)` : ''}
                   </div>
                   <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                     <button type="button" aria-label="Menos" onClick={() => cambiarCantidad(l, -1)} disabled={l.cantidad <= 1} style={{ ...btn(), padding: '4px 10px' }}>−</button>
                     <span style={{ minWidth: 28, textAlign: 'center', fontSize: 14, fontWeight: 600 }}>{l.cantidad}</span>
-                    <button type="button" aria-label="Más" onClick={() => cambiarCantidad(l, 1)} style={{ ...btn(), padding: '4px 10px' }}>+</button>
-                    <button type="button" onClick={() => navigate(urlEditarLinea(l))} disabled={!l.productoSlug || !l.categoriaSlug} title="Cambiar medida, tela o color" style={{ ...btn(), marginLeft: 10, fontSize: 12 }}>Editar</button>
+                    <button type="button" aria-label="Más" onClick={() => cambiarCantidad(l, 1)} disabled={l.cantidad >= 99} style={{ ...btn(), padding: '4px 10px' }}>+</button>
+                    <button type="button" onClick={() => navigate(urlEditarLinea(l))} disabled={l.tipo !== 'modular' && (!l.productoSlug || !l.categoriaSlug)} title="Cambiar medida, tela o color" style={{ ...btn(), marginLeft: 10, fontSize: 12 }}>Editar</button>
                     <button type="button" onClick={() => quitarLinea(email, l.key)} style={{ ...btn(), fontSize: 12 }}>Eliminar</button>
                   </div>
                 </div>
@@ -164,7 +204,7 @@ export default function CotizacionEnCurso() {
             <label style={label}>Teléfono del cliente</label>
             <input style={input} value={form.cliente_telefono} onChange={e => cambiarForm('cliente_telefono', e.target.value)} />
             <label style={label}>Tu margen (%)</label>
-            <input style={input} type="number" value={form.markup_pct} onChange={e => cambiarForm('markup_pct', e.target.value)} />
+            <input style={input} type="number" min="0" max="500" inputMode="decimal" value={form.markup_pct} onChange={e => cambiarForm('markup_pct', e.target.value)} />
             <div style={{ borderTop: '1px solid #E2E8F0', marginTop: 16, paddingTop: 12, fontSize: 13 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}><span>Precio distribuidor</span><span>{fmt(subtotalDist)}</span></div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, fontWeight: 600, marginTop: 6 }}><span>Total para tu cliente</span><span>{fmt(totalCliente)}</span></div>

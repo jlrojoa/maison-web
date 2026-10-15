@@ -11,6 +11,7 @@ import { fmt } from '../format'
 import { fmtFecha, fmtVigencia } from './fmtPdf'
 import { COLORS, PAGE_PADDING } from './pdfTheme'
 import { TERMINOS } from './terminos'
+import PlanoPagePdf from './PlanoPagePdf'
 
 registrarFuentesPdf()
 
@@ -45,6 +46,7 @@ export const s = StyleSheet.create({
   specRow: { flexDirection: 'row', marginTop: 7 },
   specLabel: { width: 70, fontSize: 7, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.6, paddingTop: 1 },
   specValue: { flex: 1, fontSize: 9 },
+  piezaLinea: { fontSize: 8.5, marginBottom: 2 },
 
   telaRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: COLORS.border, padding: 9, backgroundColor: COLORS.fillNeutro },
   telaImg: { width: 52, height: 52, borderRadius: 6, objectFit: 'cover' },
@@ -195,6 +197,12 @@ export default function CotizacionSimplePdf({ data }) {
                   <View style={s.specRow}><Text style={s.specLabel}>MEDIDAS</Text><Text style={s.specValue}>{f.medidas}</Text></View>
                 ) : null}
                 <View style={s.specRow}><Text style={s.specLabel}>CANTIDAD</Text><Text style={s.specValue}>{f.cantidad}</Text></View>
+                {f.esArmado ? (
+                  <View style={s.specRow}>
+                    <Text style={s.specLabel}>PIEZAS</Text>
+                    <View style={{ flex: 1 }}>{f.piezas.map((p, j) => <Text key={j} style={s.piezaLinea}>{p.cantidad} × {p.nombre}</Text>)}</View>
+                  </View>
+                ) : null}
               </View>
             </View>
             {f.textilCatalogo ? <TelaFicha tela={f.tela} catalogo={f.textilCatalogo} color={f.textilColor} grado={f.textilGrado} /> : null}
@@ -221,6 +229,7 @@ export default function CotizacionSimplePdf({ data }) {
         <View style={{ marginTop: 16 }}><PasosYTerminos /></View>
         <Footer folio={data.folio} />
       </Page>
+      {(data.armados ?? []).map((a, i) => <PlanoPagePdf key={i} data={a} empresa={EMPRESA} />)}
     </Document>
   )
 }

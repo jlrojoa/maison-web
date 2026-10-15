@@ -80,7 +80,13 @@ export default function MiEspacio() {
 
   // Abre el configurador con la cotización cargada: `editar` actualiza el
   // borrador al guardar; `duplicar` arma lo mismo pero crea una nueva.
-  const irAConfigurar = (cot, modo = 'editar') => navigate(urlParaEditar(cot, modo))
+  const irAConfigurar = (cot, modo = 'editar') => {
+    // Abrir una cotización guardada reemplaza la cotización en curso: si hay
+    // muebles sin guardar (y no es la misma), se pregunta antes de perderlos.
+    if (carrito.lineas.length > 0 && carrito.edicion?.id !== cot.id &&
+        !confirm(`Tienes una cotización en curso con ${carrito.lineas.length} mueble(s) sin guardar. ¿Reemplazarla por esta?`)) return
+    navigate(urlParaEditar(cot, modo))
+  }
 
   const emitir = async (cot) => {
     setBusy(cot.id)

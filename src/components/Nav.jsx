@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useScrollNav } from '../hooks/useScrollNav'
 import { useDistribuidor } from '../contexts/DistribuidorContext'
+import { useCarrito } from '../lib/cotizacionCarrito'
 
 // solid: fuerza el estado "scrolled" (fondo claro sólido, texto oscuro) desde el
 // inicio. Necesario en páginas de fondo claro (ej. Configurador), donde el nav
@@ -11,6 +12,7 @@ export default function Nav({ solid = false }) {
   const ctx = useDistribuidor()
   const distribuidor = ctx?.distribuidor ?? null
   const signOut = ctx?.signOut ?? null
+  const nCotizacion = useCarrito(distribuidor?.email).lineas.length
 
   const handleLogout = async () => {
     if (signOut) await signOut()
@@ -37,6 +39,13 @@ export default function Nav({ solid = false }) {
               style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'inherit', textDecoration: 'none', opacity: .85 }}
             >
               Mi Espacio
+            </a>
+            <a
+              href="/cotizacion"
+              onClick={e => { e.preventDefault(); navigate('/cotizacion') }}
+              style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'inherit', textDecoration: 'none', opacity: .85, fontWeight: nCotizacion > 0 ? 600 : 400 }}
+            >
+              Cotización{nCotizacion > 0 ? ` (${nCotizacion})` : ''}
             </a>
             <a
               href="/mi-espacio/descargas"

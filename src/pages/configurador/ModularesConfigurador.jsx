@@ -26,14 +26,13 @@
 // mismas medidas aproximadas de arriba, mismo aviso "pendientes de
 // confirmar".
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { fmt } from './format'
 import { ARMADOS_SUGERIDOS } from './modularesPresets'
 import { TIPOS, NOMBRE_POR_TIPO, getAllowedTypes, addToSequence, removeFromSequence, getHintSegments, detectNombreTipo, getDisabledReason } from './modularesSequence'
 import PiezaSVG, { colorsFromHex } from './PiezaSVG'
-import { generarPdfBlob, abrirBlob, descargarBlob, compartirPdf } from './cotizacionPdf/pdfActions'
-import { buildCotizacionPdfData } from './cotizacionPdf/pdfData'
+import { useCarrito, agregarLinea, actualizarLinea } from '../../lib/cotizacionCarrito'
 import './ModularesConfigurador.css'
 
 const GRADOS = ['AA', 'A', 'B', 'C']
@@ -189,18 +188,6 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
   const [sequence, setSequence] = useState([]) // [{ id, type, configuracionId, modeloId, ancho? }]
   const pidRef = useRef(0)
   const [mirrored, setMirrored] = useState(false)
-  // Con Espejo activo, tener el plano espejado (scaleX(-1)) VISIBLE EN
-  // PANTALLA al mismo tiempo que corre pdf() cuelga la generación del
-  // PDF en el navegador — causa exacta sin identificar (no es el
-  // mecanismo de espejo del PDF en sí: se probó tanto <G
-  // transform="scale(-1,1)"> como resolver el espejo por coordenadas, y
-  // los dos se cuelgan igual mientras el plano espejado esté pintado en
-  // pantalla; ver conversación con JL, 2026-09-04). Salida pragmática:
-  // confirmarCotizacion() prende esto y renderPlano() desmonta el plano
-  // ENTERO (return null, no solo le quita la clase — quitar nada más la
-  // clase no evitó el cuelgue) mientras dura toda la función, apagándolo
-  // siempre en un finally, incluso si algo falla a medias.
-  const [suprimirEspejoParaPdf, setSuprimirEspejoParaPdf] = useState(false)
 
   // Ancho "pendiente" — el que se le va a dar a la PRÓXIMA pieza que se
   // agregue desde la tarjeta de selección de arriba (Central/Puff). Vive
@@ -263,64 +250,6 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
     load()
     return () => { ignore = true }
   }, [distribuidor, productoIds.join(',')])
-
-  // ── Cargar una cotización guardada (Mi Espacio → Editar / Duplicar) ───
-  // /configurador/modulares?cotizacion=<id>&modo=editar|duplicar. `editar`
-  // actualiza ese borrador al guardar; `duplicar` arma lo mismo pero crea una
-  // cotización nueva. Se restaura una sola vez, cuando ya cargaron piezas y telas.
-  const [searchParams] = useSearchParams()
-  const cotizacionParam = searchParams.get('cotizacion')
-  const modoParam = searchParams.get('modo') === 'duplicar' ? 'duplicar' : 'editar'
-  const [cotizCargada, setCotizCargada] = useState(null) // { id, modo, status }
-  const [cotizPrefill, setCotizPrefill] = useState(null)
-  const [errorCarga, setErrorCarga] = useState(null)
-  const restauradaRef = useRef(false)
-
-  useEffect(() => {
-    if (!cotizacionParam || !distribuidor || restauradaRef.current) return
-    if (configuraciones.length === 0 || telas.length === 0) return
-    restauradaRef.current = true
-    let ignore = false
-    ;(async () => {
-      const { data: cot, error } = await supabase
-        .from('cotizaciones')
-        .select('*, items:cotizacion_items(*)')
-        .eq('id', cotizacionParam)
-        .eq('distribuidor_email', distribuidor.email)
-        .single()
-      if (ignore) return
-      const seq = cot?.secuencia_pdf?.sequence
-      const modeloId = cot?.items?.[0]?.producto_id
-      if (error || !seq?.length || !modeloId) {
-        setErrorCarga('No se pudo cargar esa cotización para editarla.')
-        return
-      }
-      const piezas = seq.map(p => {
-        const cfg = configuraciones.find(c => c.producto_id === modeloId && c.nombre === NOMBRE_POR_TIPO[p.type])
-        return { id: pidRef.current++, type: p.type, configuracionId: cfg?.id, modeloId, ancho: p.ancho ?? undefined }
-      })
-      setModeloActivoId(modeloId)
-      setSequence(piezas)
-      setMirrored(!!cot.secuencia_pdf.mirrored)
-      const m = /^(.+) \(([^)]+)\) · (.+)$/.exec(cot.items[0].textil_nombre ?? '')
-      if (m) {
-        const tela = telas.find(t => t.nombre === m[1] && t.grado === m[2])
-        if (tela) {
-          setGradoSel(tela.grado)
-          setTelaSel(tela)
-          setColorSel(tela.colores.find(c => c.nombre === m[3]) ?? tela.colores[0] ?? null)
-        }
-      }
-      setCotizPrefill({
-        cliente_nombre: cot.cliente_nombre ?? '',
-        cliente_email: cot.cliente_email ?? '',
-        cliente_telefono: cot.cliente_telefono ?? '',
-        markup_pct: String(cot.markup_pct ?? 0),
-      })
-      setCotizCargada({ id: cot.id, modo: modoParam, status: cot.status })
-    })()
-    return () => { ignore = true }
-  }, [cotizacionParam, distribuidor, configuraciones, telas])
 
   const piezasPorProducto = useMemo(() => {
     const map = {}
@@ -563,14 +492,6 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
   }
 
   const renderPlano = () => {
-    // Desmonta el plano ENTERO (no solo le quita la clase de espejo)
-    // mientras dura confirmarCotizacion() — ver nota grande en la
-    // declaración de suprimirEspejoParaPdf. Quitar nada más la clase
-    // mod-plano-mirrored (probado primero) no evitó el cuelgue; quitar
-    // el nodo del DOM por completo es la versión más segura de "oculta
-    // o desmonta" que pidió JL. El modal de confirmación ya está abierto
-    // encima en ese momento, así que no se alcanza a ver el hueco.
-    if (suprimirEspejoParaPdf) return null
     if (!hasCorner) {
       // Sin esquinero no hay nada que "doble" que orientar — pero Espejo
       // igual aplica acá: voltea el armado completo de lado a lado (ej.
@@ -692,129 +613,57 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
   const hintSegments = getHintSegments(sequence)
 
   // ── Cotización ────────────────────────────────────────────────────────
-  const [cotizModo, setCotizModo] = useState(null) // null | 'borrador' | 'emitir'
-  const [cotizForm, setCotizForm] = useState({ cliente_nombre: '', cliente_email: '', cliente_telefono: '', markup_pct: '0' })
-  const [cotizSaving, setCotizSaving] = useState(false)
-  const [cotizResultado, setCotizResultado] = useState(null)
+  // El armado se agrega a la "cotización en curso" (junto con otros muebles u
+  // otros armados) — ver lib/cotizacionCarrito.js y pages/CotizacionEnCurso.jsx.
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const carrito = useCarrito(distribuidor?.email)
+  const [lineaKey] = useState(() => searchParams.get('linea')) // se lee una vez
+  const lineaEditando = lineaKey ? carrito.lineas.find(l => l.key === lineaKey && l.tipo === 'modular') : null
+  const [aviso, setAviso] = useState(false)
 
-  const puedeGuardar = !!(distribuidor && telaSel && colorSel && lineas.length > 0 && !hayIncompletas)
+  const puedeAgregar = !!(distribuidor && telaSel && colorSel && lineas.length > 0 && !hayIncompletas)
 
-  const abrirCotizModal = (modo) => {
-    if (!puedeGuardar) return
-    setCotizForm(cotizPrefill ?? { cliente_nombre: '', cliente_email: '', cliente_telefono: '', markup_pct: '0' })
-    setCotizResultado(null)
-    setCotizModo(modo)
+  const construirLinea = () => ({
+    tipo: 'modular', categoriaSlug: 'modulares', productoId: sequenceModeloId,
+    productoNombre: productos.find(p => p.id === sequenceModeloId)?.nombre ?? '',
+    nombreArmado, sequence: sequence.map(p => ({ type: p.type, ancho: p.ancho ?? null })), mirrored,
+    telaNombre: telaSel.nombre, telaGrado: telaSel.grado, colorNombre: colorSel.nombre,
+    piezas: lineas.map(l => ({ configuracionId: l.configuracionId, nombre: l.piezaNombre, ancho: l.ancho ?? null, cantidad: l.cantidad, precioUnitario: l.precio, imagenUrl: l.imagenUrl })),
+    precioUnitario: total, imagenUrl: lineas.find(l => l.imagenUrl)?.imagenUrl ?? null,
+  })
+  const agregarACotizacion = () => {
+    if (!puedeAgregar) return
+    agregarLinea(distribuidor.email, { ...construirLinea(), cantidad: 1 })
+    setAviso(true)
+    setTimeout(() => setAviso(false), 4000)
   }
-  const cerrarCotizModal = () => { if (!cotizSaving) setCotizModo(null) }
+  const actualizarEnCotizacion = () => {
+    if (!puedeAgregar || !lineaEditando) return
+    actualizarLinea(distribuidor.email, lineaEditando.key, construirLinea())
+    navigate('/cotizacion')
+  }
 
-  const markup = parseFloat(cotizForm.markup_pct) || 0
-  const totalCliente = Math.round(total * (1 + markup / 100))
-
-  const confirmarCotizacion = async () => {
-    if (!cotizForm.cliente_nombre.trim()) return alert('El nombre del cliente es obligatorio.')
-    setCotizSaving(true)
-    // Desmonta el plano espejado EN PANTALLA para TODA la duración de
-    // confirmarCotizacion (no solo alrededor de pdf()) — ver nota grande
-    // en la declaración de suprimirEspejoParaPdf más arriba. Se prende
-    // lo antes posible (antes de cualquier llamada a Supabase) para no
-    // depender de en qué punto exacto ocurre el cuelgue; un intento
-    // anterior que solo lo prendía justo antes de pdf() (con 2 rAF de
-    // margen) NO evitó el cuelgue — quedó documentado que la ventana de
-    // "antes/durante" no es confiable, así que se desmonta con el mayor
-    // margen posible en vez de acotarlo.
-    setSuprimirEspejoParaPdf(true)
-    await new Promise(r => requestAnimationFrame(r))
-    await new Promise(r => requestAnimationFrame(r))
-    try {
-      const textilNombre = `${telaSel.nombre} (${telaSel.grado}) · ${colorSel.nombre}`
-
-      // secuencia_pdf: guarda el arreglo ORDENADO de piezas + Normal/Espejo
-      // tal cual estaban al emitir — cotizacion_items agrupa por tipo+ancho
-      // (ej. "Módulo Central × 2") y con eso solo no alcanza para saber si
-      // esas 2 piezas van ambas antes del esquinero, ambas después, o una
-      // de cada lado. Sin este campo, "descargar el mismo PDF" después
-      // tendría que adivinar el doblez en L. Pedido explícito de JL,
-      // 2026-09-02 — ver migración add_cotizaciones_secuencia_pdf.
-      const campos = {
-        nombre_proyecto: `Modulares · ${nombreArmado}`,
-        total: totalCliente,
-        markup_pct: markup,
-        cliente_nombre: cotizForm.cliente_nombre.trim(),
-        cliente_email: cotizForm.cliente_email.trim() || null,
-        cliente_telefono: cotizForm.cliente_telefono.trim() || null,
-        secuencia_pdf: { sequence: sequence.map(p => ({ type: p.type, ancho: p.ancho ?? null })), mirrored },
-      }
-      // Editando un borrador existente: se actualiza y se reemplazan sus
-      // líneas. En cualquier otro caso (nueva o duplicar) se inserta una.
-      const editando = cotizCargada?.modo === 'editar' && cotizCargada.status === 'borrador'
-      let cot
-      if (editando) {
-        const { data, error } = await supabase.from('cotizaciones').update(campos).eq('id', cotizCargada.id).select().single()
-        if (error) throw error
-        cot = data
-        const { error: delErr } = await supabase.from('cotizacion_items').delete().eq('cotizacion_id', cot.id)
-        if (delErr) throw delErr
-      } else {
-        const { data, error } = await supabase.from('cotizaciones').insert({
-          distribuidor_email: distribuidor.email,
-          status: 'borrador',
-          ...campos,
-        }).select().single()
-        if (error) throw error
-        cot = data
-      }
-
-      const items = lineas.map(l => ({
-        cotizacion_id: cot.id,
-        producto_id: l.modeloId,
-        producto_nombre: l.productoNombre,
-        imagen_url: l.imagenUrl,
-        configuracion_nombre: l.piezaNombre,
-        medidas: l.ancho != null ? `${l.ancho}cm (aprox.)` : null,
-        textil_nombre: textilNombre,
-        precio_unitario: l.precio,
-        precio_cliente: Math.round(l.precio * (1 + markup / 100)),
-        cantidad: l.cantidad,
-      }))
-      const { error: itemErr } = await supabase.from('cotizacion_items').insert(items)
-      if (itemErr) throw itemErr
-
-      let folio = cot.folio
-      if (cotizModo === 'emitir') {
-        const { error: emitErr } = await supabase.rpc('emitir_cotizacion', { cotizacion_uuid: cot.id })
-        if (emitErr) throw emitErr
-        const { data: fresca } = await supabase.from('cotizaciones').select('folio').eq('id', cot.id).single()
-        folio = fresca?.folio ?? folio
-      }
-
-      // El PDF se entrega SIEMPRE (emitida o borrador) con botones en el modal
-      // — una descarga automática después de varios await la bloquea el
-      // navegador y no deja ver el documento. Si falla, la cotización ya quedó
-      // guardada: se avisa en el modal, no se pierde el trabajo.
-      let pdfBlob = null, pdfError = null
-      try {
-        const producto = productos.find(p => p.id === modeloActivoId) ?? productos[0]
-        const pdfData = buildCotizacionPdfData({
-          folio: folio ? `BR-${folio}` : 'BORRADOR',
-          fecha: new Date(),
-          productoNombre: producto?.nombre ?? '',
-          sequence, mirrored, telaSel, colorSel, gradoSel,
-          lineas, markupPct: markup,
-          tiempoFabricacion: TIEMPO_FABRICACION,
-        })
-        pdfBlob = await generarPdfBlob(pdfData)
-      } catch (err) {
-        pdfError = err.message
-      }
-      setCotizCargada({ id: cot.id, modo: 'editar', status: cotizModo === 'emitir' ? 'emitida' : 'borrador' })
-      setCotizResultado({ folio, modo: cotizModo, pdfBlob, pdfError, nombre: cotizForm.cliente_nombre.trim(), email: cotizForm.cliente_email.trim(), tel: cotizForm.cliente_telefono.trim(), precio: totalCliente })
-    } catch (err) {
-      alert(`Error al guardar la cotización: ${err.message}`)
-    } finally {
-      setCotizSaving(false)
-      setSuprimirEspejoParaPdf(false)
+  // Cotización en curso → editar un armado (?linea=ID): restaura piezas, espejo,
+  // tela y color una sola vez, cuando ya cargaron las piezas y las telas.
+  const restauradaRef = useRef(false)
+  useEffect(() => {
+    if (restauradaRef.current || !lineaEditando) return
+    if (configuraciones.length === 0 || telas.length === 0) return
+    restauradaRef.current = true
+    const modeloId = lineaEditando.productoId
+    setModeloActivoId(modeloId)
+    setSequence(lineaEditando.sequence.map(p => {
+      const cfg = configuraciones.find(c => c.producto_id === modeloId && c.nombre === NOMBRE_POR_TIPO[p.type])
+      return { id: pidRef.current++, type: p.type, configuracionId: cfg?.id, modeloId, ancho: p.ancho ?? undefined }
+    }))
+    setMirrored(!!lineaEditando.mirrored)
+    const tela = telas.find(t => t.nombre === lineaEditando.telaNombre && t.grado === lineaEditando.telaGrado)
+    if (tela) {
+      setGradoSel(tela.grado); setTelaSel(tela)
+      setColorSel(tela.colores.find(c => c.nombre === lineaEditando.colorNombre) ?? tela.colores[0] ?? null)
     }
-  }
+  }, [lineaEditando, configuraciones, telas])
 
   if (productos.length === 0) {
     return <div className="cfg-message">Aún no hay modelos cargados en «{categoriaNombre}». Se agregan desde el panel de administración → Productos.</div>
@@ -827,8 +676,7 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
     <div className="mod-wrap">
       <div className="mod-header">
         <h1 className="mod-h1">{categoriaNombre}</h1>
-        {errorCarga && <div className="cfg-message" role="alert">{errorCarga}</div>}
-        {cotizCargada && !errorCarga && <div className="cfg-message" role="status">{cotizCargada.modo === 'editar' && cotizCargada.status === 'borrador' ? 'Editando tu borrador — al guardar se actualiza.' : 'Cotización cargada como base — al guardar se crea una nueva.'}</div>}
+        {lineaEditando && <div className="cfg-message" role="status">Editando un armado de tu cotización — al actualizar vuelves a Mi cotización.</div>}
         <p className="mod-subtitle">Arma tu sofá pieza por pieza, en orden. El precio y el nombre se actualizan según lo que vayas agregando.</p>
       </div>
 
@@ -1114,81 +962,18 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
                 <div className="mod-bar-fabricacion">Tiempo estimado de fabricación: {TIEMPO_FABRICACION}</div>
               )}
               <div className="mod-bar-actions">
-                <button type="button" className="cfg-btn cfg-btn-primary" disabled={!puedeGuardar} onClick={() => abrirCotizModal('emitir')}>Crear cotización</button>
-                <button type="button" className="cfg-btn cfg-btn-secondary" disabled={!puedeGuardar} onClick={() => abrirCotizModal('borrador')}>Guardar en mi espacio</button>
+                {aviso && <span className="mod-bar-msg" role="status">✓ Agregado a tu cotización</span>}
+                {lineaEditando ? (
+                  <button type="button" className="cfg-btn cfg-btn-primary" disabled={!puedeAgregar} onClick={actualizarEnCotizacion}>Actualizar en la cotización</button>
+                ) : (
+                  <button type="button" className="cfg-btn cfg-btn-primary" disabled={!puedeAgregar} onClick={agregarACotizacion}>Agregar a la cotización</button>
+                )}
+                <button type="button" className="cfg-btn cfg-btn-secondary" onClick={() => navigate('/cotizacion')}>Ver cotización{carrito.lineas.length > 0 ? ` (${carrito.lineas.length})` : ''}</button>
               </div>
             </>
           )}
         </div>
 
-      {cotizModo && (
-        <div className="cfg-modal-overlay" onClick={e => { if (e.target === e.currentTarget && !cotizSaving) cerrarCotizModal() }}>
-          <div className="cfg-modal-box">
-            {cotizResultado ? (
-              <>
-                <h3 className="cfg-modal-title">
-                  {cotizResultado.modo === 'emitir' ? '¡Cotización emitida!' : 'Guardada en Mi Espacio'}
-                </h3>
-                <p className="cfg-modal-text">
-                  {cotizResultado.folio
-                    ? <>Folio <b>BR-{cotizResultado.folio}</b>. Vigente 15 días. Aquí tienes tu PDF; también lo encuentras siempre en Mi Espacio.</>
-                    : <>Quedó guardada como borrador. Puedes revisar el PDF y emitirla cuando quieras desde Mi Espacio.</>}
-                </p>
-                {cotizResultado.pdfError && <p className="cfg-modal-text" style={{ color: '#B91C1C' }}>La cotización se guardó, pero no se pudo generar el PDF aquí ({cotizResultado.pdfError}). Ábrelo desde Mi Espacio.</p>}
-                <div className="cfg-buttons">
-                  {cotizResultado.pdfBlob && (
-                    <>
-                      <button type="button" className="cfg-btn cfg-btn-primary" onClick={() => abrirBlob(cotizResultado.pdfBlob)}>Ver PDF</button>
-                      <button type="button" className="cfg-btn cfg-btn-secondary" onClick={() => descargarBlob(cotizResultado.pdfBlob, `cotizacion-${cotizResultado.folio ? 'BR-' + cotizResultado.folio : 'borrador'}.pdf`)}>Descargar PDF</button>
-                    </>
-                  )}
-                  {cotizResultado.modo === 'emitir' && cotizResultado.pdfBlob && (cotizResultado.email || cotizResultado.tel) && (
-                    <button type="button" className="cfg-btn cfg-btn-secondary" onClick={() => compartirPdf({
-                      blob: cotizResultado.pdfBlob, nombre: `cotizacion-BR-${cotizResultado.folio}.pdf`,
-                      asunto: `Cotización BR-${cotizResultado.folio}`,
-                      cuerpo: `Hola ${cotizResultado.nombre},\n\nTe comparto tu cotización BR-${cotizResultado.folio} (${fmt(cotizResultado.precio)}).\n\nSaludos.`,
-                      email: cotizResultado.email, tel: cotizResultado.tel,
-                    })}>Enviar al cliente</button>
-                  )}
-                  <a href="/mi-espacio" className="cfg-btn cfg-btn-secondary" style={{ textAlign: 'center', textDecoration: 'none' }}>Ir a Mi Espacio</a>
-                  <button type="button" className="cfg-btn cfg-btn-secondary" onClick={cerrarCotizModal}>Seguir configurando</button>
-                </div>
-              </>
-            ) : (
-              <>
-                <h3 className="cfg-modal-title">{cotizModo === 'emitir' ? 'Crear cotización' : 'Guardar borrador'}</h3>
-                <p className="cfg-modal-text">Este documento es el que le compartes a tu cliente final.</p>
-                <div className="mod-resumen mod-resumen-modal">
-                  {lineas.map(l => (
-                    <div className="mod-resumen-row" key={l.key}>
-                      <span>{l.productoNombre} · {l.piezaNombre} × {l.cantidad}</span>
-                      <span>{fmt((l.precio ?? 0) * l.cantidad)}</span>
-                    </div>
-                  ))}
-                </div>
-                <label className="cfg-dropdown-label">Nombre del cliente *</label>
-                <input className="cfg-dropdown" value={cotizForm.cliente_nombre} onChange={e => setCotizForm(f => ({ ...f, cliente_nombre: e.target.value }))} />
-                <label className="cfg-dropdown-label">Email del cliente</label>
-                <input className="cfg-dropdown" value={cotizForm.cliente_email} onChange={e => setCotizForm(f => ({ ...f, cliente_email: e.target.value }))} />
-                <label className="cfg-dropdown-label">Teléfono del cliente</label>
-                <input className="cfg-dropdown" value={cotizForm.cliente_telefono} onChange={e => setCotizForm(f => ({ ...f, cliente_telefono: e.target.value }))} />
-                <label className="cfg-dropdown-label">Tu margen (%)</label>
-                <input className="cfg-dropdown" type="number" value={cotizForm.markup_pct} onChange={e => setCotizForm(f => ({ ...f, markup_pct: e.target.value }))} />
-                <div className="cfg-summary-price-row" style={{ marginBottom: 16 }}>
-                  <span>Precio para tu cliente</span>
-                  <span>{fmt(totalCliente)}</span>
-                </div>
-                <div className="cfg-buttons">
-                  <button type="button" className="cfg-btn cfg-btn-primary" disabled={cotizSaving} onClick={confirmarCotizacion}>
-                    {cotizSaving ? 'Guardando…' : cotizModo === 'emitir' ? 'Confirmar y emitir' : 'Guardar borrador'}
-                  </button>
-                  <button type="button" className="cfg-btn cfg-btn-secondary" disabled={cotizSaving} onClick={cerrarCotizModal}>Cancelar</button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

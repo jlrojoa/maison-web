@@ -48,8 +48,8 @@ const nuevoId = () => `l_${Date.now().toString(36)}${Math.random().toString(36).
 export function agregarLinea(email, linea) {
   const c = leer(email)
   // misma configuración exacta -> suma cantidad en vez de duplicar la línea
-  const igual = c.lineas.find(l =>
-    l.productoId === linea.productoId && l.medidaNombre === linea.medidaNombre &&
+  const igual = linea.tipo === 'modular' ? null : c.lineas.find(l =>
+    l.tipo !== 'modular' && l.productoId === linea.productoId && l.medidaNombre === linea.medidaNombre &&
     l.telaNombre === linea.telaNombre && l.colorNombre === linea.colorNombre)
   if (igual) {
     escribir(email, { ...c, lineas: c.lineas.map(l => (l.key === igual.key ? { ...l, cantidad: l.cantidad + (linea.cantidad ?? 1) } : l)) })
@@ -68,6 +68,10 @@ export function actualizarLinea(email, key, cambios) {
 export function quitarLinea(email, key) {
   const c = leer(email)
   escribir(email, { ...c, lineas: c.lineas.filter(l => l.key !== key) })
+}
+
+export function setEdicion(email, edicion) {
+  escribir(email, { ...leer(email), edicion })
 }
 
 export function setForm(email, form) {

@@ -11,6 +11,7 @@ const STICKY = ['camas', 'sofas', 'escuadras-l', 'chaise-lounge']
 
 // URL del configurador para editar una línea (selección precargada).
 export function urlEditarLinea(l) {
+  if (l.tipo === 'modular') return `/configurador/modulares?linea=${l.key}`
   if (!l.categoriaSlug || !l.productoSlug) return '/configurador'
   const q = new URLSearchParams()
   if (STICKY.includes(l.categoriaSlug)) {
@@ -39,9 +40,9 @@ export function useAgregarACotizacion({ distribuidor, categoriaSlug, producto, m
   const puede = !!(distribuidor && producto && medidaSel && telaSel && colorSel && precioLookup != null)
 
   const construir = () => ({
-    categoriaSlug, productoSlug: producto.slug, productoId: producto.id, productoNombre: producto.nombre,
+    tipo: 'mueble', categoriaSlug, productoSlug: producto.slug, productoId: producto.id, productoNombre: producto.nombre,
     imagenUrl: producto.isometrico_url ?? null,
-    medidaNombre: medidaSel.nombre, dimensiones: medidaSel.dimensiones ?? null,
+    configuracionId: medidaSel.id, medidaNombre: medidaSel.nombre, dimensiones: medidaSel.dimensiones ?? null,
     telaNombre: telaSel.nombre, telaGrado: telaSel.grado, colorNombre: colorSel.nombre,
     precioUnitario: precioLookup,
   })
