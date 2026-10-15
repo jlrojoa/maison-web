@@ -9,7 +9,7 @@ export default function ResultadoCotizacion({ resultado, onClose }) {
   const enviar = () => compartirPdf({
     blob: resultado.pdfBlob, nombre: resultado.pdfNombre ?? 'cotizacion.pdf',
     asunto: `Cotización BR-${resultado.folio}`,
-    cuerpo: `Hola ${resultado.nombre},\n\nTe comparto tu cotización BR-${resultado.folio} (${fmt(resultado.precio)}).\n\nSaludos.`,
+    cuerpo: `Hola${resultado.nombre ? ' ' + resultado.nombre : ''},\n\nTe comparto tu cotización BR-${resultado.folio} (${fmt(resultado.precio)}).\n\nSaludos.`,
     email: resultado.email, tel: resultado.tel,
   })
   return (

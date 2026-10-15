@@ -5,7 +5,7 @@
 import { createElement } from 'react'
 import { pdf } from '@react-pdf/renderer'
 import ModularesCotizacionPdf from './ModularesCotizacionPdf'
-import { fichaTela, fotoProducto, fotoPieza } from './imagenesPdf'
+import { fichaTela, fotoProducto, fotoPieza, imagenParaPdf } from './imagenesPdf'
 
 // Modulares: agrega la ficha/foto de la tela elegida antes de renderizar.
 export async function generarPdfBlob(data) {
@@ -46,15 +46,27 @@ export function abrirPestanaEspera() {
 
 // Genera el PDF de una cotización YA GUARDADA (o con su mismo shape),
 // del tipo que corresponda. Devuelve { blob, nombre }.
-export async function generarPdfDeCotizacion(cot, tiempoFabricacion) {
+// Datos del distribuidor para el PDF "con mis datos" (null si la cotización es la normal).
+async function marcaDe(cot, distribuidor) {
+  if (!cot.marca_distribuidor || !distribuidor) return null
+  return {
+    nombre: distribuidor.nombre_comercial || distribuidor.empresa || distribuidor.nombre || distribuidor.email,
+    telefono: distribuidor.telefono || '', email: distribuidor.email || '', direccion: distribuidor.direccion || '',
+    condiciones: distribuidor.condiciones_venta || '',
+    logo: await imagenParaPdf(distribuidor.logo_url, 400),
+  }
+}
+
+export async function generarPdfDeCotizacion(cot, tiempoFabricacion, distribuidor) {
+  const marca = await marcaDe(cot, distribuidor)
   const { buildCotizacionPdfDataFromCotizacion, buildSimplePdfDataFromCotizacion } = await import('./pdfDataFromSaved')
   const { esModular } = await import('../modularesNombre')
   if (esModular(cot)) {
-    const data = buildCotizacionPdfDataFromCotizacion(cot, tiempoFabricacion)
+    const data = { ...buildCotizacionPdfDataFromCotizacion(cot, tiempoFabricacion), marca }
     return { blob: await generarPdfBlob(data), nombre: `cotizacion-${data.folio}.pdf` }
   }
   const { default: CotizacionSimplePdf } = await import('./CotizacionSimplePdf')
-  const data = buildSimplePdfDataFromCotizacion(cot, tiempoFabricacion)
+  const data = { ...buildSimplePdfDataFromCotizacion(cot, tiempoFabricacion), marca }
   // Foto del mueble y ficha de la tela de cada línea (en paralelo).
   data.filas = await Promise.all(data.filas.map(async f => ({
     ...f,

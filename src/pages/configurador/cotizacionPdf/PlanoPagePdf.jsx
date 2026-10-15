@@ -229,8 +229,8 @@ export default function PlanoPagePdf({ data, empresa }) {
     <Page size="LETTER" style={s.page}>
       <View style={s.headerRow}>
         <View>
-          <Text style={s.brand}>BRENDELL MODULAR</Text>
-          <Text style={s.brandSub}>PRESENTADO POR {empresa.razonSocial.toUpperCase()}</Text>
+          <Text style={s.brand}>{empresa.marca ? empresa.razonSocial.toUpperCase() : 'BRENDELL MODULAR'}</Text>
+          {empresa.marca ? null : <Text style={s.brandSub}>PRESENTADO POR {empresa.razonSocial.toUpperCase()}</Text>}
         </View>
         <View style={s.headerRight}>
           <Text style={s.titulo}>PLANO TÉCNICO · {data.folio}</Text>
@@ -297,8 +297,8 @@ export default function PlanoPagePdf({ data, empresa }) {
       <View style={s.footerHr}>
         <View style={s.footerRow}>
           <View style={{ maxWidth: 430 }}>
-            <Text style={[s.footerLeft, s.footerBold]}>Brendell Modular · {empresa.razonSocial}</Text>
-            <Text style={[s.footerLeft, s.footerMuted]}>RFC: {empresa.rfc}</Text>
+            <Text style={[s.footerLeft, s.footerBold]}>{empresa.marca ? '' : 'Brendell Modular · '}{empresa.razonSocial}</Text>
+            {empresa.rfc ? <Text style={[s.footerLeft, s.footerMuted]}>RFC: {empresa.rfc}</Text> : null}
             <Text style={[s.footerLeft, s.footerMuted]}>{empresa.direccion}</Text>
           </View>
           <View>

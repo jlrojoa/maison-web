@@ -11,3 +11,8 @@ export const EMPRESA = {
   telefono: '+52 561925 5395',
   email: 'info@brendell.mx',
 }
+
+// Datos del distribuidor para cotizaciones "con mis datos" (sin RFC de Brendell).
+export const empresaDeMarca = (m) => ({
+  razonSocial: m.nombre, rfc: '', direccion: m.direccion || '', telefono: m.telefono || '', email: m.email || '', marca: true,
+})
