@@ -5,7 +5,7 @@
 // paleta blueprint propia de Brendell (grafito/cobre, ver pdfTheme.js) en
 // vez del negro-sobre-blanco de Veka, y SIN "Opciones de pago" — Brendell
 // cotiza a precio único, sin mensualidades ni tasas de interés.
-import { Page, View, Text, StyleSheet } from '@react-pdf/renderer'
+import { Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer'
 import { fmt } from '../format'
 import { fmtFecha, fmtVigencia } from './fmtPdf'
 import { COLORS, PAGE_PADDING } from './pdfTheme'
@@ -117,7 +117,9 @@ export default function DetallePagePdf({ data, empresa }) {
       <View style={s.cards}>
         <View style={s.card}>
           <Text style={s.cardLabel}>TELA</Text>
+          {data.tela?.imagen ? <Image src={data.tela.imagen.src} style={{ width: 46, height: 46, borderRadius: 5, marginBottom: 5, objectFit: 'cover' }} /> : null}
           <Text style={s.telaLine}>Catálogo: {data.telaNombre || '—'} · Color: {data.colorNombre || '—'} · Categoría: {data.gradoSel || '—'}</Text>
+          {data.tela?.composicion ? <Text style={s.cardSub}>{data.tela.composicion}</Text> : null}
           <Text style={s.cardSub}>Orientación: {data.orientacion}</Text>
         </View>
         <View style={s.card}>

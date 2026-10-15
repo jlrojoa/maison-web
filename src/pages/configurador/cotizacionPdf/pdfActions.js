@@ -5,8 +5,13 @@
 import { createElement } from 'react'
 import { pdf } from '@react-pdf/renderer'
 import ModularesCotizacionPdf from './ModularesCotizacionPdf'
+import { fichaTela, fotoProducto } from './imagenesPdf'
 
-export const generarPdfBlob = (data) => pdf(createElement(ModularesCotizacionPdf, { data })).toBlob()
+// Modulares: agrega la ficha/foto de la tela elegida antes de renderizar.
+export async function generarPdfBlob(data) {
+  const tela = data.tela ?? await fichaTela({ catalogo: data.telaNombre, grado: data.gradoSel, color: data.colorNombre })
+  return pdf(createElement(ModularesCotizacionPdf, { data: { ...data, tela } })).toBlob()
+}
 
 // Abre el visor de PDF del navegador en una pestaña nueva. Debe llamarse
 // con la pestaña ya abierta (`win`) porque abrirla después de un await la
@@ -44,7 +49,13 @@ export async function generarPdfDeCotizacion(cot, tiempoFabricacion) {
     return { blob: await generarPdfBlob(data), nombre: `cotizacion-${data.folio}.pdf` }
   }
   const { default: CotizacionSimplePdf } = await import('./CotizacionSimplePdf')
-  const data = buildSimplePdfDataFromCotizacion(cot)
+  const data = buildSimplePdfDataFromCotizacion(cot, tiempoFabricacion)
+  // Foto del mueble y ficha de la tela de cada línea (en paralelo).
+  data.filas = await Promise.all(data.filas.map(async f => ({
+    ...f,
+    foto: await fotoProducto(f.imagenUrl, f.productoId),
+    tela: await fichaTela({ catalogo: f.textilCatalogo, grado: f.textilGrado, color: f.textilColor }),
+  })))
   return { blob: await pdf(createElement(CotizacionSimplePdf, { data })).toBlob(), nombre: `cotizacion-${data.folio}.pdf` }
 }
 

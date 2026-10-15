@@ -83,6 +83,8 @@ export async function guardarCotizacionSimple({ distribuidor, producto, medidaSe
     cot = data
   }
   const item = {
+    producto_id: producto.id,
+    imagen_url: producto.isometrico_url ?? null,
     producto_nombre: producto.nombre,
     configuracion_nombre: medidaSel.nombre,
     medidas: medidaSel.dimensiones ?? null,
@@ -92,7 +94,7 @@ export async function guardarCotizacionSimple({ distribuidor, producto, medidaSe
     cantidad: 1,
   }
   const { error: itemErr } = await supabase.from('cotizacion_items').insert({
-    cotizacion_id: cot.id, producto_id: producto.id, imagen_url: producto.isometrico_url ?? null, ...item,
+    cotizacion_id: cot.id, ...item,
   })
   if (itemErr) throw itemErr
   return { cot, item, precioCliente }
