@@ -26,13 +26,13 @@
 // mismas medidas aproximadas de arriba, mismo aviso "pendientes de
 // confirmar".
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { fmt } from './format'
 import { ARMADOS_SUGERIDOS } from './modularesPresets'
 import { TIPOS, NOMBRE_POR_TIPO, getAllowedTypes, addToSequence, removeFromSequence, getHintSegments, detectNombreTipo, getDisabledReason } from './modularesSequence'
 import PiezaSVG, { colorsFromHex } from './PiezaSVG'
-import { pdf } from '@react-pdf/renderer'
-import ModularesCotizacionPdf from './cotizacionPdf/ModularesCotizacionPdf'
+import { generarPdfBlob, abrirBlob, descargarBlob } from './cotizacionPdf/pdfActions'
 import { buildCotizacionPdfData } from './cotizacionPdf/pdfData'
 import './ModularesConfigurador.css'
 
@@ -263,6 +263,64 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
     load()
     return () => { ignore = true }
   }, [distribuidor, productoIds.join(',')])
+
+  // ── Cargar una cotización guardada (Mi Espacio → Editar / Duplicar) ───
+  // /configurador/modulares?cotizacion=<id>&modo=editar|duplicar. `editar`
+  // actualiza ese borrador al guardar; `duplicar` arma lo mismo pero crea una
+  // cotización nueva. Se restaura una sola vez, cuando ya cargaron piezas y telas.
+  const [searchParams] = useSearchParams()
+  const cotizacionParam = searchParams.get('cotizacion')
+  const modoParam = searchParams.get('modo') === 'duplicar' ? 'duplicar' : 'editar'
+  const [cotizCargada, setCotizCargada] = useState(null) // { id, modo, status }
+  const [cotizPrefill, setCotizPrefill] = useState(null)
+  const [errorCarga, setErrorCarga] = useState(null)
+  const restauradaRef = useRef(false)
+
+  useEffect(() => {
+    if (!cotizacionParam || !distribuidor || restauradaRef.current) return
+    if (configuraciones.length === 0 || telas.length === 0) return
+    restauradaRef.current = true
+    let ignore = false
+    ;(async () => {
+      const { data: cot, error } = await supabase
+        .from('cotizaciones')
+        .select('*, items:cotizacion_items(*)')
+        .eq('id', cotizacionParam)
+        .eq('distribuidor_email', distribuidor.email)
+        .single()
+      if (ignore) return
+      const seq = cot?.secuencia_pdf?.sequence
+      const modeloId = cot?.items?.[0]?.producto_id
+      if (error || !seq?.length || !modeloId) {
+        setErrorCarga('No se pudo cargar esa cotización para editarla.')
+        return
+      }
+      const piezas = seq.map(p => {
+        const cfg = configuraciones.find(c => c.producto_id === modeloId && c.nombre === NOMBRE_POR_TIPO[p.type])
+        return { id: pidRef.current++, type: p.type, configuracionId: cfg?.id, modeloId, ancho: p.ancho ?? undefined }
+      })
+      setModeloActivoId(modeloId)
+      setSequence(piezas)
+      setMirrored(!!cot.secuencia_pdf.mirrored)
+      const m = /^(.+) \(([^)]+)\) · (.+)$/.exec(cot.items[0].textil_nombre ?? '')
+      if (m) {
+        const tela = telas.find(t => t.nombre === m[1] && t.grado === m[2])
+        if (tela) {
+          setGradoSel(tela.grado)
+          setTelaSel(tela)
+          setColorSel(tela.colores.find(c => c.nombre === m[3]) ?? tela.colores[0] ?? null)
+        }
+      }
+      setCotizPrefill({
+        cliente_nombre: cot.cliente_nombre ?? '',
+        cliente_email: cot.cliente_email ?? '',
+        cliente_telefono: cot.cliente_telefono ?? '',
+        markup_pct: String(cot.markup_pct ?? 0),
+      })
+      setCotizCargada({ id: cot.id, modo: modoParam, status: cot.status })
+    })()
+    return () => { ignore = true }
+  }, [cotizacionParam, distribuidor, configuraciones, telas])
 
   const piezasPorProducto = useMemo(() => {
     const map = {}
@@ -643,7 +701,7 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
 
   const abrirCotizModal = (modo) => {
     if (!puedeGuardar) return
-    setCotizForm({ cliente_nombre: '', cliente_email: '', cliente_telefono: '', markup_pct: '0' })
+    setCotizForm(cotizPrefill ?? { cliente_nombre: '', cliente_email: '', cliente_telefono: '', markup_pct: '0' })
     setCotizResultado(null)
     setCotizModo(modo)
   }
@@ -677,18 +735,34 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
       // de cada lado. Sin este campo, "descargar el mismo PDF" después
       // tendría que adivinar el doblez en L. Pedido explícito de JL,
       // 2026-09-02 — ver migración add_cotizaciones_secuencia_pdf.
-      const { data: cot, error: cotErr } = await supabase.from('cotizaciones').insert({
-        distribuidor_email: distribuidor.email,
+      const campos = {
         nombre_proyecto: `Modulares · ${nombreArmado}`,
-        status: 'borrador',
         total: totalCliente,
         markup_pct: markup,
         cliente_nombre: cotizForm.cliente_nombre.trim(),
         cliente_email: cotizForm.cliente_email.trim() || null,
         cliente_telefono: cotizForm.cliente_telefono.trim() || null,
         secuencia_pdf: { sequence: sequence.map(p => ({ type: p.type, ancho: p.ancho ?? null })), mirrored },
-      }).select().single()
-      if (cotErr) throw cotErr
+      }
+      // Editando un borrador existente: se actualiza y se reemplazan sus
+      // líneas. En cualquier otro caso (nueva o duplicar) se inserta una.
+      const editando = cotizCargada?.modo === 'editar' && cotizCargada.status === 'borrador'
+      let cot
+      if (editando) {
+        const { data, error } = await supabase.from('cotizaciones').update(campos).eq('id', cotizCargada.id).select().single()
+        if (error) throw error
+        cot = data
+        const { error: delErr } = await supabase.from('cotizacion_items').delete().eq('cotizacion_id', cot.id)
+        if (delErr) throw delErr
+      } else {
+        const { data, error } = await supabase.from('cotizaciones').insert({
+          distribuidor_email: distribuidor.email,
+          status: 'borrador',
+          ...campos,
+        }).select().single()
+        if (error) throw error
+        cot = data
+      }
 
       const items = lineas.map(l => ({
         cotizacion_id: cot.id,
@@ -705,31 +779,35 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
       const { error: itemErr } = await supabase.from('cotizacion_items').insert(items)
       if (itemErr) throw itemErr
 
+      let folio = cot.folio
       if (cotizModo === 'emitir') {
         const { error: emitErr } = await supabase.rpc('emitir_cotizacion', { cotizacion_uuid: cot.id })
         if (emitErr) throw emitErr
+        const { data: fresca } = await supabase.from('cotizaciones').select('folio').eq('id', cot.id).single()
+        folio = fresca?.folio ?? folio
+      }
 
-        // Descarga automática del PDF al emitir — mismo folio real ya
-        // asignado por Supabase, sin ningún paso/modal intermedio propio
-        // (pedido explícito de JL, 2026-09-01). "Guardar en mi espacio"
-        // (modo 'borrador') no descarga nada, solo Crear cotización.
+      // El PDF se entrega SIEMPRE (emitida o borrador) con botones en el modal
+      // — una descarga automática después de varios await la bloquea el
+      // navegador y no deja ver el documento. Si falla, la cotización ya quedó
+      // guardada: se avisa en el modal, no se pierde el trabajo.
+      let pdfBlob = null, pdfError = null
+      try {
         const producto = productos.find(p => p.id === modeloActivoId) ?? productos[0]
         const pdfData = buildCotizacionPdfData({
-          folio: `BR-${cot.folio}`,
+          folio: folio ? `BR-${folio}` : 'BORRADOR',
           fecha: new Date(),
           productoNombre: producto?.nombre ?? '',
           sequence, mirrored, telaSel, colorSel, gradoSel,
           lineas, markupPct: markup,
           tiempoFabricacion: TIEMPO_FABRICACION,
         })
-        const blob = await pdf(<ModularesCotizacionPdf data={pdfData} />).toBlob()
-        const a = document.createElement('a')
-        a.href = URL.createObjectURL(blob)
-        a.download = `cotizacion-BR-${cot.folio}.pdf`
-        a.click()
+        pdfBlob = await generarPdfBlob(pdfData)
+      } catch (err) {
+        pdfError = err.message
       }
-
-      setCotizResultado({ folio: cot.folio, modo: cotizModo })
+      setCotizCargada({ id: cot.id, modo: 'editar', status: cotizModo === 'emitir' ? 'emitida' : 'borrador' })
+      setCotizResultado({ folio, modo: cotizModo, pdfBlob, pdfError, nombre: cotizForm.cliente_nombre.trim(), email: cotizForm.cliente_email.trim(), tel: cotizForm.cliente_telefono.trim(), precio: totalCliente })
     } catch (err) {
       alert(`Error al guardar la cotización: ${err.message}`)
     } finally {
@@ -749,6 +827,8 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
     <div className="mod-wrap">
       <div className="mod-header">
         <h1 className="mod-h1">{categoriaNombre}</h1>
+        {errorCarga && <div className="cfg-message" role="alert">{errorCarga}</div>}
+        {cotizCargada && !errorCarga && <div className="cfg-message" role="status">{cotizCargada.modo === 'editar' && cotizCargada.status === 'borrador' ? 'Editando tu borrador — al guardar se actualiza.' : 'Cotización cargada como base — al guardar se crea una nueva.'}</div>}
         <p className="mod-subtitle">Arma tu sofá pieza por pieza, en orden. El precio y el nombre se actualizan según lo que vayas agregando.</p>
       </div>
 
@@ -1051,11 +1131,26 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
                 </h3>
                 <p className="cfg-modal-text">
                   {cotizResultado.folio
-                    ? <>Folio <b>BR-{cotizResultado.folio}</b>. Vigente 15 días. Puedes verla, descargarla y compartirla desde Mi Espacio.</>
-                    : <>Quedó guardada como borrador. Termínala y emítela cuando quieras desde Mi Espacio.</>}
+                    ? <>Folio <b>BR-{cotizResultado.folio}</b>. Vigente 15 días. Aquí tienes tu PDF; también lo encuentras siempre en Mi Espacio.</>
+                    : <>Quedó guardada como borrador. Puedes revisar el PDF y emitirla cuando quieras desde Mi Espacio.</>}
                 </p>
+                {cotizResultado.pdfError && <p className="cfg-modal-text" style={{ color: '#B91C1C' }}>La cotización se guardó, pero no se pudo generar el PDF aquí ({cotizResultado.pdfError}). Ábrelo desde Mi Espacio.</p>}
                 <div className="cfg-buttons">
-                  <a href="/mi-espacio" className="cfg-btn cfg-btn-primary" style={{ textAlign: 'center', textDecoration: 'none' }}>Ir a Mi Espacio</a>
+                  {cotizResultado.pdfBlob && (
+                    <>
+                      <button type="button" className="cfg-btn cfg-btn-primary" onClick={() => abrirBlob(cotizResultado.pdfBlob)}>Ver PDF</button>
+                      <button type="button" className="cfg-btn cfg-btn-secondary" onClick={() => descargarBlob(cotizResultado.pdfBlob, `cotizacion-${cotizResultado.folio ? 'BR-' + cotizResultado.folio : 'borrador'}.pdf`)}>Descargar PDF</button>
+                    </>
+                  )}
+                  {cotizResultado.modo === 'emitir' && (cotizResultado.email || cotizResultado.tel) && (
+                    <button type="button" className="cfg-btn cfg-btn-secondary" onClick={() => {
+                      const cuerpo = encodeURIComponent(`Hola ${cotizResultado.nombre},\n\nTe comparto tu cotización BR-${cotizResultado.folio} (${fmt(cotizResultado.precio)}). Te adjunto el PDF.\n\nSaludos.`)
+                      window.open(cotizResultado.email
+                        ? `mailto:${cotizResultado.email}?subject=${encodeURIComponent('Cotización BR-' + cotizResultado.folio)}&body=${cuerpo}`
+                        : `https://wa.me/${cotizResultado.tel.replace(/\D/g, '')}?text=${cuerpo}`, '_blank')
+                    }}>Enviar al cliente</button>
+                  )}
+                  <a href="/mi-espacio" className="cfg-btn cfg-btn-secondary" style={{ textAlign: 'center', textDecoration: 'none' }}>Ir a Mi Espacio</a>
                   <button type="button" className="cfg-btn cfg-btn-secondary" onClick={cerrarCotizModal}>Seguir configurando</button>
                 </div>
               </>

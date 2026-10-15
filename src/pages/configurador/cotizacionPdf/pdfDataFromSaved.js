@@ -73,7 +73,7 @@ export function buildCotizacionPdfDataFromCotizacion(cot, tiempoFabricacion) {
   const { catalogo, grado, color } = parseTextilNombre(items[0]?.textil_nombre)
 
   return {
-    folio: `BR-${cot.folio}`,
+    folio: cot.folio ? `BR-${cot.folio}` : 'BORRADOR',
     fecha: cot.emitida_at ? new Date(cot.emitida_at) : new Date(cot.created_at),
     vigenciaDias: 15,
     productoNombre: items[0]?.producto_nombre ?? '',
