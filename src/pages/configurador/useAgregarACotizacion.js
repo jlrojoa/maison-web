@@ -62,6 +62,7 @@ export function useAgregarACotizacion({ distribuidor, categoriaSlug, producto, m
     navigate('/cotizacion')
   }
   const verCotizacion = () => navigate('/cotizacion')
+  const elegirOtro = () => navigate('/configurador') // vuelve a elegir tipo de mueble para seguir agregando
 
-  return { n: carrito.lineas.length, puede, editandoLinea, aviso, agregar, actualizar, verCotizacion }
+  return { n: carrito.lineas.length, puede, editandoLinea, aviso, agregar, actualizar, verCotizacion, elegirOtro }
 }

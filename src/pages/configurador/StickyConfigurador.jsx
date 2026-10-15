@@ -333,6 +333,9 @@ export default function StickyConfigurador({ categoriaSlug, categoriaNombre, pro
                 <button type="button" className="cfg-btn cfg-btn-primary" disabled={!cotiz.puede} onClick={cotiz.agregar}>Agregar a la cotización</button>
               )}
               <button type="button" className="cfg-btn cfg-btn-secondary" onClick={cotiz.verCotizacion}>Ver cotización{cotiz.n > 0 ? ` (${cotiz.n})` : ''}</button>
+              {cotiz.n > 0 && !cotiz.editandoLinea && (
+                <button type="button" className="cfg-btn cfg-btn-secondary" onClick={cotiz.elegirOtro}>+ Elegir otro mueble</button>
+              )}
             </div>
           </>
         )}

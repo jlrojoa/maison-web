@@ -979,6 +979,9 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
                   <button type="button" className="cfg-btn cfg-btn-primary" disabled={!puedeAgregar} onClick={agregarACotizacion}>Agregar a la cotización</button>
                 )}
                 <button type="button" className="cfg-btn cfg-btn-secondary" onClick={() => navigate('/cotizacion')}>Ver cotización{carrito.lineas.length > 0 ? ` (${carrito.lineas.length})` : ''}</button>
+                {carrito.lineas.length > 0 && !lineaEditando && (
+                  <button type="button" className="cfg-btn cfg-btn-secondary" onClick={() => navigate('/configurador')}>+ Elegir otro mueble</button>
+                )}
               </div>
             </>
           )}
