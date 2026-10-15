@@ -27,6 +27,45 @@ const btn = (primary) => ({
   border: `1px solid ${primary ? '#0F172A' : '#E2E8F0'}`, background: primary ? '#0F172A' : '#fff', color: primary ? '#fff' : '#0F172A',
 })
 
+const claveTela = (l) => `${l.telaNombre}|${l.telaGrado}|${l.colorNombre}`
+
+// Foto (o color) de la tela de cada mueble: se lee del catálogo por catálogo +
+// grado + color, así funciona también con cotizaciones guardadas antes.
+function useMuestrasTela(lineas) {
+  const [muestras, setMuestras] = useState({})
+  const colores = [...new Set(lineas.map(l => l.colorNombre).filter(Boolean))].sort()
+  const firma = colores.join('|')
+  useEffect(() => {
+    if (colores.length === 0) return
+    let ignore = false
+    supabase.from('tela_colores')
+      .select('nombre, imagen_url, codigo_hex, tela:telas(nombre, grado)')
+      .in('nombre', colores)
+      .then(({ data }) => {
+        if (ignore || !data) return
+        const m = {}
+        for (const r of data) if (r.tela) m[`${r.tela.nombre}|${r.tela.grado}|${r.nombre}`] = { imagen: r.imagen_url, hex: r.codigo_hex }
+        setMuestras(m)
+      })
+    return () => { ignore = true }
+  }, [firma])
+  return muestras
+}
+
+function MuestraTela({ linea, muestras, antes }) {
+  const m = muestras[claveTela(linea)]
+  const fondo = m?.imagen
+    ? { backgroundImage: `url(${m.imagen})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : { background: m?.hex || '#F1F5F9' }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+      <div role="img" aria-label={`Tela ${linea.telaNombre} ${linea.colorNombre}`} title={`${linea.telaNombre} · ${linea.colorNombre}`}
+        style={{ width: 56, height: 56, borderRadius: 8, border: '1px solid #E2E8F0', flexShrink: 0, ...fondo }} />
+      <div style={{ fontSize: 12, color: '#64748B' }}>{antes}{linea.telaNombre} ({linea.telaGrado}) · {linea.colorNombre}</div>
+    </div>
+  )
+}
+
 export default function CotizacionEnCurso() {
   const ctx = useDistribuidor()
   const distribuidor = ctx?.distribuidor ?? null
@@ -43,6 +82,7 @@ export default function CotizacionEnCurso() {
   const [guardando, setGuardando] = useState(null) // 'borrador' | 'emitir'
   const [resultado, setResultado] = useState(null)
   const [avisoPrecios, setAvisoPrecios] = useState([])
+  const muestras = useMuestrasTela(lineas)
   const cargadaRef = useRef(false)
 
   useEffect(() => {
@@ -173,14 +213,12 @@ export default function CotizacionEnCurso() {
                       <div style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>
                         {l.piezas.map(p => `${p.cantidad} × ${p.nombre}`).join(' · ')}
                       </div>
-                      <div style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>{l.telaNombre} ({l.telaGrado}) · {l.colorNombre}</div>
+                      <MuestraTela linea={l} muestras={muestras} />
                     </>
                   ) : (
                     <>
                       <div style={{ fontSize: 15, fontWeight: 600 }}>{l.productoNombre} · {l.medidaNombre}</div>
-                      <div style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>
-                        {l.dimensiones ? `${l.dimensiones} · ` : ''}{l.telaNombre} ({l.telaGrado}) · {l.colorNombre}
-                      </div>
+                      <MuestraTela linea={l} muestras={muestras} antes={l.dimensiones ? `${l.dimensiones} · ` : ''} />
                     </>
                   )}
                   <div style={{ fontSize: 12, color: '#64748B', marginTop: 6 }}>
