@@ -1,21 +1,19 @@
 // src/pages/configurador/cotizacionPdf/pdfDataFromSaved.js
 //
-// Reconstruye el mismo objeto que consumen las páginas del PDF (mismo
-// shape que buildCotizacionPdfData en pdfData.js) pero a partir de una
-// cotización YA GUARDADA en Supabase (fila de `cotizaciones` + sus
-// `cotizacion_items`), no del estado en vivo del configurador — para el
-// botón "Descargar"/folio clickeable en Mi Espacio (pedido de JL,
-// 2026-09-02): debe regenerar EXACTAMENTE el mismo PDF, no la
-// configuración actual en pantalla.
+// Datos de los PDF a partir de una cotización YA GUARDADA en Supabase (fila
+// de `cotizaciones` + sus `cotizacion_items`) — nunca del estado en vivo de
+// un configurador — para que "Ver/Descargar PDF" dé siempre el mismo
+// documento aunque los precios, las telas o el margen cambien después.
 //
-// Usa los precios YA CONGELADOS en cotizacion_items (precio_cliente) en
-// vez de recalcular contra `precios`/`telas` actuales — una cotización
-// emitida no debe cambiar si el precio base o el margen del distribuidor
-// cambian después. El total se suma desde esos mismos precios congelados
-// (no se usa cotizaciones.total, que se redondea en otro orden — sum(item
-// redondeado) puede diferir en unos pesos de round(sum(item)) — así el
-// número siempre coincide con el que mostró el PDF original).
-import { nombreDelArmado, notasArmado, esModular } from '../modularesNombre'
+// Usa los precios YA CONGELADOS en cotizacion_items (precio_cliente) y suma el
+// total desde esos mismos precios (no cotizaciones.total, que se redondea en
+// otro orden y puede diferir unos pesos), así el número coincide con el que se
+// mostró al guardar.
+//   - buildCotizacionPdfDataFromCotizacion: un armado de Modulares con su
+//     secuencia guardada (PDF de Modulares con plano).
+//   - buildSimplePdfDataFromCotizacion: muebles sueltos y/o varios armados
+//     (PDF completo, con un plano por armado).
+import { nombreDelArmado, notasArmado, parseTextil as parseTextilNombre } from '../modularesNombre'
 import { splitSofaLayout } from '../ModularesConfigurador'
 
 const tieneAncho = (type) => type === 'center' || type === 'puff'
@@ -30,16 +28,6 @@ function huellaAproxM(sequence) {
   let profundidadM = 1 + botRow.reduce((sum, p) => sum + metrosDePieza(p), 0)
   if (puffs.length > 0) profundidadM += 1
   return { anchoM, profundidadM }
-}
-
-// "Cancún (B) · Azul Cielo" -> { catalogo: 'Cancún', grado: 'B', color:
-// 'Azul Cielo' } — mismo formato que arma confirmarCotizacion() en
-// ModularesConfigurador.jsx (textilNombre), único lugar donde se guarda
-// catálogo/color/categoría de una cotización ya emitida.
-function parseTextilNombre(textilNombre) {
-  const m = /^(.+) \(([^)]+)\) · (.+)$/.exec(textilNombre ?? '')
-  if (!m) return { catalogo: textilNombre ?? '', grado: '', color: '' }
-  return { catalogo: m[1], grado: m[2], color: m[3] }
 }
 
 // `cot` = fila de `cotizaciones` con `.items` (cotizacion_items) ya
@@ -141,7 +129,7 @@ export function buildSimplePdfDataFromCotizacion(cot, tiempoFabricacion) {
     const totalPiezas = g.fila.piezas.reduce((s, p) => s + p.cantidad, 0)
     const plano = datosPlano(g.arm, { folio, fecha, colorNombre: t.color, totalPiezas })
     Object.assign(g.fila, {
-      producto: `${g.items[0].producto_nombre ?? 'Modulares'} · ${g.arm.nombre ?? nombreDelArmado(g.arm.sequence)}`,
+      producto: `${g.items[0].producto_nombre ?? 'Modulares'} · ${nombreDelArmado(g.arm.sequence)}`,
       configuracion: 'Armado modular', medidas: `${plano.huellaAnchoCm} × ${plano.huellaProfundidadCm} cm aprox.`,
       textilCatalogo: t.catalogo, textilGrado: t.grado, textilColor: t.color,
       imagenUrl: g.items.find(i => i.imagen_url)?.imagen_url ?? null, productoId: g.items[0].producto_id ?? null,
@@ -156,5 +144,3 @@ export function buildSimplePdfDataFromCotizacion(cot, tiempoFabricacion) {
     total: filas.reduce((sum, f) => sum + f.subtotal, 0),
   }
 }
-
-export { esModular }

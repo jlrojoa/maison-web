@@ -52,7 +52,7 @@ export function agregarLinea(email, linea) {
     l.tipo !== 'modular' && l.productoId === linea.productoId && l.medidaNombre === linea.medidaNombre &&
     l.telaNombre === linea.telaNombre && l.colorNombre === linea.colorNombre)
   if (igual) {
-    escribir(email, { ...c, lineas: c.lineas.map(l => (l.key === igual.key ? { ...l, cantidad: l.cantidad + (linea.cantidad ?? 1) } : l)) })
+    escribir(email, { ...c, lineas: c.lineas.map(l => (l.key === igual.key ? { ...l, cantidad: Math.min(99, l.cantidad + (linea.cantidad ?? 1)) } : l)) })
     return igual.key
   }
   const key = nuevoId()
@@ -63,6 +63,24 @@ export function agregarLinea(email, linea) {
 export function actualizarLinea(email, key, cambios) {
   const c = leer(email)
   escribir(email, { ...c, lineas: c.lineas.map(l => (l.key === key ? { ...l, ...cambios } : l)) })
+}
+
+// Aplica precios vigentes sobre la versión ACTUAL de cada línea (no sobre una
+// copia vieja): `nuevos` = { [key]: { precio?, piezas?: { [nombre]: precio } } }.
+export function aplicarPrecios(email, nuevos) {
+  const c = leer(email)
+  escribir(email, {
+    ...c,
+    lineas: c.lineas.map(l => {
+      const n = nuevos[l.key]
+      if (!n) return l
+      if (l.tipo === 'modular') {
+        const piezas = l.piezas.map(p => (n.piezas?.[p.nombre] != null ? { ...p, precioUnitario: n.piezas[p.nombre] } : p))
+        return { ...l, piezas, precioUnitario: piezas.reduce((s, p) => s + (p.precioUnitario ?? 0) * p.cantidad, 0) }
+      }
+      return n.precio != null ? { ...l, precioUnitario: n.precio } : l
+    }),
+  })
 }
 
 export function quitarLinea(email, key) {

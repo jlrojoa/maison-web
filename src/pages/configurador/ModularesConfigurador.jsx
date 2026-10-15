@@ -621,6 +621,8 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
   const [lineaKey] = useState(() => searchParams.get('linea')) // se lee una vez
   const lineaEditando = lineaKey ? carrito.lineas.find(l => l.key === lineaKey && l.tipo === 'modular') : null
   const [aviso, setAviso] = useState(false)
+  const avisoTimer = useRef(null)
+  useEffect(() => () => clearTimeout(avisoTimer.current), [])
 
   const puedeAgregar = !!(distribuidor && telaSel && colorSel && lineas.length > 0 && !hayIncompletas)
 
@@ -636,7 +638,8 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
     if (!puedeAgregar) return
     agregarLinea(distribuidor.email, { ...construirLinea(), cantidad: 1 })
     setAviso(true)
-    setTimeout(() => setAviso(false), 4000)
+    clearTimeout(avisoTimer.current)
+    avisoTimer.current = setTimeout(() => setAviso(false), 4000)
   }
   const actualizarEnCotizacion = () => {
     if (!puedeAgregar || !lineaEditando) return

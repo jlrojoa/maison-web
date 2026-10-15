@@ -3,7 +3,7 @@
 // Acciones de los configuradores de producto único sobre la "cotización en
 // curso" (ver lib/cotizacionCarrito.js): agregar el mueble configurado,
 // o —si se llegó con ?linea=ID desde la cotización— actualizar esa línea.
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useCarrito, agregarLinea, actualizarLinea } from '../../lib/cotizacionCarrito'
 
@@ -35,6 +35,8 @@ export function useAgregarACotizacion({ distribuidor, categoriaSlug, producto, m
   const [lineaKey] = useState(() => searchParams.get('linea')) // se lee una vez: el configurador reescribe la URL
   const [aviso, setAviso] = useState(false)
   const carrito = useCarrito(distribuidor?.email)
+  const avisoTimer = useRef(null)
+  useEffect(() => () => clearTimeout(avisoTimer.current), [])
 
   const editandoLinea = !!lineaKey && carrito.lineas.some(l => l.key === lineaKey)
   const puede = !!(distribuidor && producto && medidaSel && telaSel && colorSel && precioLookup != null)
@@ -51,7 +53,8 @@ export function useAgregarACotizacion({ distribuidor, categoriaSlug, producto, m
     if (!puede) return
     agregarLinea(distribuidor.email, { ...construir(), cantidad: 1 })
     setAviso(true)
-    setTimeout(() => setAviso(false), 4000)
+    clearTimeout(avisoTimer.current)
+    avisoTimer.current = setTimeout(() => setAviso(false), 4000)
   }
   const actualizar = () => {
     if (!puede || !editandoLinea) return

@@ -12,15 +12,9 @@
 //   - cotizaciones.secuencia_pdf solo se llena cuando la cotización es UN
 //     armado, igual que antes (así el PDF de Modulares con plano sigue igual).
 import { supabase } from '../../lib/supabase'
-import { nombreDelArmado, notasArmado, esModular } from './modularesNombre'
+import { nombreDelArmado, notasArmado, esModular, parseTextil } from './modularesNombre'
 
 const baseNombrePieza = (n) => (n ?? '').replace(/\s*\(\d+\s*cm\)\s*$/, '')
-
-// "Cancún (B) · Azul Cielo" -> { tela: 'Cancún', grado: 'B', color: 'Azul Cielo' }
-function parseTextil(textil) {
-  const m = /^(.+) \(([^)]+)\) · (.+)$/.exec(textil ?? '')
-  return m ? { tela: m[1], grado: m[2], color: m[3] } : { tela: textil ?? '', grado: '', color: '' }
-}
 
 // Dónde editar/duplicar una cotización guardada: siempre en la cotización
 // en curso, que la carga desde la guardada.
@@ -29,7 +23,7 @@ export const urlParaEditar = (cot, modo = 'editar') => `/cotizacion?cotizacion=$
 /* ─── Guardada → cotización en curso ─────────────────────────────────── */
 
 function armadoDeItems(items, armado, cantidadArmados) {
-  const { tela, grado, color } = parseTextil(items[0].textil_nombre)
+  const { catalogo: tela, grado, color } = parseTextil(items[0].textil_nombre)
   const piezas = items.map(it => {
     const ancho = Number(/(\d+)\s*cm/.exec(it.medidas ?? '')?.[1]) || null
     return {
@@ -63,7 +57,7 @@ export async function cotizacionAlCarrito(id, email, modo) {
       if (!grupos.has(arm.id)) grupos.set(arm.id, { armado: arm, items: [] })
       grupos.get(arm.id).items.push(it)
     } else if (!legacy) {
-      const { tela, grado, color } = parseTextil(it.textil_nombre)
+      const { catalogo: tela, grado, color } = parseTextil(it.textil_nombre)
       lineas.push({
         tipo: 'mueble', productoId: it.producto_id, productoSlug: it.producto?.slug ?? null, categoriaSlug: it.producto?.categoria?.slug ?? null,
         productoNombre: it.producto_nombre, imagenUrl: it.imagen_url, configuracionId: null, medidaNombre: it.configuracion_nombre,
@@ -140,24 +134,37 @@ export async function guardarCotizacionMulti({ distribuidor, lineas, form, edici
     secuencia_pdf: unSoloArmado ? { sequence: lineas[0].sequence, mirrored: !!lineas[0].mirrored } : null,
   }
   const editando = edicion?.modo === 'editar' && edicion.status === 'borrador'
+  const filas = (cotId) => items.map(it => ({ cotizacion_id: cotId, ...it }))
   let cot
   if (editando) {
+    // Orden pensado para no perder nada si algo falla a medias: primero se
+    // insertan las líneas nuevas, luego se retiran las anteriores (si eso
+    // falla se retiran las nuevas) y al final se actualiza el encabezado.
+    const { data: previas, error: prevErr } = await supabase.from('cotizacion_items').select('id').eq('cotizacion_id', edicion.id)
+    if (prevErr) throw prevErr
+    const { data: nuevas, error: insErr } = await supabase.from('cotizacion_items').insert(filas(edicion.id)).select('id')
+    if (insErr) throw insErr
+    if (previas.length > 0) {
+      const { error: delErr } = await supabase.from('cotizacion_items').delete().in('id', previas.map(r => r.id))
+      if (delErr) {
+        await supabase.from('cotizacion_items').delete().in('id', nuevas.map(r => r.id))
+        throw delErr
+      }
+    }
     const { data, error } = await supabase.from('cotizaciones').update(campos).eq('id', edicion.id).eq('distribuidor_email', distribuidor.email).select().single()
     if (error) throw error
     cot = data
-    const { error: delErr } = await supabase.from('cotizacion_items').delete().eq('cotizacion_id', cot.id)
-    if (delErr) throw delErr
   } else {
     const { data, error } = await supabase.from('cotizaciones')
       .insert({ distribuidor_email: distribuidor.email, status: 'borrador', ...campos }).select().single()
     if (error) throw error
     cot = data
-  }
-  const { error: itemErr } = await supabase.from('cotizacion_items').insert(items.map(it => ({ cotizacion_id: cot.id, ...it })))
-  if (itemErr) {
-    // Una cotización recién creada sin líneas no sirve: se retira para no dejar un borrador vacío.
-    if (!editando) await supabase.from('cotizaciones').delete().eq('id', cot.id)
-    throw itemErr
+    const { error: itemErr } = await supabase.from('cotizacion_items').insert(filas(cot.id))
+    if (itemErr) {
+      // Una cotización nueva sin líneas no sirve: se retira para no dejar un borrador vacío.
+      await supabase.from('cotizaciones').delete().eq('id', cot.id)
+      throw itemErr
+    }
   }
   return { cot, items, total }
 }
@@ -166,35 +173,40 @@ export async function guardarCotizacionMulti({ distribuidor, lineas, form, edici
 
 // Vuelve a leer los precios de distribuidor de cada línea (el distribuidor
 // pudo dejar la cotización días en curso, o venir de una guardada con precios
-// de ese día). Devuelve { lineas, cambios } — `cambios` lista lo que se movió.
+// de ese día). Devuelve { lineas, cambios, nuevos } — `cambios` lista lo que se
+// movió y `nuevos` los precios para aplicarlos sobre la versión actual de cada línea.
 // Si un precio ya no se puede resolver, se conserva el guardado.
 export async function refrescarPrecios(lineas) {
   const ids = [...new Set(lineas.map(l => l.productoId).filter(Boolean))]
-  if (ids.length === 0) return { lineas, cambios: [] }
+  if (ids.length === 0) return { lineas, cambios: [], nuevos: {} }
   const [cfgRes, preRes] = await Promise.all([
     supabase.from('producto_configuraciones').select('id, producto_id, nombre').in('producto_id', ids),
     supabase.from('producto_precios').select('producto_id, configuracion_id, grado, precio').in('producto_id', ids),
   ])
-  if (cfgRes.error || preRes.error) return { lineas, cambios: [] }
+  if (cfgRes.error || preRes.error) return { lineas, cambios: [], nuevos: {} }
   const precioDe = (productoId, nombre, grado) => {
     const cfg = cfgRes.data.find(c => c.producto_id === productoId && c.nombre === nombre)
     const row = cfg && preRes.data.find(p => p.configuracion_id === cfg.id && p.grado === grado)
     return row?.precio ?? null
   }
   const cambios = []
+  const nuevos = {} // key -> { precio } | { piezas: { nombre: precio } }
   const nuevas = lineas.map(l => {
     if (l.tipo === 'modular') {
+      const porNombre = {}
       const piezas = l.piezas.map(p => {
         const nuevo = precioDe(l.productoId, baseNombrePieza(p.nombre), l.telaGrado)
-        return nuevo != null ? { ...p, precioUnitario: nuevo } : p
+        if (nuevo == null) return p
+        porNombre[p.nombre] = nuevo
+        return { ...p, precioUnitario: nuevo }
       })
       const precioUnitario = piezas.reduce((s, p) => s + (p.precioUnitario ?? 0) * p.cantidad, 0)
-      if (precioUnitario !== l.precioUnitario) cambios.push(`${l.productoNombre} · ${l.nombreArmado}`)
+      if (precioUnitario !== l.precioUnitario) { cambios.push(`${l.productoNombre} · ${l.nombreArmado}`); nuevos[l.key] = { piezas: porNombre } }
       return { ...l, piezas, precioUnitario }
     }
     const nuevo = precioDe(l.productoId, l.medidaNombre, l.telaGrado)
-    if (nuevo != null && nuevo !== l.precioUnitario) { cambios.push(`${l.productoNombre} · ${l.medidaNombre}`); return { ...l, precioUnitario: nuevo } }
+    if (nuevo != null && nuevo !== l.precioUnitario) { cambios.push(`${l.productoNombre} · ${l.medidaNombre}`); nuevos[l.key] = { precio: nuevo }; return { ...l, precioUnitario: nuevo } }
     return l
   })
-  return { lineas: nuevas, cambios }
+  return { lineas: nuevas, cambios, nuevos }
 }

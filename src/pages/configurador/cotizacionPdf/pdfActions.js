@@ -43,7 +43,8 @@ export function abrirPestanaEspera() {
 // Genera el PDF de una cotización YA GUARDADA (o con su mismo shape),
 // del tipo que corresponda. Devuelve { blob, nombre }.
 export async function generarPdfDeCotizacion(cot, tiempoFabricacion) {
-  const { buildCotizacionPdfDataFromCotizacion, buildSimplePdfDataFromCotizacion, esModular } = await import('./pdfDataFromSaved')
+  const { buildCotizacionPdfDataFromCotizacion, buildSimplePdfDataFromCotizacion } = await import('./pdfDataFromSaved')
+  const { esModular } = await import('../modularesNombre')
   if (esModular(cot)) {
     const data = buildCotizacionPdfDataFromCotizacion(cot, tiempoFabricacion)
     return { blob: await generarPdfBlob(data), nombre: `cotizacion-${data.folio}.pdf` }

@@ -30,12 +30,6 @@ export function imagenParaPdf(url, maxPx = 900) {
   return cache.get(key)
 }
 
-// "Cancún (B) · Azul Cielo" -> { catalogo, grado, color }
-export function parseTextil(textil) {
-  const m = /^(.+) \(([^)]+)\) · (.+)$/.exec(textil ?? '')
-  return m ? { catalogo: m[1], grado: m[2], color: m[3] } : { catalogo: textil ?? '', grado: '', color: '' }
-}
-
 // Ficha de la tela (foto + datos técnicos) desde el catálogo; null si no existe.
 export async function fichaTela({ catalogo, grado, color }) {
   if (!catalogo || !color) return null

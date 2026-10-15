@@ -14,7 +14,7 @@ import { urlEditarLinea } from './configurador/useAgregarACotizacion'
 import { cotizacionAlCarrito, guardarCotizacionMulti, refrescarPrecios, parseMargen, conMargen as aplicaMargen } from './configurador/cotizacionEdit'
 import { generarPdfDeCotizacion } from './configurador/cotizacionPdf/pdfActions'
 import { TIEMPO_FABRICACION } from './configurador/ModularesConfigurador'
-import { useCarrito, actualizarLinea, quitarLinea, setForm, setEdicion, cargarCarrito, vaciarCarrito } from '../lib/cotizacionCarrito'
+import { useCarrito, actualizarLinea, aplicarPrecios as guardarPrecios, quitarLinea, setForm, setEdicion, cargarCarrito, vaciarCarrito } from '../lib/cotizacionCarrito'
 
 const fmt = v => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(v)
 const FORM_VACIO = { cliente_nombre: '', cliente_email: '', cliente_telefono: '', markup_pct: '0' }
@@ -44,7 +44,6 @@ export default function CotizacionEnCurso() {
   const [resultado, setResultado] = useState(null)
   const [avisoPrecios, setAvisoPrecios] = useState([])
   const cargadaRef = useRef(false)
-  const refrescadoRef = useRef(false)
 
   useEffect(() => {
     if (!loading && !distribuidor) navigate('/distribuidores', { replace: true })
@@ -65,18 +64,17 @@ export default function CotizacionEnCurso() {
   // Precios vigentes: al abrir la pantalla (con la cotización ya cargada) se
   // vuelven a leer; si algo cambió se actualiza y se avisa.
   const aplicarPrecios = async (lista) => {
-    const { lineas: nuevas, cambios } = await refrescarPrecios(lista)
-    nuevas.forEach((n, i) => {
-      if (n.precioUnitario !== lista[i].precioUnitario) actualizarLinea(email, n.key, n.tipo === 'modular' ? { piezas: n.piezas, precioUnitario: n.precioUnitario } : { precioUnitario: n.precioUnitario })
-    })
+    const { lineas: nuevas, cambios, nuevos } = await refrescarPrecios(lista)
+    if (Object.keys(nuevos).length) guardarPrecios(email, nuevos) // sobre la versión actual de cada línea
     if (cambios.length) setAvisoPrecios(cambios)
     return nuevas
   }
+  // Al abrir y cada vez que cambia el conjunto de muebles (agregar/quitar).
+  const firma = lineas.map(l => l.key).join(',')
   useEffect(() => {
-    if (cargando || !email || refrescadoRef.current || lineas.length === 0) return
-    refrescadoRef.current = true
+    if (cargando || !email || lineas.length === 0) return
     aplicarPrecios(lineas)
-  }, [cargando, email, lineas.length])
+  }, [cargando, email, firma])
 
   const markup = parseMargen(form.markup_pct)
   const conMargen = precio => aplicaMargen(precio, markup)
@@ -145,7 +143,7 @@ export default function CotizacionEnCurso() {
         {errorCarga && <div style={{ ...card, padding: 16, color: '#B91C1C', background: '#FEF2F2', borderColor: '#FECACA', marginBottom: 16, fontSize: 13 }}>{errorCarga}</div>}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: 24, alignItems: 'start' }} className="cot-grid">
-          <div>
+          <div style={{ pointerEvents: guardando ? 'none' : 'auto', opacity: guardando ? 0.6 : 1 }}>
             {lineas.length === 0 ? (
               <div style={{ ...card, padding: '40px 24px', textAlign: 'center', color: '#64748B', fontSize: 13 }}>
                 Tu cotización está vacía.<br />
