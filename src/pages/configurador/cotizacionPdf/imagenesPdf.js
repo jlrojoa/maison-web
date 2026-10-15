@@ -5,6 +5,7 @@
 // (data URL). Si no se puede (sin red, sin CORS, formato raro) devuelve null
 // y el PDF usa un recuadro neutro — nunca falla la generación por una imagen.
 import { supabase } from '../../../lib/supabase'
+import { imagenDePieza } from '../modularesNombre'
 
 const cache = new Map()
 
@@ -28,12 +29,6 @@ export function imagenParaPdf(url, maxPx = 900) {
     })())
   }
   return cache.get(key)
-}
-
-// "Cancún (B) · Azul Cielo" -> { catalogo, grado, color }
-export function parseTextil(textil) {
-  const m = /^(.+) \(([^)]+)\) · (.+)$/.exec(textil ?? '')
-  return m ? { catalogo: m[1], grado: m[2], color: m[3] } : { catalogo: textil ?? '', grado: '', color: '' }
 }
 
 // Ficha de la tela (foto + datos técnicos) desde el catálogo; null si no existe.
@@ -64,4 +59,19 @@ export async function fotoProducto(imagenUrl, productoId) {
     } catch { /* sin foto */ }
   }
   return imagenParaPdf(url, 1000)
+}
+
+// Foto de UN módulo (Brazo, Módulo Central, Esquinero, Puff…): la guardada en
+// la cotización o, si no hay, la del catálogo (producto_imagenes cuyo `alt` es
+// el nombre del módulo).
+export async function fotoPieza(imagenUrl, productoId, nombre) {
+  let url = imagenUrl
+  if (!url && productoId && nombre) {
+    try {
+      const base = nombre.replace(/\s*\(\d+\s*cm\)\s*$/, '')
+      const { data } = await supabase.from('producto_imagenes').select('url, alt, orden').eq('producto_id', productoId).order('orden')
+      url = imagenDePieza(data ?? [], base)?.url ?? null
+    } catch { /* sin foto */ }
+  }
+  return imagenParaPdf(url, 500)
 }

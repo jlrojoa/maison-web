@@ -11,6 +11,7 @@ import ProductPage from './pages/ProductPage'
 import Distribuidores from './pages/Distribuidores'
 import Configurador from './pages/Configurador'
 import MiEspacio from './pages/MiEspacio'
+import CotizacionEnCurso from './pages/CotizacionEnCurso'
 import MiEspacioDescargas from './pages/MiEspacioDescargas'
 
 function ScrollToTop() {
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="/configurador/:categoria" element={<Configurador />} />
           <Route path="/configurador/:categoria/:productoSlug" element={<Configurador />} />
           <Route path="/mi-espacio" element={<MiEspacio />} />
+          <Route path="/cotizacion" element={<CotizacionEnCurso />} />
           <Route path="/mi-espacio/descargas" element={<MiEspacioDescargas />} />
           <Route path="/admin/login" element={<Suspense fallback={<AdminFallback />}><AdminLogin /></Suspense>} />
           <Route

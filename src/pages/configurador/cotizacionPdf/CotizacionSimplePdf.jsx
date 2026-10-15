@@ -11,6 +11,7 @@ import { fmt } from '../format'
 import { fmtFecha, fmtVigencia } from './fmtPdf'
 import { COLORS, PAGE_PADDING } from './pdfTheme'
 import { TERMINOS } from './terminos'
+import PlanoPagePdf from './PlanoPagePdf'
 
 registrarFuentesPdf()
 
@@ -29,33 +30,40 @@ export const s = StyleSheet.create({
   h2: { fontSize: 11.5, fontWeight: 700, marginBottom: 4 },
   h2Rule: { width: 28, borderBottomWidth: 2, borderBottomColor: COLORS.copperLine, marginBottom: 10 },
 
-  clienteBox: { backgroundColor: COLORS.fillNeutro, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 10, marginBottom: 14, flexDirection: 'row', justifyContent: 'space-between' },
+  clienteBox: { backgroundColor: COLORS.fillNeutro, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 10, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between' },
   clienteNombre: { fontSize: 11, fontWeight: 600 },
   clienteSub: { fontSize: 8, color: COLORS.inkMuted, marginTop: 2 },
   clienteLabel: { fontSize: 7, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.8, marginBottom: 3 },
 
-  item: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, marginBottom: 12, overflow: 'hidden' },
+  item: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, marginBottom: 10, overflow: 'hidden' },
   itemTop: { flexDirection: 'row' },
-  fotoBox: { width: 215, height: 175, backgroundColor: COLORS.panelBg, alignItems: 'center', justifyContent: 'center' },
-  foto: { width: 215, height: 175, objectFit: 'contain' },
+  fotoBox: { width: 185, height: 112, backgroundColor: COLORS.panelBg, alignItems: 'center', justifyContent: 'center' },
+  foto: { width: 185, height: 112, objectFit: 'contain' },
   fotoVacia: { fontSize: 7.5, color: COLORS.inkMuted },
-  itemInfo: { flex: 1, padding: 14 },
-  itemNombre: { fontSize: 16, fontWeight: 700 },
+  itemInfo: { flex: 1, padding: 12 },
+  itemNombre: { fontSize: 15, fontWeight: 700 },
   itemConfig: { fontSize: 10.5, color: COLORS.copperText, fontWeight: 600, marginTop: 2 },
   specRow: { flexDirection: 'row', marginTop: 7 },
   specLabel: { width: 70, fontSize: 7, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.6, paddingTop: 1 },
   specValue: { flex: 1, fontSize: 9 },
+  piezaLinea: { fontSize: 8.5, marginBottom: 2 },
+  tira: { flexDirection: 'row', flexWrap: 'wrap', padding: 10, backgroundColor: COLORS.panelBg },
+  tiraTitulo: { fontSize: 7, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.8, paddingHorizontal: 10, paddingTop: 8, backgroundColor: COLORS.panelBg },
+  modulo: { width: 104, marginRight: 8, marginBottom: 6, backgroundColor: '#fff', borderWidth: 1, borderColor: COLORS.border, borderRadius: 6, padding: 5, alignItems: 'center' },
+  moduloImg: { width: 92, height: 62, objectFit: 'contain' },
+  moduloVacio: { width: 92, height: 62, backgroundColor: COLORS.panelBg, borderRadius: 3 },
+  moduloTxt: { fontSize: 7.5, textAlign: 'center', marginTop: 3, lineHeight: 1.3 },
 
-  telaRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: COLORS.border, padding: 12, backgroundColor: COLORS.fillNeutro },
-  telaImg: { width: 64, height: 64, borderRadius: 6, objectFit: 'cover' },
-  telaSwatch: { width: 64, height: 64, borderRadius: 6, borderWidth: 1, borderColor: COLORS.border },
+  telaRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: COLORS.border, padding: 9, backgroundColor: COLORS.fillNeutro },
+  telaImg: { width: 52, height: 52, borderRadius: 6, objectFit: 'cover' },
+  telaSwatch: { width: 52, height: 52, borderRadius: 6, borderWidth: 1, borderColor: COLORS.border },
   telaInfo: { flex: 1, marginLeft: 12 },
   telaNombre: { fontSize: 10.5, fontWeight: 600 },
   telaSub: { fontSize: 8, color: COLORS.inkMuted, marginTop: 2, lineHeight: 1.4 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 5 },
   chip: { fontSize: 7, color: COLORS.copperText, backgroundColor: COLORS.accentBg, borderRadius: 3, paddingVertical: 2, paddingHorizontal: 5, marginRight: 4, marginBottom: 3 },
 
-  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
+  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
   priceMuted: { fontSize: 8.5, color: COLORS.inkMuted },
   priceBig: { fontSize: 14, fontWeight: 700 },
 
@@ -185,9 +193,11 @@ export default function CotizacionSimplePdf({ data }) {
         {data.filas.map((f, i) => (
           <View key={i} style={s.item} wrap={false}>
             <View style={s.itemTop}>
-              <View style={s.fotoBox}>
-                {f.foto ? <Image src={f.foto.src} style={s.foto} /> : <Text style={s.fotoVacia}>Imagen no disponible</Text>}
-              </View>
+              {f.esArmado ? null : (
+                <View style={s.fotoBox}>
+                  {f.foto ? <Image src={f.foto.src} style={s.foto} /> : <Text style={s.fotoVacia}>Imagen no disponible</Text>}
+                </View>
+              )}
               <View style={s.itemInfo}>
                 <Text style={s.itemNombre}>{f.producto}</Text>
                 {f.configuracion ? <Text style={s.itemConfig}>{f.configuracion}</Text> : null}
@@ -197,6 +207,19 @@ export default function CotizacionSimplePdf({ data }) {
                 <View style={s.specRow}><Text style={s.specLabel}>CANTIDAD</Text><Text style={s.specValue}>{f.cantidad}</Text></View>
               </View>
             </View>
+            {f.esArmado ? (
+              <View>
+                <Text style={s.tiraTitulo}>MÓDULOS SOLICITADOS</Text>
+                <View style={s.tira}>
+                  {f.piezas.map((p, j) => (
+                    <View key={j} style={s.modulo} wrap={false}>
+                      {p.foto ? <Image src={p.foto.src} style={s.moduloImg} /> : <View style={s.moduloVacio} />}
+                      <Text style={s.moduloTxt}>{p.cantidad} × {p.nombre}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
             {f.textilCatalogo ? <TelaFicha tela={f.tela} catalogo={f.textilCatalogo} color={f.textilColor} grado={f.textilGrado} /> : null}
             <View style={s.priceRow}>
               <Text style={s.priceMuted}>{f.cantidad} × {fmt(f.precioUnitario)}</Text>
@@ -218,14 +241,10 @@ export default function CotizacionSimplePdf({ data }) {
             <Text style={s.fabText}>{data.tiempoFabricacion}</Text>
           </View>
         ) : null}
+        <View style={{ marginTop: 16 }}><PasosYTerminos /></View>
         <Footer folio={data.folio} />
       </Page>
-
-      <Page size="LETTER" style={s.page}>
-        <Encabezado data={data} />
-        <PasosYTerminos />
-        <Footer folio={data.folio} />
-      </Page>
+      {(data.armados ?? []).map((a, i) => <PlanoPagePdf key={i} data={a} empresa={EMPRESA} />)}
     </Document>
   )
 }
