@@ -46,7 +46,7 @@ export function DistribuidorProvider({ children }) {
   }
 
   return (
-    <Ctx.Provider value={{ session, distribuidor, loading, signIn, signUp, signOut }}>
+    <Ctx.Provider value={{ session, distribuidor, loading, signIn, signUp, signOut, refrescar: () => checkDistribuidor(session?.user?.email) }}>
       {children}
     </Ctx.Provider>
   )

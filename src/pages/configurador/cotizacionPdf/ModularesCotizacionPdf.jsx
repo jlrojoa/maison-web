@@ -6,7 +6,7 @@
 // completos, y JL pidió explícitamente no inventarlas.
 import { Document } from '@react-pdf/renderer'
 import { registrarFuentesPdf } from './pdfFonts'
-import { EMPRESA } from './empresa'
+import { EMPRESA, empresaDeMarca } from './empresa'
 import DetallePagePdf from './DetallePagePdf'
 import PlanoPagePdf from './PlanoPagePdf'
 import { Page } from '@react-pdf/renderer'
@@ -15,14 +15,15 @@ import { Encabezado, PasosYTerminos, Footer, s as sp } from './CotizacionSimpleP
 registrarFuentesPdf()
 
 export default function ModularesCotizacionPdf({ data }) {
+  const empresa = data.marca ? empresaDeMarca(data.marca) : EMPRESA
   return (
-    <Document title={`Cotización ${data.folio} · Brendell Modular`}>
-      <DetallePagePdf data={data} empresa={EMPRESA} />
-      <PlanoPagePdf data={data} empresa={EMPRESA} />
+    <Document title={data.marca ? `Cotización ${data.folio}` : `Cotización ${data.folio} · Brendell Modular`}>
+      <DetallePagePdf data={data} empresa={empresa} />
+      <PlanoPagePdf data={data} empresa={empresa} />
       <Page size="LETTER" style={sp.page}>
         <Encabezado data={data} titulo="BRENDELL MODULAR" />
-        <PasosYTerminos />
-        <Footer folio={data.folio} />
+        <PasosYTerminos marca={data.marca} />
+        <Footer folio={data.folio} marca={data.marca} />
       </Page>
     </Document>
   )

@@ -17,7 +17,7 @@ import { TIEMPO_FABRICACION } from './configurador/ModularesConfigurador'
 import { useCarrito, actualizarLinea, aplicarPrecios as guardarPrecios, quitarLinea, setForm, setEdicion, cargarCarrito, vaciarCarrito } from '../lib/cotizacionCarrito'
 
 const fmt = v => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(v)
-const FORM_VACIO = { cliente_nombre: '', cliente_email: '', cliente_telefono: '', markup_pct: '0' }
+const FORM_VACIO = { cliente_nombre: '', cliente_email: '', cliente_telefono: '', markup_pct: '0', con_marca: false }
 
 const card = { background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8 }
 const input = { width: '100%', padding: '9px 10px', border: '1px solid #E2E8F0', borderRadius: 4, fontSize: 13, boxSizing: 'border-box' }
@@ -84,6 +84,13 @@ export default function CotizacionEnCurso() {
   const [avisoPrecios, setAvisoPrecios] = useState([])
   const muestras = useMuestrasTela(lineas)
   const cargadaRef = useRef(false)
+  // "Tus datos" para el PDF con la marca del distribuidor (se guardan en su perfil al cotizar).
+  const [perfil, setPerfil] = useState(null)
+  const perfilActual = perfil ?? {
+    nombre_comercial: distribuidor?.nombre_comercial || distribuidor?.empresa || distribuidor?.nombre || '',
+    telefono: distribuidor?.telefono || '', direccion: distribuidor?.direccion || '', condiciones: distribuidor?.condiciones_venta || '',
+  }
+  const cambiarPerfil = (campo, valor) => setPerfil({ ...perfilActual, [campo]: valor })
 
   useEffect(() => {
     if (!loading && !distribuidor) navigate('/distribuidores', { replace: true })
@@ -129,9 +136,18 @@ export default function CotizacionEnCurso() {
 
   const guardar = async (modo) => {
     if (lineas.length === 0) return
-    if (!form.cliente_nombre.trim()) return alert('El nombre del cliente es obligatorio.')
+    if (form.con_marca && !form.cliente_nombre.trim()) return alert('Para cotizar a tu cliente con tus datos, escribe el nombre del cliente.')
+    if (form.con_marca && !perfilActual.nombre_comercial.trim()) return alert('Escribe el nombre de tu negocio: aparecerá en el PDF.')
     setGuardando(modo)
     try {
+      if (form.con_marca) {
+        const { error: perfilErr } = await supabase.rpc('actualizar_mi_perfil', {
+          p_nombre_comercial: perfilActual.nombre_comercial, p_telefono: perfilActual.telefono,
+          p_direccion: perfilActual.direccion, p_condiciones: perfilActual.condiciones,
+        })
+        if (perfilErr) throw perfilErr
+        await ctx?.refrescar?.()
+      }
       const vigentes = await aplicarPrecios(lineas)
       const { cot, items, total } = await guardarCotizacionMulti({ distribuidor, lineas: vigentes, form, edicion })
       // Si algo falla de aquí en adelante, reintentar actualiza este mismo borrador (no crea otro).
@@ -144,7 +160,7 @@ export default function CotizacionEnCurso() {
       try {
         const { data: fresca } = await supabase.from('cotizaciones').select('*').eq('id', cot.id).single()
         folio = fresca?.folio ?? folio
-        const r = await generarPdfDeCotizacion({ ...(fresca ?? cot), items }, TIEMPO_FABRICACION)
+        const r = await generarPdfDeCotizacion({ ...(fresca ?? cot), items }, TIEMPO_FABRICACION, form.con_marca ? { ...distribuidor, nombre_comercial: perfilActual.nombre_comercial.trim(), telefono: perfilActual.telefono.trim(), direccion: perfilActual.direccion.trim(), condiciones_venta: perfilActual.condiciones.trim() } : null)
         pdfBlob = r.blob; pdfNombre = r.nombre
       } catch (err) { pdfError = err.message }
       setResultado({
@@ -244,13 +260,39 @@ export default function CotizacionEnCurso() {
           </div>
 
           <div style={{ ...card, padding: 20 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Cliente</div>
-            <label style={label}>Nombre del cliente *</label>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>¿Cómo quieres cotizar?</div>
+            {[
+              [false, 'Guardar en Mi espacio', 'Para tu control. El cliente es opcional y el PDF sale con el formato Brendell.'],
+              [true, 'Cotizar a mi cliente con mis datos', 'El PDF sale con tu nombre, contacto y condiciones de venta.'],
+            ].map(([marca, titulo, desc]) => (
+              <label key={String(marca)} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: 10, marginBottom: 6, cursor: 'pointer', borderRadius: 6, border: `1px solid ${!!form.con_marca === marca ? '#0F172A' : '#E2E8F0'}`, background: !!form.con_marca === marca ? '#F8FAFC' : '#fff' }}>
+                <input type="radio" name="modo-cotizar" checked={!!form.con_marca === marca} onChange={() => cambiarForm('con_marca', marca)} style={{ marginTop: 3 }} />
+                <span><span style={{ display: 'block', fontSize: 13, fontWeight: 600 }}>{titulo}</span><span style={{ display: 'block', fontSize: 11.5, color: '#64748B', marginTop: 2 }}>{desc}</span></span>
+              </label>
+            ))}
+            <div style={{ fontSize: 14, fontWeight: 600, margin: '14px 0 4px' }}>Cliente</div>
+            <label style={label}>Nombre del cliente{form.con_marca ? ' *' : ' (opcional)'}</label>
             <input style={input} value={form.cliente_nombre} onChange={e => cambiarForm('cliente_nombre', e.target.value)} />
             <label style={label}>Email del cliente</label>
             <input style={input} value={form.cliente_email} onChange={e => cambiarForm('cliente_email', e.target.value)} />
             <label style={label}>Teléfono del cliente</label>
             <input style={input} value={form.cliente_telefono} onChange={e => cambiarForm('cliente_telefono', e.target.value)} />
+            {form.con_marca && (
+              <>
+                <div style={{ fontSize: 14, fontWeight: 600, margin: '18px 0 4px' }}>Tus datos en el PDF</div>
+                <label style={label}>Nombre de tu negocio *</label>
+                <input style={input} value={perfilActual.nombre_comercial} onChange={e => cambiarPerfil('nombre_comercial', e.target.value)} maxLength={120} />
+                <label style={label}>Teléfono / WhatsApp</label>
+                <input style={input} value={perfilActual.telefono} onChange={e => cambiarPerfil('telefono', e.target.value)} maxLength={40} />
+                <label style={label}>Dirección</label>
+                <input style={input} value={perfilActual.direccion} onChange={e => cambiarPerfil('direccion', e.target.value)} maxLength={300} />
+                <label style={label}>Condiciones de venta (opcional; si lo dejas vacío salen los términos estándar)</label>
+                <textarea style={{ ...input, minHeight: 70, fontFamily: 'inherit' }} value={perfilActual.condiciones} onChange={e => cambiarPerfil('condiciones', e.target.value)} maxLength={2000} />
+                <div style={{ fontSize: 11, color: '#64748B', marginTop: 6 }}>
+                  {distribuidor?.logo_url ? 'Se usará tu logo registrado.' : 'Para que salga tu logo, envíalo a info@brendell.mx.'} Estos datos se guardan para tus próximas cotizaciones.
+                </div>
+              </>
+            )}
             <label style={label}>Tu margen (%)</label>
             <input style={input} type="number" min="0" max="500" inputMode="decimal" value={form.markup_pct} onChange={e => cambiarForm('markup_pct', e.target.value)} />
             <div style={{ borderTop: '1px solid #E2E8F0', marginTop: 16, paddingTop: 12, fontSize: 13 }}>

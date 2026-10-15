@@ -6,7 +6,7 @@
 // Las imágenes llegan ya como data URL JPEG (ver imagenesPdf.js).
 import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer'
 import { registrarFuentesPdf } from './pdfFonts'
-import { EMPRESA } from './empresa'
+import { EMPRESA, empresaDeMarca } from './empresa'
 import { fmt } from '../format'
 import { fmtFecha, fmtVigencia } from './fmtPdf'
 import { COLORS, PAGE_PADDING } from './pdfTheme'
@@ -86,27 +86,44 @@ export const s = StyleSheet.create({
   footerTxt: { fontSize: 6.8, color: COLORS.inkMuted },
 })
 
-export function Footer({ folio }) {
+export function Footer({ folio, marca }) {
   return (
     <View style={s.footer} fixed>
-      <Text style={s.footerTxt}>{EMPRESA.razonSocial} · RFC {EMPRESA.rfc} · {EMPRESA.email} · {EMPRESA.telefono}</Text>
+      <Text style={s.footerTxt}>
+        {marca
+          ? [marca.nombre, marca.email, marca.telefono].filter(Boolean).join(' · ')
+          : `${EMPRESA.razonSocial} · RFC ${EMPRESA.rfc} · ${EMPRESA.email} · ${EMPRESA.telefono}`}
+      </Text>
       <Text style={s.footerTxt} render={({ pageNumber, totalPages }) => `${folio} · Página ${pageNumber} de ${totalPages}`} />
     </View>
   )
 }
 
 export function Encabezado({ data, titulo = 'BRENDELL' }) {
+  const m = data.marca
   return (
     <>
       <View style={s.headerRow}>
         <View style={{ maxWidth: 300 }}>
+          {m?.logo ? <Image src={m.logo.src} style={{ height: 44, objectFit: 'contain', objectPositionX: 0, marginBottom: 6 }} /> : null}
           <Text style={s.presentadoPor}>PRESENTADO POR</Text>
-          <Text style={s.brand}>{titulo}</Text>
-          <Text style={s.brandContact}>
-            {EMPRESA.razonSocial} · RFC {EMPRESA.rfc}{'\n'}
-            {EMPRESA.direccion}{'\n'}
-            {EMPRESA.telefono} · {EMPRESA.email}
-          </Text>
+          {m ? (
+            <>
+              {m.logo ? null : <Text style={s.brand}>{m.nombre}</Text>}
+              <Text style={s.brandContact}>
+                {[m.logo ? m.nombre : null, m.direccion, [m.telefono, m.email].filter(Boolean).join(' · ')].filter(Boolean).join('\n')}
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={s.brand}>{titulo}</Text>
+              <Text style={s.brandContact}>
+                {EMPRESA.razonSocial} · RFC {EMPRESA.rfc}{'\n'}
+                {EMPRESA.direccion}{'\n'}
+                {EMPRESA.telefono} · {EMPRESA.email}
+              </Text>
+            </>
+          )}
         </View>
         <View>
           <View style={s.folioBadge}>
@@ -148,9 +165,9 @@ export function TelaFicha({ tela, catalogo, color, grado }) {
   )
 }
 
-export function PasosYTerminos() {
+export function PasosYTerminos({ marca }) {
   const pasos = [
-    ['Confirma tu cotización', 'Revisa modelo, medida, tela y precio con tu distribuidor y confírmalo antes de que termine la vigencia.'],
+    ['Confirma tu cotización', `Revisa modelo, medida, tela y precio ${marca ? 'con nosotros' : 'con tu distribuidor'} y confírmalo antes de que termine la vigencia.`],
     ['Formaliza el pedido', 'Se acuerdan pago, entrega y garantía, y tu mueble entra a fabricación.'],
     ['Fabricación y entrega', 'Tu mueble se fabrica bajo pedido y se coordina la entrega.'],
   ]
@@ -164,16 +181,19 @@ export function PasosYTerminos() {
         </View>
       ))}
       <View style={{ marginTop: 10 }}><Titulo>Términos y condiciones</Titulo></View>
-      {TERMINOS.map(([t, d], i) => (
-        <View key={i} wrap={false}><Text style={s.terminoTitulo}>{t}</Text><Text style={s.terminoTexto}>{d}</Text></View>
-      ))}
+      {marca?.condiciones
+        ? <Text style={s.terminoTexto}>{marca.condiciones}</Text>
+        : TERMINOS.map(([t, d], i) => (
+          <View key={i} wrap={false}><Text style={s.terminoTitulo}>{t}</Text><Text style={s.terminoTexto}>{d}</Text></View>
+        ))}
+      {marca ? <Text style={[s.terminoTexto, { marginTop: 8 }]}>Muebles fabricados por Brendell ({EMPRESA.razonSocial}).</Text> : null}
     </>
   )
 }
 
 export default function CotizacionSimplePdf({ data }) {
   return (
-    <Document title={`Cotización ${data.folio} · Brendell`} author={EMPRESA.razonSocial}>
+    <Document title={data.marca ? `Cotización ${data.folio}` : `Cotización ${data.folio} · Brendell`} author={data.marca?.nombre ?? EMPRESA.razonSocial}>
       <Page size="LETTER" style={s.page}>
         <Encabezado data={data} />
 
@@ -241,10 +261,10 @@ export default function CotizacionSimplePdf({ data }) {
             <Text style={s.fabText}>{data.tiempoFabricacion}</Text>
           </View>
         ) : null}
-        <View style={{ marginTop: 16 }}><PasosYTerminos /></View>
-        <Footer folio={data.folio} />
+        <View style={{ marginTop: 16 }}><PasosYTerminos marca={data.marca} /></View>
+        <Footer folio={data.folio} marca={data.marca} />
       </Page>
-      {(data.armados ?? []).map((a, i) => <PlanoPagePdf key={i} data={a} empresa={EMPRESA} />)}
+      {(data.armados ?? []).map((a, i) => <PlanoPagePdf key={i} data={a} empresa={data.marca ? empresaDeMarca(data.marca) : EMPRESA} />)}
     </Document>
   )
 }

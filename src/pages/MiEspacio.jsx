@@ -101,7 +101,7 @@ export default function MiEspacio() {
       await load()
       setEmitida(fresca ?? cot)
       if (fresca && tienePdf(fresca)) {
-        const { blob } = await generarPdfDeCotizacion(fresca, TIEMPO_FABRICACION)
+        const { blob } = await generarPdfDeCotizacion(fresca, TIEMPO_FABRICACION, distribuidor)
         abrirBlob(blob, win)
       }
     } catch (err) {
@@ -133,7 +133,7 @@ export default function MiEspacio() {
     }
     setDescargando(cot.id)
     try {
-      const { blob, nombre } = await generarPdfDeCotizacion(cot, TIEMPO_FABRICACION)
+      const { blob, nombre } = await generarPdfDeCotizacion(cot, TIEMPO_FABRICACION, distribuidor)
       await compartirPdf({
         blob, nombre, email: cot.cliente_email, tel: cot.cliente_telefono,
         asunto: `Cotización ${cot.folio ? 'BR-' + cot.folio : ''} — ${item?.producto_nombre ?? ''}`,
@@ -159,7 +159,7 @@ export default function MiEspacio() {
     // La pestaña se abre en el clic (antes del await) para no ser bloqueada.
     const win = accion === 'ver' ? abrirPestanaEspera() : null
     try {
-      const { blob, nombre } = await generarPdfDeCotizacion(cot, TIEMPO_FABRICACION)
+      const { blob, nombre } = await generarPdfDeCotizacion(cot, TIEMPO_FABRICACION, distribuidor)
       if (accion === 'ver') abrirBlob(blob, win)
       else descargarBlob(blob, nombre)
     } catch (err) {

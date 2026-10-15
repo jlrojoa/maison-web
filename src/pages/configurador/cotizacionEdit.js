@@ -77,6 +77,7 @@ export async function cotizacionAlCarrito(id, email, modo) {
     form: {
       cliente_nombre: cot.cliente_nombre ?? '', cliente_email: cot.cliente_email ?? '',
       cliente_telefono: cot.cliente_telefono ?? '', markup_pct: String(cot.markup_pct ?? 0),
+      con_marca: !!cot.marca_distribuidor,
     },
   }
 }
@@ -128,7 +129,8 @@ export async function guardarCotizacionMulti({ distribuidor, lineas, form, edici
   const unSoloArmado = lineas.length === 1 && lineas[0].tipo === 'modular' && lineas[0].cantidad === 1
   const campos = {
     nombre_proyecto: nombreProyecto(lineas), total, markup_pct: markup,
-    cliente_nombre: form.cliente_nombre.trim(),
+    cliente_nombre: form.cliente_nombre.trim() || null,
+    marca_distribuidor: !!form.con_marca,
     cliente_email: form.cliente_email.trim() || null,
     cliente_telefono: form.cliente_telefono.trim() || null,
     secuencia_pdf: unSoloArmado ? { sequence: lineas[0].sequence, mirrored: !!lineas[0].mirrored } : null,

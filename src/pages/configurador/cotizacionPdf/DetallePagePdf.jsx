@@ -75,9 +75,9 @@ export default function DetallePagePdf({ data, empresa }) {
       <View style={s.headerRow}>
         <View style={{ maxWidth: 300 }}>
           <Text style={s.presentadoPor}>PRESENTADO POR</Text>
-          <Text style={s.brand}>BRENDELL MODULAR</Text>
+          <Text style={s.brand}>{empresa.marca ? empresa.razonSocial.toUpperCase() : 'BRENDELL MODULAR'}</Text>
           <Text style={s.brandContact}>
-            {empresa.razonSocial} · RFC {empresa.rfc}{'\n'}
+            {empresa.razonSocial}{empresa.rfc ? ` · RFC ${empresa.rfc}` : ''}{'\n'}
             {empresa.direccion}{'\n'}
             {empresa.telefono} · {empresa.email}
           </Text>
@@ -155,8 +155,8 @@ export default function DetallePagePdf({ data, empresa }) {
       <View style={s.footerHr}>
         <View style={s.footerRow}>
           <View style={{ maxWidth: 430 }}>
-            <Text style={[s.footerLeft, s.footerBold]}>Brendell Modular · {empresa.razonSocial}</Text>
-            <Text style={[s.footerLeft, s.footerMuted]}>RFC: {empresa.rfc}</Text>
+            <Text style={[s.footerLeft, s.footerBold]}>{empresa.marca ? '' : 'Brendell Modular · '}{empresa.razonSocial}</Text>
+            {empresa.rfc ? <Text style={[s.footerLeft, s.footerMuted]}>RFC: {empresa.rfc}</Text> : null}
             <Text style={[s.footerLeft, s.footerMuted]}>{empresa.direccion}</Text>
           </View>
           <View>
