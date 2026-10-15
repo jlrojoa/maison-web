@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useScrollNav } from '../hooks/useScrollNav'
 import { useDistribuidor } from '../contexts/DistribuidorContext'
@@ -7,7 +8,8 @@ import { useCarrito } from '../lib/cotizacionCarrito'
 // inicio. Necesario en páginas de fondo claro (ej. Configurador), donde el nav
 // transparente con letras blancas sería invisible.
 export default function Nav({ solid = false }) {
-  const scrolled = useScrollNav(60) || solid
+  const [abierto, setAbierto] = useState(false) // menú en pantallas chicas
+  const scrolled = useScrollNav(60) || solid || abierto
   const navigate = useNavigate()
   const ctx = useDistribuidor()
   const distribuidor = ctx?.distribuidor ?? null
@@ -24,6 +26,10 @@ export default function Nav({ solid = false }) {
       <a href="/" onClick={e => { e.preventDefault(); navigate('/') }} className="logo">
         Brendell<b>.</b>
       </a>
+      <button type="button" className="nav-burger" aria-label={abierto ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={abierto} onClick={() => setAbierto(a => !a)}>
+        <span /><span /><span />
+      </button>
+      <div className={`nav-menu${abierto ? ' open' : ''}`} onClick={e => { if (e.target.closest('a,button')) setAbierto(false) }}>
       <ul className="nav-ul">
         <li><a href="/colecciones" onClick={e => { e.preventDefault(); navigate('/colecciones') }}>Colecciones</a></li>
         <li><a href="/materiales" onClick={e => { e.preventDefault(); navigate('/materiales') }}>Materiales</a></li>
@@ -80,6 +86,7 @@ export default function Nav({ solid = false }) {
             <a href="#kt" className="nbtn">Kit de Muestras</a>
           </>
         )}
+      </div>
       </div>
     </nav>
   )

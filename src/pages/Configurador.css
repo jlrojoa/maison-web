@@ -94,3 +94,10 @@
 .cfg-modal-box { background: #fff; border-radius: 8px; padding: 28px; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
 .cfg-modal-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
 .cfg-modal-text { font-size: 13px; color: #64748B; margin-bottom: 20px; line-height: 1.5; }
+
+@media (max-width: 900px) {
+  .cfg-grid-2col { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .cfg-grid-2col > * { min-width: 0; }
+  .cfg-tabs { overflow-x: auto; }
+  .cfg-carousel { min-height: 0; }
+}

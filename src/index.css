@@ -12,7 +12,8 @@ body{font-family:var(--sans);background:var(--warm);color:var(--charcoal);overfl
 
 /* NAV */
 nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:26px 52px;transition:all .4s}
-nav.s{background:rgba(255,255,255,.97);backdrop-filter:blur(12px);padding:15px 52px;box-shadow:0 1px 0 rgba(0,0,0,.06)}
+nav{color:#fff}
+nav.s{color:var(--ink);background:rgba(255,255,255,.97);backdrop-filter:blur(12px);padding:15px 52px;box-shadow:0 1px 0 rgba(0,0,0,.06)}
 .logo{font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;font-size:25px;font-weight:500;letter-spacing:.25em;color:#fff;text-decoration:none;transition:color .3s}
 nav.s .logo{color:var(--ink)}
 .logo b{color:var(--gold);font-weight:500}
@@ -22,6 +23,21 @@ nav.s .nav-ul a{color:var(--charcoal)}
 .nav-ul a:hover{color:var(--gold)!important}
 .nbtn{font-family:var(--sans);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);padding:9px 20px;text-decoration:none;transition:all .3s}
 nav.s .nbtn{background:var(--charcoal);border-color:var(--charcoal)}
+.nav-menu{display:contents}
+.nav-burger{display:none;background:none;border:0;padding:8px;cursor:pointer;color:#fff;flex-direction:column;gap:5px}
+.nav-burger span{display:block;width:22px;height:1.5px;background:currentColor}
+nav.s .nav-burger{color:var(--ink)}
+@media (max-width:900px){
+  nav{padding:16px 20px}
+  nav.s{padding:12px 20px}
+  .nav-burger{display:flex}
+  .nav-menu{display:none;position:absolute;top:100%;left:0;right:0;flex-direction:column;align-items:flex-start;gap:20px;padding:22px 24px 28px;background:rgba(255,255,255,.98);box-shadow:0 8px 24px rgba(0,0,0,.08)}
+  .nav-menu.open{display:flex}
+  .nav-menu .nav-ul{flex-direction:column;gap:18px}
+  .nav-menu > div{flex-direction:column;align-items:flex-start !important;gap:16px !important}
+  .nav-menu a,.nav-menu button{color:var(--charcoal) !important;opacity:1 !important}
+  .nav-menu a.nbtn{background:var(--charcoal);border-color:var(--charcoal);color:#fff !important}
+}
 .nbtn:hover{background:var(--gold)!important;border-color:var(--gold)!important}
 
 /* HERO */
@@ -275,3 +291,27 @@ footer{background:var(--ink);padding:68px 52px 38px}
 
 /* ── Admin: telas disponibles section ── */
 .textile-check-group{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:4px}
+
+/* ── Pantallas chicas (teléfono/tableta) ─────────────────────────────────
+   El sitio estaba pensado solo para escritorio: las cuadrículas de varias
+   columnas y los márgenes de 52px hacían que la página se saliera de la
+   pantalla. Aquí se apilan las columnas y se reducen los márgenes. */
+@media (max-width:900px){
+  .phil,.edit,.kit,.pl{grid-template-columns:1fr;min-height:0}
+  .pg{grid-template-columns:1fr 1fr;gap:20px}
+  .pg5{grid-template-columns:1fr 1fr;gap:14px}
+  .mg{grid-template-columns:1fr 1fr}
+  .mitem{padding:28px 20px}
+  .fg{grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px;padding-bottom:32px}
+  .fb{flex-direction:column;gap:14px}
+  .fb > div{flex-wrap:wrap;gap:12px 18px !important}
+  .coll,.cat-pg{padding:72px 20px 80px}
+  .mts{padding:72px 20px}
+  footer{padding:48px 20px 32px}
+  #ct{padding:72px 20px !important}
+  .pd{padding:36px 20px 56px}
+  .pnav{padding:14px 20px}
+}
+@media (max-width:520px){
+  .pg,.pg5,.mg,.fg{grid-template-columns:1fr}
+}
