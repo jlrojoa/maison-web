@@ -3,15 +3,15 @@
 // Contenido del cuadro "cotización guardada/emitida" para los configuradores
 // de producto único: entrega el PDF (ver/descargar) y permite enviarlo.
 import { fmt } from './format'
-import { abrirBlob, descargarBlob } from './cotizacionPdf/pdfActions'
+import { abrirBlob, descargarBlob, compartirPdf } from './cotizacionPdf/pdfActions'
 
 export default function ResultadoCotizacion({ resultado, onClose }) {
-  const enviar = () => {
-    const cuerpo = encodeURIComponent(`Hola ${resultado.nombre},\n\nTe comparto tu cotización BR-${resultado.folio} (${fmt(resultado.precio)}). Te adjunto el PDF.\n\nSaludos.`)
-    window.open(resultado.email
-      ? `mailto:${resultado.email}?subject=${encodeURIComponent('Cotización BR-' + resultado.folio)}&body=${cuerpo}`
-      : `https://wa.me/${resultado.tel.replace(/\D/g, '')}?text=${cuerpo}`, '_blank')
-  }
+  const enviar = () => compartirPdf({
+    blob: resultado.pdfBlob, nombre: resultado.pdfNombre ?? 'cotizacion.pdf',
+    asunto: `Cotización BR-${resultado.folio}`,
+    cuerpo: `Hola ${resultado.nombre},\n\nTe comparto tu cotización BR-${resultado.folio} (${fmt(resultado.precio)}).\n\nSaludos.`,
+    email: resultado.email, tel: resultado.tel,
+  })
   return (
     <>
       <h3 className="cfg-modal-title">
@@ -30,7 +30,7 @@ export default function ResultadoCotizacion({ resultado, onClose }) {
             <button type="button" className="cfg-btn cfg-btn-secondary" onClick={() => descargarBlob(resultado.pdfBlob, resultado.pdfNombre ?? 'cotizacion.pdf')}>Descargar PDF</button>
           </>
         )}
-        {resultado.modo === 'emitir' && (resultado.email || resultado.tel) && (
+        {resultado.modo === 'emitir' && resultado.pdfBlob && (resultado.email || resultado.tel) && (
           <button type="button" className="cfg-btn cfg-btn-secondary" onClick={enviar}>Enviar al cliente</button>
         )}
         <a href="/mi-espacio" className="cfg-btn cfg-btn-secondary" style={{ textAlign: 'center', textDecoration: 'none' }}>Ir a Mi Espacio</a>

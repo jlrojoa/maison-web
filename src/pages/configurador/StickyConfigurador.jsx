@@ -343,6 +343,7 @@ export default function StickyConfigurador({ categoriaSlug, categoriaNombre, pro
         precioLookup={cfg.precioLookup}
         onConfirm={cotiz.confirmarCotizacion}
         onClose={cotiz.cerrarCotizModal}
+        edicion={cotiz.edicion}
       />
     </div>
   )

@@ -1,5 +1,5 @@
 // src/pages/Configurador.jsx
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useDistribuidor } from '../contexts/DistribuidorContext'
@@ -8,6 +8,7 @@ import { CategoryIcon } from './CategoryIcons'
 import StickyConfigurador from './configurador/StickyConfigurador'
 import ModularesConfigurador, { TIEMPO_FABRICACION } from './configurador/ModularesConfigurador'
 import ResultadoCotizacion from './configurador/ResultadoCotizacion'
+import { cargarParaEditar, guardarCotizacionSimple } from './configurador/cotizacionEdit'
 import { generarPdfDeCotizacion } from './configurador/cotizacionPdf/pdfActions'
 import './Configurador.css'
 
@@ -124,12 +125,14 @@ export default function Configurador() {
   const [cotizForm, setCotizForm] = useState({ cliente_nombre: '', cliente_email: '', cliente_telefono: '', markup_pct: '0' })
   const [cotizSaving, setCotizSaving] = useState(false)
   const [cotizResultado, setCotizResultado] = useState(null)
+  const [edicion, setEdicion] = useState(null) // { id, modo, status } al venir de Mi Espacio
+  const [prefill, setPrefill] = useState(null)
 
   const puedeGuardar = !!(distribuidor && modeloSel && medidaSel && telaSel && colorSel && precioLookup != null)
 
   const abrirCotizModal = (modo) => {
     if (!puedeGuardar) return
-    setCotizForm({ cliente_nombre: '', cliente_email: '', cliente_telefono: '', markup_pct: '0' })
+    setCotizForm(prefill ?? { cliente_nombre: '', cliente_email: '', cliente_telefono: '', markup_pct: '0' })
     setCotizResultado(null)
     setCotizModo(modo)
   }
@@ -138,34 +141,9 @@ export default function Configurador() {
     if (!cotizForm.cliente_nombre.trim()) return alert('El nombre del cliente es obligatorio.')
     setCotizSaving(true)
     try {
-      const markup = parseFloat(cotizForm.markup_pct) || 0
-      const precioCliente = Math.round(precioLookup * (1 + markup / 100))
-
-      const { data: cot, error: cotErr } = await supabase.from('cotizaciones').insert({
-        distribuidor_email: distribuidor.email,
-        nombre_proyecto: `${modeloSel.nombre} · ${medidaSel.nombre}`,
-        status: 'borrador',
-        total: precioCliente,
-        markup_pct: markup,
-        cliente_nombre: cotizForm.cliente_nombre.trim(),
-        cliente_email: cotizForm.cliente_email.trim() || null,
-        cliente_telefono: cotizForm.cliente_telefono.trim() || null,
-      }).select().single()
-      if (cotErr) throw cotErr
-
-      const { error: itemErr } = await supabase.from('cotizacion_items').insert({
-        cotizacion_id: cot.id,
-        producto_id: modeloSel.id,
-        producto_nombre: modeloSel.nombre,
-        imagen_url: modeloSel.isometrico_url ?? null,
-        configuracion_nombre: medidaSel.nombre,
-        medidas: medidaSel.dimensiones ?? null,
-        textil_nombre: `${telaSel.nombre} (${telaSel.grado}) · ${colorSel.nombre}`,
-        precio_unitario: precioLookup,
-        precio_cliente: precioCliente,
-        cantidad: 1,
+      const { cot, item, precioCliente } = await guardarCotizacionSimple({
+        distribuidor, producto: modeloSel, medidaSel, telaSel, colorSel, precioLookup, form: cotizForm, edicion,
       })
-      if (itemErr) throw itemErr
 
       // El folio (BR-xxxx) ya se asignó solo al insertar (columna con secuencia
       // automática). emitir_cotizacion() solo cambia el estado y fija la vigencia de 15 días.
@@ -177,12 +155,10 @@ export default function Configurador() {
       let pdfBlob = null, pdfNombre = null, pdfError = null
       try {
         const { data: fresca } = await supabase.from('cotizaciones').select('*').eq('id', cot.id).single()
-        const res = await generarPdfDeCotizacion({
-          ...(fresca ?? cot),
-          items: [{ producto_nombre: modeloSel.nombre, configuracion_nombre: medidaSel.nombre, medidas: medidaSel.dimensiones ?? null, textil_nombre: `${telaSel.nombre} (${telaSel.grado}) · ${colorSel.nombre}`, precio_unitario: precioLookup, precio_cliente: precioCliente, cantidad: 1 }],
-        }, TIEMPO_FABRICACION)
+        const res = await generarPdfDeCotizacion({ ...(fresca ?? cot), items: [item] }, TIEMPO_FABRICACION)
         pdfBlob = res.blob; pdfNombre = res.nombre
       } catch (err) { pdfError = err.message }
+      setEdicion({ id: cot.id, modo: 'editar', status: cotizModo === 'emitir' ? 'emitida' : 'borrador' })
       setCotizResultado({
         folio: cot.folio, modo: cotizModo, pdfBlob, pdfNombre, pdfError,
         nombre: cotizForm.cliente_nombre.trim(), email: cotizForm.cliente_email.trim(), tel: cotizForm.cliente_telefono.trim(), precio: precioCliente,
@@ -198,6 +174,33 @@ export default function Configurador() {
   const params = useParams()
   const navigate = useNavigate()
   const [tipoPreloaded, setTipoPreloaded] = useState(false)
+
+  // Mi Espacio → Editar/Duplicar (Mesas/Butacas): ?cotizacion=ID&modo=... trae
+  // además medida/tela/color guardados, que se aplican una vez que cargan las
+  // opciones del modelo.
+  const aplicadoEdicionRef = useRef(false)
+  useEffect(() => {
+    const id = searchParams.get('cotizacion')
+    if (!id || !distribuidor) return
+    let ignore = false
+    cargarParaEditar(id, distribuidor.email, searchParams.get('modo')).then(r => {
+      if (ignore || !r) return
+      setEdicion({ id: r.id, modo: r.modo, status: r.status }); setPrefill(r.form)
+    })
+    return () => { ignore = true }
+  }, [distribuidor?.email])
+  useEffect(() => {
+    if (aplicadoEdicionRef.current || !searchParams.get('cotizacion')) return
+    if (!modeloSel || configuraciones.length === 0 || telas.length === 0) return
+    aplicadoEdicionRef.current = true
+    const medida = configuraciones.find(c => c.nombre === searchParams.get('medida'))
+    if (medida) setMedidaSel(medida)
+    const tela = telas.find(t => t.nombre === searchParams.get('tela'))
+    if (tela) {
+      setGradoSel(tela.grado); setTelaSel(tela)
+      setColorSel(tela.colores.find(c => c.nombre === searchParams.get('color')) ?? null)
+    }
+  }, [modeloSel, configuraciones, telas])
   const [modeloPreloadDone, setModeloPreloadDone] = useState(false)
 
   // Las 4 categorías con el layout nuevo (sticky + pasos colapsables) viven

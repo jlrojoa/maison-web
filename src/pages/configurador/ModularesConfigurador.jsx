@@ -32,7 +32,7 @@ import { fmt } from './format'
 import { ARMADOS_SUGERIDOS } from './modularesPresets'
 import { TIPOS, NOMBRE_POR_TIPO, getAllowedTypes, addToSequence, removeFromSequence, getHintSegments, detectNombreTipo, getDisabledReason } from './modularesSequence'
 import PiezaSVG, { colorsFromHex } from './PiezaSVG'
-import { generarPdfBlob, abrirBlob, descargarBlob } from './cotizacionPdf/pdfActions'
+import { generarPdfBlob, abrirBlob, descargarBlob, compartirPdf } from './cotizacionPdf/pdfActions'
 import { buildCotizacionPdfData } from './cotizacionPdf/pdfData'
 import './ModularesConfigurador.css'
 
@@ -1142,13 +1142,13 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
                       <button type="button" className="cfg-btn cfg-btn-secondary" onClick={() => descargarBlob(cotizResultado.pdfBlob, `cotizacion-${cotizResultado.folio ? 'BR-' + cotizResultado.folio : 'borrador'}.pdf`)}>Descargar PDF</button>
                     </>
                   )}
-                  {cotizResultado.modo === 'emitir' && (cotizResultado.email || cotizResultado.tel) && (
-                    <button type="button" className="cfg-btn cfg-btn-secondary" onClick={() => {
-                      const cuerpo = encodeURIComponent(`Hola ${cotizResultado.nombre},\n\nTe comparto tu cotización BR-${cotizResultado.folio} (${fmt(cotizResultado.precio)}). Te adjunto el PDF.\n\nSaludos.`)
-                      window.open(cotizResultado.email
-                        ? `mailto:${cotizResultado.email}?subject=${encodeURIComponent('Cotización BR-' + cotizResultado.folio)}&body=${cuerpo}`
-                        : `https://wa.me/${cotizResultado.tel.replace(/\D/g, '')}?text=${cuerpo}`, '_blank')
-                    }}>Enviar al cliente</button>
+                  {cotizResultado.modo === 'emitir' && cotizResultado.pdfBlob && (cotizResultado.email || cotizResultado.tel) && (
+                    <button type="button" className="cfg-btn cfg-btn-secondary" onClick={() => compartirPdf({
+                      blob: cotizResultado.pdfBlob, nombre: `cotizacion-BR-${cotizResultado.folio}.pdf`,
+                      asunto: `Cotización BR-${cotizResultado.folio}`,
+                      cuerpo: `Hola ${cotizResultado.nombre},\n\nTe comparto tu cotización BR-${cotizResultado.folio} (${fmt(cotizResultado.precio)}).\n\nSaludos.`,
+                      email: cotizResultado.email, tel: cotizResultado.tel,
+                    })}>Enviar al cliente</button>
                   )}
                   <a href="/mi-espacio" className="cfg-btn cfg-btn-secondary" style={{ textAlign: 'center', textDecoration: 'none' }}>Ir a Mi Espacio</a>
                   <button type="button" className="cfg-btn cfg-btn-secondary" onClick={cerrarCotizModal}>Seguir configurando</button>

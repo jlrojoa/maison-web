@@ -9,7 +9,8 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useDistribuidor } from '../contexts/DistribuidorContext'
 import Nav from '../components/Nav'
-import { generarPdfDeCotizacion, abrirBlob, descargarBlob, abrirPestanaEspera } from './configurador/cotizacionPdf/pdfActions'
+import { generarPdfDeCotizacion, abrirBlob, descargarBlob, abrirPestanaEspera, compartirPdf } from './configurador/cotizacionPdf/pdfActions'
+import { urlParaEditar } from './configurador/cotizacionEdit'
 import { TIEMPO_FABRICACION } from './configurador/ModularesConfigurador'
 
 const fmt = v => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(v)
@@ -73,19 +74,11 @@ export default function MiEspacio() {
   const contar = (key) => key === 'todas' ? cotizaciones.length : cotizaciones.filter(c => estadoDe(c) === key).length
   const visibles = filtro === 'todas' ? cotizaciones : cotizaciones.filter(c => estadoDe(c) === filtro)
 
-  const esModular = (cot) => !!cot.secuencia_pdf?.sequence?.length
   const tienePdf = (cot) => (cot.items?.length ?? 0) > 0
 
-  // Modulares (tiene secuencia_pdf): abre el configurador con la cotización
-  // cargada — `editar` actualiza el borrador, `duplicar` crea una nueva.
-  const irAConfigurar = (cot, modo = 'editar') => {
-    if (esModular(cot)) { navigate(`/configurador/modulares?cotizacion=${cot.id}&modo=${modo}`); return }
-    const item = cot.items?.[0]
-    const tipo = item?.producto?.categoria?.slug
-    const modelo = item?.producto?.slug
-    if (!modelo) { navigate('/configurador'); return }
-    navigate(tipo ? `/configurador?tipo=${tipo}&modelo=${modelo}` : `/configurador?modelo=${modelo}`)
-  }
+  // Abre el configurador con la cotización cargada: `editar` actualiza el
+  // borrador al guardar; `duplicar` arma lo mismo pero crea una nueva.
+  const irAConfigurar = (cot, modo = 'editar') => navigate(urlParaEditar(cot, modo))
 
   const emitir = async (cot) => {
     setBusy(cot.id)
@@ -122,18 +115,26 @@ export default function MiEspacio() {
     }
   }
 
-  const enviar = (cot) => {
+  // Envía con el PDF adjunto (menú de compartir) o, si el dispositivo no
+  // lo permite, descarga el PDF y abre correo/WhatsApp con el texto.
+  const enviar = async (cot) => {
     const item = cot.items?.[0]
-    const asunto = encodeURIComponent(`Cotización ${cot.folio ? 'BR-' + cot.folio : ''} — ${item?.producto_nombre ?? ''}`)
-    const cuerpo = encodeURIComponent(
-      `Hola ${cot.cliente_nombre ?? ''},\n\nAdjunto tu cotización de ${item?.producto_nombre ?? ''} (${item?.configuracion_nombre ?? ''}) en ${item?.textil_nombre ?? ''}.\nPrecio: ${fmt(item?.precio_cliente ?? cot.total)}.\n\nSaludos.`
-    )
-    if (cot.cliente_email) {
-      window.open(`mailto:${cot.cliente_email}?subject=${asunto}&body=${cuerpo}`, '_blank')
-    } else if (cot.cliente_telefono) {
-      window.open(`https://wa.me/${cot.cliente_telefono.replace(/\D/g, '')}?text=${cuerpo}`, '_blank')
-    } else {
+    if (!cot.cliente_email && !cot.cliente_telefono) {
       alert('Esta cotización no tiene email ni teléfono de cliente guardado.')
+      return
+    }
+    setDescargando(cot.id)
+    try {
+      const { blob, nombre } = await generarPdfDeCotizacion(cot, TIEMPO_FABRICACION)
+      await compartirPdf({
+        blob, nombre, email: cot.cliente_email, tel: cot.cliente_telefono,
+        asunto: `Cotización ${cot.folio ? 'BR-' + cot.folio : ''} — ${item?.producto_nombre ?? ''}`,
+        cuerpo: `Hola ${cot.cliente_nombre ?? ''},\n\nTe comparto tu cotización de ${item?.producto_nombre ?? ''} (${item?.configuracion_nombre ?? ''}) en ${item?.textil_nombre ?? ''}.\nPrecio: ${fmt((cot.items?.length ?? 0) > 1 ? cot.total : (item?.precio_cliente ?? cot.total))}.\n\nSaludos.`,
+      })
+    } catch (err) {
+      alert(`No se pudo preparar el envío: ${err.message}`)
+    } finally {
+      setDescargando(null)
     }
   }
 

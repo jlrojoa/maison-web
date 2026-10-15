@@ -4,7 +4,7 @@ import ResultadoCotizacion from './ResultadoCotizacion'
 
 export default function CotizacionModal({
   cotizModo, cotizResultado, cotizForm, setCotizForm, cotizSaving,
-  precioLookup, onConfirm, onClose,
+  precioLookup, onConfirm, onClose, edicion,
 }) {
   if (!cotizModo) return null
 
@@ -16,7 +16,7 @@ export default function CotizacionModal({
         ) : (
           <>
             <h3 className="cfg-modal-title">{cotizModo === 'emitir' ? 'Crear cotización' : 'Guardar borrador'}</h3>
-            <p className="cfg-modal-text">Este documento es el que le compartes a tu cliente final.</p>
+            <p className="cfg-modal-text">Este documento es el que le compartes a tu cliente final.{edicion?.modo === 'editar' && edicion.status === 'borrador' ? ' Estás editando un borrador: al guardar se actualiza.' : ''}</p>
             <label className="cfg-dropdown-label">Nombre del cliente *</label>
             <input className="cfg-dropdown" value={cotizForm.cliente_nombre} onChange={e => setCotizForm(f => ({ ...f, cliente_nombre: e.target.value }))} />
             <label className="cfg-dropdown-label">Email del cliente</label>

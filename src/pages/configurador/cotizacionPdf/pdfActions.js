@@ -47,3 +47,24 @@ export async function generarPdfDeCotizacion(cot, tiempoFabricacion) {
   const data = buildSimplePdfDataFromCotizacion(cot)
   return { blob: await pdf(createElement(CotizacionSimplePdf, { data })).toBlob(), nombre: `cotizacion-${data.folio}.pdf` }
 }
+
+// Envía la cotización con el PDF ADJUNTO cuando el dispositivo lo permite
+// (menú de compartir del sistema: correo, WhatsApp…). En computadoras sin
+// esa función se descarga el PDF y se abre el correo/WhatsApp con el texto,
+// para que la persona solo lo adjunte.
+export async function compartirPdf({ blob, nombre, asunto, cuerpo, email, tel }) {
+  const file = new File([blob], nombre, { type: 'application/pdf' })
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: asunto, text: cuerpo })
+      return 'compartido'
+    } catch (err) {
+      if (err?.name === 'AbortError') return 'cancelado'
+    }
+  }
+  descargarBlob(blob, nombre)
+  const texto = `${cuerpo}\n\n(Adjunta el PDF "${nombre}" que se acaba de descargar.)`
+  if (email) window.open(`mailto:${email}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(texto)}`, '_blank')
+  else if (tel) window.open(`https://wa.me/${tel.replace(/\D/g, '')}?text=${encodeURIComponent(texto)}`, '_blank')
+  return 'descargado'
+}
