@@ -52,6 +52,9 @@ export default function LeadForm() {
           <button type="submit" className="bcot" disabled={status === 'loading'}>
             {status === 'loading' ? 'Enviando…' : 'Enviar Consulta'}
           </button>
+          <p style={{ fontFamily: 'var(--sans)', fontSize: 11, opacity: .65, marginTop: 12 }}>
+            Al enviar tu consulta aceptas el <a href="/aviso-de-privacidad" style={{ color: 'inherit' }}>Aviso de privacidad</a>.
+          </p>
           {status === 'ok' && (
             <p style={{ color: 'var(--gold)', fontFamily: 'var(--sans)', fontSize: 13, marginTop: 12 }}>
               Mensaje recibido. Te contactamos en 24h.
