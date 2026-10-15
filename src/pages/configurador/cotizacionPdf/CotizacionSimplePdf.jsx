@@ -29,33 +29,33 @@ export const s = StyleSheet.create({
   h2: { fontSize: 11.5, fontWeight: 700, marginBottom: 4 },
   h2Rule: { width: 28, borderBottomWidth: 2, borderBottomColor: COLORS.copperLine, marginBottom: 10 },
 
-  clienteBox: { backgroundColor: COLORS.fillNeutro, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 10, marginBottom: 14, flexDirection: 'row', justifyContent: 'space-between' },
+  clienteBox: { backgroundColor: COLORS.fillNeutro, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 10, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between' },
   clienteNombre: { fontSize: 11, fontWeight: 600 },
   clienteSub: { fontSize: 8, color: COLORS.inkMuted, marginTop: 2 },
   clienteLabel: { fontSize: 7, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.8, marginBottom: 3 },
 
-  item: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, marginBottom: 12, overflow: 'hidden' },
+  item: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, marginBottom: 10, overflow: 'hidden' },
   itemTop: { flexDirection: 'row' },
-  fotoBox: { width: 215, height: 175, backgroundColor: COLORS.panelBg, alignItems: 'center', justifyContent: 'center' },
-  foto: { width: 215, height: 175, objectFit: 'contain' },
+  fotoBox: { width: 185, height: 112, backgroundColor: COLORS.panelBg, alignItems: 'center', justifyContent: 'center' },
+  foto: { width: 185, height: 112, objectFit: 'contain' },
   fotoVacia: { fontSize: 7.5, color: COLORS.inkMuted },
-  itemInfo: { flex: 1, padding: 14 },
-  itemNombre: { fontSize: 16, fontWeight: 700 },
+  itemInfo: { flex: 1, padding: 12 },
+  itemNombre: { fontSize: 15, fontWeight: 700 },
   itemConfig: { fontSize: 10.5, color: COLORS.copperText, fontWeight: 600, marginTop: 2 },
   specRow: { flexDirection: 'row', marginTop: 7 },
   specLabel: { width: 70, fontSize: 7, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.6, paddingTop: 1 },
   specValue: { flex: 1, fontSize: 9 },
 
-  telaRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: COLORS.border, padding: 12, backgroundColor: COLORS.fillNeutro },
-  telaImg: { width: 64, height: 64, borderRadius: 6, objectFit: 'cover' },
-  telaSwatch: { width: 64, height: 64, borderRadius: 6, borderWidth: 1, borderColor: COLORS.border },
+  telaRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: COLORS.border, padding: 9, backgroundColor: COLORS.fillNeutro },
+  telaImg: { width: 52, height: 52, borderRadius: 6, objectFit: 'cover' },
+  telaSwatch: { width: 52, height: 52, borderRadius: 6, borderWidth: 1, borderColor: COLORS.border },
   telaInfo: { flex: 1, marginLeft: 12 },
   telaNombre: { fontSize: 10.5, fontWeight: 600 },
   telaSub: { fontSize: 8, color: COLORS.inkMuted, marginTop: 2, lineHeight: 1.4 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 5 },
   chip: { fontSize: 7, color: COLORS.copperText, backgroundColor: COLORS.accentBg, borderRadius: 3, paddingVertical: 2, paddingHorizontal: 5, marginRight: 4, marginBottom: 3 },
 
-  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
+  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
   priceMuted: { fontSize: 8.5, color: COLORS.inkMuted },
   priceBig: { fontSize: 14, fontWeight: 700 },
 
@@ -218,12 +218,7 @@ export default function CotizacionSimplePdf({ data }) {
             <Text style={s.fabText}>{data.tiempoFabricacion}</Text>
           </View>
         ) : null}
-        <Footer folio={data.folio} />
-      </Page>
-
-      <Page size="LETTER" style={s.page}>
-        <Encabezado data={data} />
-        <PasosYTerminos />
+        <View style={{ marginTop: 16 }}><PasosYTerminos /></View>
         <Footer folio={data.folio} />
       </Page>
     </Document>

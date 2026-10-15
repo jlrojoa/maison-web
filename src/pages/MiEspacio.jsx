@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase'
 import { useDistribuidor } from '../contexts/DistribuidorContext'
 import Nav from '../components/Nav'
 import { generarPdfDeCotizacion, abrirBlob, descargarBlob, abrirPestanaEspera, compartirPdf } from './configurador/cotizacionPdf/pdfActions'
+import { useCarrito } from '../lib/cotizacionCarrito'
 import { urlParaEditar } from './configurador/cotizacionEdit'
 import { TIEMPO_FABRICACION } from './configurador/ModularesConfigurador'
 
@@ -33,6 +34,7 @@ export default function MiEspacio() {
   const distribuidor = ctx?.distribuidor ?? null
   const loading = ctx?.loading ?? false
   const navigate = useNavigate()
+  const carrito = useCarrito(distribuidor?.email)
 
   const [cotizaciones, setCotizaciones] = useState([])
   const [cargando, setCargando] = useState(true)
@@ -173,7 +175,10 @@ export default function MiEspacio() {
       <Nav solid />
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '100px 24px 64px' }}>
         <h1 style={{ fontSize: 26, fontWeight: 300, marginBottom: 4 }}>Mi Espacio</h1>
-        <p style={{ fontSize: 13, color: '#64748B', marginBottom: 32 }}>Tus cotizaciones guardadas y emitidas</p>
+        <p style={{ fontSize: 13, color: '#64748B', marginBottom: 20 }}>Tus cotizaciones guardadas y emitidas</p>
+        <button type="button" onClick={() => navigate('/cotizacion')} style={{ ...btnStyle(true), marginBottom: 24, padding: '10px 16px', fontSize: 13 }}>
+          {carrito.lineas.length > 0 ? `Mi cotización en curso (${carrito.lineas.length})` : '+ Nueva cotización'}
+        </button>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
           {FILTROS.map(f => (

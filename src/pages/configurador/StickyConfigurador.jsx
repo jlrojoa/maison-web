@@ -15,10 +15,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useProductoConfig } from './useProductoConfig'
-import { useCotizacion } from './useCotizacion'
+import { useAgregarACotizacion } from './useAgregarACotizacion'
 import StepCard from './StepCard'
 import StickyViewer from './StickyViewer'
-import CotizacionModal from './CotizacionModal'
 import { fmt } from './format'
 import { STEPS_BY_CATEGORY } from './steps'
 import './ConfiguradorSticky.css'
@@ -175,9 +174,9 @@ export default function StickyConfigurador({ categoriaSlug, categoriaNombre, pro
     return () => { ignore = true }
   }, [tieneFamilia, familias, productos])
 
-  const cotiz = useCotizacion({
-    distribuidor, producto: productoActivo, medidaSel: cfg.medidaSel,
-    telaSel: cfg.telaSel, colorSel: cfg.colorSel, precioLookup: cfg.precioLookup,
+  const cotiz = useAgregarACotizacion({
+    distribuidor, categoriaSlug, producto: productoActivo,
+    medidaSel: cfg.medidaSel, telaSel: cfg.telaSel, colorSel: cfg.colorSel, precioLookup: cfg.precioLookup,
   })
 
   if (productos.length === 0) {
@@ -327,24 +326,18 @@ export default function StickyConfigurador({ categoriaSlug, categoriaNombre, pro
               <strong>{cfg.precioLookup != null ? fmt(cfg.precioLookup) : 'No disponible'}</strong>
             </div>
             <div className="cfg2-bar-actions">
-              <button type="button" className="cfg-btn cfg-btn-primary" disabled={!cotiz.puedeGuardar} onClick={() => cotiz.abrirCotizModal('emitir')}>Crear cotización</button>
-              <button type="button" className="cfg-btn cfg-btn-secondary" disabled={!cotiz.puedeGuardar} onClick={() => cotiz.abrirCotizModal('borrador')}>Guardar en mi espacio</button>
+              {cotiz.aviso && <span className="cfg2-bar-msg" role="status">✓ Agregado a tu cotización</span>}
+              {cotiz.editandoLinea ? (
+                <button type="button" className="cfg-btn cfg-btn-primary" disabled={!cotiz.puede} onClick={cotiz.actualizar}>Actualizar en la cotización</button>
+              ) : (
+                <button type="button" className="cfg-btn cfg-btn-primary" disabled={!cotiz.puede} onClick={cotiz.agregar}>Agregar a la cotización</button>
+              )}
+              <button type="button" className="cfg-btn cfg-btn-secondary" onClick={cotiz.verCotizacion}>Ver cotización{cotiz.n > 0 ? ` (${cotiz.n})` : ''}</button>
             </div>
           </>
         )}
       </div>
 
-      <CotizacionModal
-        cotizModo={cotiz.cotizModo}
-        cotizResultado={cotiz.cotizResultado}
-        cotizForm={cotiz.cotizForm}
-        setCotizForm={cotiz.setCotizForm}
-        cotizSaving={cotiz.cotizSaving}
-        precioLookup={cfg.precioLookup}
-        onConfirm={cotiz.confirmarCotizacion}
-        onClose={cotiz.cerrarCotizModal}
-        edicion={cotiz.edicion}
-      />
     </div>
   )
 }

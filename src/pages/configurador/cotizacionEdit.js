@@ -5,43 +5,24 @@
 // tiene su propio flujo (secuencia_pdf) dentro de ModularesConfigurador.
 import { supabase } from '../../lib/supabase'
 
-const STICKY = ['camas', 'sofas', 'escuadras-l', 'chaise-lounge']
-
 export const esModular = (cot) => !!cot.secuencia_pdf?.sequence?.length
 
-// "Cancún (B) · Azul Cielo" -> { tela: 'Cancún', color: 'Azul Cielo' }
-export function parseTextil(textil) {
+// "Cancún (B) · Azul Cielo" -> { tela: 'Cancún', grado: 'B', color: 'Azul Cielo' }
+function parseTextilCompleto(textil) {
   const m = /^(.+) \(([^)]+)\) · (.+)$/.exec(textil ?? '')
-  return m ? { tela: m[1], color: m[3] } : { tela: null, color: null }
+  return m ? { tela: m[1], grado: m[2], color: m[3] } : { tela: textil ?? '', grado: '', color: '' }
 }
 
-// URL del configurador con la cotización cargada. `modo`: 'editar' |
-// 'duplicar'.
+// Dónde editar/duplicar una cotización guardada: Modulares en su
+// configurador (secuencia de piezas); el resto en la "cotización en curso"
+// (varios muebles), que se carga desde la cotización guardada.
 export function urlParaEditar(cot, modo = 'editar') {
   if (esModular(cot)) return `/configurador/modulares?cotizacion=${cot.id}&modo=${modo}`
-  const item = cot.items?.[0]
-  const cat = item?.producto?.categoria?.slug
-  const prod = item?.producto?.slug
-  if (!cat || !prod) return '/configurador'
-  const { tela, color } = parseTextil(item.textil_nombre)
-  const q = new URLSearchParams()
-  if (STICKY.includes(cat)) {
-    if (item.configuracion_nombre) q.set('tamano', item.configuracion_nombre)
-    if (tela) q.set('tela', tela)
-    if (color) q.set('color', color)
-    q.set('cotizacion', cot.id); q.set('modo', modo)
-    return `/configurador/${cat}/${prod}?${q}`
-  }
-  q.set('tipo', cat); q.set('modelo', prod)
-  if (item.configuracion_nombre) q.set('medida', item.configuracion_nombre)
-  if (tela) q.set('tela', tela)
-  if (color) q.set('color', color)
-  q.set('cotizacion', cot.id); q.set('modo', modo)
-  return `/configurador?${q}`
+  return `/cotizacion?cotizacion=${cot.id}&modo=${modo}`
 }
 
-// Datos del cliente/margen de la cotización a editar (para precargar el
-// formulario). Devuelve null si no existe o no es del distribuidor.
+// Datos del cliente/margen de una cotización de Modulares a editar (precarga
+// el formulario). Devuelve null si no existe o no es del distribuidor.
 export async function cargarParaEditar(id, email, modo) {
   const { data: cot } = await supabase.from('cotizaciones').select('*')
     .eq('id', id).eq('distribuidor_email', email).single()
@@ -55,15 +36,52 @@ export async function cargarParaEditar(id, email, modo) {
   }
 }
 
-// Guarda (inserta, o actualiza el borrador que se está editando) una
-// cotización de producto único con su línea. Devuelve la fila de cotizaciones.
-export async function guardarCotizacionSimple({ distribuidor, producto, medidaSel, telaSel, colorSel, precioLookup, form, edicion }) {
+// Carga una cotización guardada (varios muebles) como "cotización en curso".
+export async function cotizacionAlCarrito(id, email, modo) {
+  const { data: cot } = await supabase.from('cotizaciones')
+    .select('*, items:cotizacion_items(*, producto:productos(slug, categoria:categorias(slug)))')
+    .eq('id', id).eq('distribuidor_email', email).single()
+  if (!cot) return null
+  const lineas = (cot.items ?? []).map(it => {
+    const { tela, color, grado } = parseTextilCompleto(it.textil_nombre)
+    return {
+      productoId: it.producto_id, productoSlug: it.producto?.slug ?? null, categoriaSlug: it.producto?.categoria?.slug ?? null,
+      productoNombre: it.producto_nombre, imagenUrl: it.imagen_url, medidaNombre: it.configuracion_nombre,
+      dimensiones: it.medidas, telaNombre: tela, telaGrado: grado, colorNombre: color,
+      precioUnitario: it.precio_unitario, cantidad: it.cantidad ?? 1,
+    }
+  })
+  return {
+    lineas,
+    edicion: { id: cot.id, modo: modo === 'duplicar' ? 'duplicar' : 'editar', status: cot.status, folio: cot.folio },
+    form: {
+      cliente_nombre: cot.cliente_nombre ?? '', cliente_email: cot.cliente_email ?? '',
+      cliente_telefono: cot.cliente_telefono ?? '', markup_pct: String(cot.markup_pct ?? 0),
+    },
+  }
+}
+
+// Guarda (inserta, o actualiza el borrador que se está editando) UNA
+// cotización con todas las líneas de la cotización en curso.
+export async function guardarCotizacionMulti({ distribuidor, lineas, form, edicion }) {
   const markup = parseFloat(form.markup_pct) || 0
-  const precioCliente = Math.round(precioLookup * (1 + markup / 100))
+  const items = lineas.map(l => ({
+    producto_id: l.productoId,
+    imagen_url: l.imagenUrl ?? null,
+    producto_nombre: l.productoNombre,
+    configuracion_nombre: l.medidaNombre,
+    medidas: l.dimensiones ?? null,
+    textil_nombre: `${l.telaNombre} (${l.telaGrado}) · ${l.colorNombre}`,
+    precio_unitario: l.precioUnitario,
+    precio_cliente: Math.round(l.precioUnitario * (1 + markup / 100)),
+    cantidad: l.cantidad,
+  }))
+  const total = items.reduce((sum, it) => sum + it.precio_cliente * it.cantidad, 0)
+  const nombreProyecto = lineas.length === 1
+    ? `${lineas[0].productoNombre} · ${lineas[0].medidaNombre}`
+    : `${lineas.length} muebles: ${[...new Set(lineas.map(l => l.productoNombre))].join(', ')}`.slice(0, 120)
   const campos = {
-    nombre_proyecto: `${producto.nombre} · ${medidaSel.nombre}`,
-    total: precioCliente,
-    markup_pct: markup,
+    nombre_proyecto: nombreProyecto, total, markup_pct: markup,
     cliente_nombre: form.cliente_nombre.trim(),
     cliente_email: form.cliente_email.trim() || null,
     cliente_telefono: form.cliente_telefono.trim() || null,
@@ -82,20 +100,7 @@ export async function guardarCotizacionSimple({ distribuidor, producto, medidaSe
     if (error) throw error
     cot = data
   }
-  const item = {
-    producto_id: producto.id,
-    imagen_url: producto.isometrico_url ?? null,
-    producto_nombre: producto.nombre,
-    configuracion_nombre: medidaSel.nombre,
-    medidas: medidaSel.dimensiones ?? null,
-    textil_nombre: `${telaSel.nombre} (${telaSel.grado}) · ${colorSel.nombre}`,
-    precio_unitario: precioLookup,
-    precio_cliente: precioCliente,
-    cantidad: 1,
-  }
-  const { error: itemErr } = await supabase.from('cotizacion_items').insert({
-    cotizacion_id: cot.id, ...item,
-  })
+  const { error: itemErr } = await supabase.from('cotizacion_items').insert(items.map(it => ({ cotizacion_id: cot.id, ...it })))
   if (itemErr) throw itemErr
-  return { cot, item, precioCliente }
+  return { cot, items, total }
 }
