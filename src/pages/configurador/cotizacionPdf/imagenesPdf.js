@@ -5,6 +5,7 @@
 // (data URL). Si no se puede (sin red, sin CORS, formato raro) devuelve null
 // y el PDF usa un recuadro neutro — nunca falla la generación por una imagen.
 import { supabase } from '../../../lib/supabase'
+import { imagenDePieza } from '../modularesNombre'
 
 const cache = new Map()
 
@@ -68,8 +69,8 @@ export async function fotoPieza(imagenUrl, productoId, nombre) {
   if (!url && productoId && nombre) {
     try {
       const base = nombre.replace(/\s*\(\d+\s*cm\)\s*$/, '')
-      const { data } = await supabase.from('producto_imagenes').select('url').eq('producto_id', productoId).eq('alt', base).limit(1)
-      url = data?.[0]?.url ?? null
+      const { data } = await supabase.from('producto_imagenes').select('url, alt, orden').eq('producto_id', productoId).order('orden')
+      url = imagenDePieza(data ?? [], base)?.url ?? null
     } catch { /* sin foto */ }
   }
   return imagenParaPdf(url, 500)

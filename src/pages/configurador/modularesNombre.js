@@ -28,3 +28,21 @@ export function parseTextil(textil) {
 
 // Cotización guardada que es UN armado de Modulares (tiene la secuencia).
 export const esModular = (cot) => !!cot.secuencia_pdf?.sequence?.length
+
+// Foto de un módulo entre las imágenes de su modelo (producto_imagenes). El
+// `alt` no siempre es exactamente "Módulo Central": en Milan es "Milan Central",
+// "Esquinero Milan", "Puff Milan"… Primero se busca el nombre exacto y, si no
+// hay, el que contenga la palabra clave del módulo (sin tomar las fotos de
+// conjuntos como "Chaise" o "Sofá").
+const CLAVES = { 'brazo izquierdo': 'izquierdo', 'brazo derecho': 'derecho', 'modulo central': 'central', esquinero: 'esquinero', puff: 'puff' }
+const sinAcentos = (t) => (t ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+export function imagenDePieza(imagenes, nombreBase) {
+  const exacta = imagenes.find(i => i.alt === nombreBase)
+  if (exacta) return exacta
+  const clave = CLAVES[sinAcentos(nombreBase)]
+  if (!clave) return null
+  return imagenes.find(i => {
+    const alt = sinAcentos(i.alt)
+    return alt.includes(clave) && !alt.includes('chaise') && !alt.includes('sofa')
+  }) ?? null
+}

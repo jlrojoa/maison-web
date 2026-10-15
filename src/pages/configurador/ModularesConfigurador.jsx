@@ -31,6 +31,7 @@ import { supabase } from '../../lib/supabase'
 import { fmt } from './format'
 import { ARMADOS_SUGERIDOS } from './modularesPresets'
 import { TIPOS, NOMBRE_POR_TIPO, getAllowedTypes, addToSequence, removeFromSequence, getHintSegments, detectNombreTipo, getDisabledReason } from './modularesSequence'
+import { imagenDePieza } from './modularesNombre'
 import PiezaSVG, { colorsFromHex } from './PiezaSVG'
 import { useCarrito, agregarLinea, actualizarLinea } from '../../lib/cotizacionCarrito'
 import './ModularesConfigurador.css'
@@ -265,6 +266,12 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
   const getImagen = (productoId, piezaNombre) =>
     imagenes.find(i => i.producto_id === productoId && i.alt === piezaNombre)?.url ?? null
 
+  // Foto del módulo para la cotización: tolera los nombres propios de cada
+  // modelo (Milan: "Milan Central", "Esquinero Milan"…). Las tarjetas de
+  // arriba siguen usando getImagen (nombre exacto).
+  const getImagenCotizacion = (productoId, piezaNombre) =>
+    imagenDePieza(imagenes.filter(i => i.producto_id === productoId), piezaNombre)?.url ?? null
+
   const getPrecio = (configuracionId, grado) =>
     precios.find(p => p.configuracion_id === configuracionId && p.grado === grado)?.precio ?? null
 
@@ -343,7 +350,7 @@ export default function ModularesConfigurador({ productos, distribuidor, categor
         productoNombre: producto?.nombre ?? '',
         piezaNombre,
         precio: getPrecio(l.configuracionId, gradoSel),
-        imagenUrl: getImagen(l.modeloId, base),
+        imagenUrl: getImagenCotizacion(l.modeloId, base),
       }
     })
   }, [sequence, productos, precios, gradoSel])
