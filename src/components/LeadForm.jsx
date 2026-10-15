@@ -6,6 +6,7 @@ const EMPTY = { nombre: '', email: '', telefono: '', mensaje: '' }
 export default function LeadForm() {
   const [form, setForm] = useState(EMPTY)
   const [status, setStatus] = useState(null)
+  const [acepta, setAcepta] = useState(false)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -18,6 +19,7 @@ export default function LeadForm() {
     } else {
       setStatus('ok')
       setForm(EMPTY)
+      setAcepta(false)
     }
   }
 
@@ -49,12 +51,13 @@ export default function LeadForm() {
             placeholder="Cuéntanos tu proyecto…"
             value={form.mensaje} onChange={e => set('mensaje', e.target.value)}
           />
+          <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontFamily: 'var(--sans)', fontSize: 12, lineHeight: 1.5, margin: '0 0 18px', cursor: 'pointer' }}>
+            <input type="checkbox" required checked={acepta} onChange={e => setAcepta(e.target.checked)} style={{ marginTop: 3 }} />
+            <span>He leído y acepto el <a href="/aviso-de-privacidad" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>Aviso de privacidad</a>.</span>
+          </label>
           <button type="submit" className="bcot" disabled={status === 'loading'}>
             {status === 'loading' ? 'Enviando…' : 'Enviar Consulta'}
           </button>
-          <p style={{ fontFamily: 'var(--sans)', fontSize: 11, opacity: .65, marginTop: 12 }}>
-            Al enviar tu consulta aceptas el <a href="/aviso-de-privacidad" style={{ color: 'inherit' }}>Aviso de privacidad</a>.
-          </p>
           {status === 'ok' && (
             <p style={{ color: 'var(--gold)', fontFamily: 'var(--sans)', fontSize: 13, marginTop: 12 }}>
               Mensaje recibido. Te contactamos en 24h.

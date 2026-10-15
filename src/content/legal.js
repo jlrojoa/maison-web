@@ -20,7 +20,7 @@ export const PRIVACIDAD = {
     ['Con quién los compartimos',
       'No vendemos ni transferimos tus datos a terceros. Para operar el sitio nos apoyamos en proveedores que los tratan por nuestra cuenta, sin usarlos para fines propios: alojamiento del sitio (Vercel), base de datos y autenticación (Supabase) y correo electrónico (Google y Resend).'],
     ['Almacenamiento en tu navegador',
-      'El portal de distribuidores guarda en tu navegador tu sesión y tu cotización en curso para que no la pierdas al recargar. No usamos cookies publicitarias ni herramientas de rastreo.'],
+      'El portal de distribuidores guarda en tu navegador tu sesión y tu cotización en curso para que no la pierdas al recargar. No usamos cookies publicitarias ni herramientas de rastreo. Si en el futuro usamos cookies de medición o publicidad, te pediremos tu consentimiento antes de activarlas y actualizaremos este aviso.'],
     ['Tus derechos (ARCO)',
       `Puedes acceder a tus datos, rectificarlos, cancelarlos u oponerte a su uso, así como revocar tu consentimiento, escribiendo a ${EMPRESA.email} con tu nombre, el derecho que deseas ejercer y una copia de una identificación. Te responderemos en un máximo de 20 días hábiles.`],
     ['Cambios a este aviso',

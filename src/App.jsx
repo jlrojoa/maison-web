@@ -13,6 +13,7 @@ import Configurador from './pages/Configurador'
 import MiEspacio from './pages/MiEspacio'
 import CotizacionEnCurso from './pages/CotizacionEnCurso'
 import Legal from './pages/Legal'
+import AvisoCookies from './components/AvisoCookies'
 import MiEspacioDescargas from './pages/MiEspacioDescargas'
 
 function ScrollToTop() {
@@ -47,6 +48,7 @@ export default function App() {
     <DistribuidorProvider>
       <AdminAuthProvider>
         <ScrollToTop />
+        <AvisoCookies />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/colecciones" element={<Colecciones />} />
