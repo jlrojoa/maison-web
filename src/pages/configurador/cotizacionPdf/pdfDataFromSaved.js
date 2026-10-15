@@ -73,7 +73,7 @@ export function buildCotizacionPdfDataFromCotizacion(cot, tiempoFabricacion) {
   const { catalogo, grado, color } = parseTextilNombre(items[0]?.textil_nombre)
 
   return {
-    folio: `BR-${cot.folio}`,
+    folio: cot.folio ? `BR-${cot.folio}` : 'BORRADOR',
     fecha: cot.emitida_at ? new Date(cot.emitida_at) : new Date(cot.created_at),
     vigenciaDias: 15,
     productoNombre: items[0]?.producto_nombre ?? '',
@@ -91,4 +91,40 @@ export function buildCotizacionPdfDataFromCotizacion(cot, tiempoFabricacion) {
     sequence,
     mirrored,
   }
+}
+
+// Datos para CotizacionSimplePdf (producto único, sin armado por piezas) a
+// partir de una cotización guardada — o de una recién creada con el mismo
+// shape (`items` ya con precio_cliente congelado).
+export function buildSimplePdfDataFromCotizacion(cot) {
+  const items = cot.items ?? []
+  if (items.length === 0) throw new Error('Esta cotización no tiene productos guardados.')
+  const filas = items.map(it => {
+    const precioUnitario = it.precio_cliente ?? it.precio_unitario ?? 0
+    return {
+      producto: it.producto_nombre ?? cot.nombre_proyecto ?? '',
+      configuracion: it.configuracion_nombre ?? '',
+      medidas: it.medidas ?? '',
+      textil: it.textil_nombre ?? '',
+      cantidad: it.cantidad ?? 1,
+      precioUnitario,
+      subtotal: precioUnitario * (it.cantidad ?? 1),
+    }
+  })
+  return {
+    folio: cot.folio ? `BR-${cot.folio}` : 'BORRADOR',
+    fecha: cot.emitida_at ? new Date(cot.emitida_at) : new Date(cot.created_at ?? Date.now()),
+    vigenciaDias: 15,
+    clienteNombre: cot.cliente_nombre ?? '',
+    clienteEmail: cot.cliente_email ?? '',
+    clienteTelefono: cot.cliente_telefono ?? '',
+    filas,
+    total: filas.reduce((sum, f) => sum + f.subtotal, 0),
+  }
+}
+
+// Elige el PDF según el tipo de cotización: Modulares (tiene
+// secuencia_pdf) o producto único.
+export function esModular(cot) {
+  return !!cot.secuencia_pdf?.sequence?.length
 }
