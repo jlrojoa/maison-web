@@ -7,6 +7,7 @@ export default function Distribuidores() {
   const { distribuidor, loading, signIn, signUp } = useDistribuidor()
   const navigate = useNavigate()
   const [mode, setMode] = useState('login') // 'login' | 'signup'
+  const [acepta, setAcepta] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -83,6 +84,16 @@ export default function Distribuidores() {
                   minLength={6}
                 />
               </div>
+
+              {mode === 'signup' && (
+                <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontFamily: 'var(--sans)', fontSize: 12, lineHeight: 1.5, cursor: 'pointer' }}>
+                  <input type="checkbox" required checked={acepta} onChange={e => setAcepta(e.target.checked)} style={{ marginTop: 3 }} />
+                  <span>
+                    He leído y acepto el <a href="/aviso-de-privacidad" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>Aviso de privacidad</a> y
+                    los <a href="/terminos" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>Términos y condiciones</a>.
+                  </span>
+                </label>
+              )}
 
               {error && (
                 <p style={{ fontFamily: 'var(--sans)', fontSize: 12, color: '#c0392b', margin: 0, lineHeight: 1.5 }}>
