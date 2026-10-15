@@ -185,6 +185,9 @@ export default function MiEspacio() {
         <button type="button" onClick={() => navigate('/cotizacion')} style={{ ...btnStyle(true), marginBottom: 24, padding: '10px 16px', fontSize: 13 }}>
           {carrito.lineas.length > 0 ? `Mi cotización en curso (${carrito.lineas.length})` : '+ Nueva cotización'}
         </button>
+        <button type="button" onClick={() => navigate('/mi-espacio/perfil')} style={{ ...btnStyle(false), marginBottom: 24, marginLeft: 8, padding: '10px 16px', fontSize: 13 }}>
+          Mis datos y logo
+        </button>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
           {FILTROS.map(f => (
