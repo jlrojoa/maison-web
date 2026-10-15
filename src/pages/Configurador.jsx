@@ -6,7 +6,9 @@ import { useDistribuidor } from '../contexts/DistribuidorContext'
 import Nav from '../components/Nav'
 import { CategoryIcon } from './CategoryIcons'
 import StickyConfigurador from './configurador/StickyConfigurador'
-import ModularesConfigurador from './configurador/ModularesConfigurador'
+import ModularesConfigurador, { TIEMPO_FABRICACION } from './configurador/ModularesConfigurador'
+import ResultadoCotizacion from './configurador/ResultadoCotizacion'
+import { generarPdfDeCotizacion } from './configurador/cotizacionPdf/pdfActions'
 import './Configurador.css'
 
 const GRADOS = ['AA', 'A', 'B', 'C']
@@ -172,7 +174,19 @@ export default function Configurador() {
         if (emitErr) throw emitErr
       }
 
-      setCotizResultado({ folio: cot.folio, modo: cotizModo })
+      let pdfBlob = null, pdfNombre = null, pdfError = null
+      try {
+        const { data: fresca } = await supabase.from('cotizaciones').select('*').eq('id', cot.id).single()
+        const res = await generarPdfDeCotizacion({
+          ...(fresca ?? cot),
+          items: [{ producto_nombre: modeloSel.nombre, configuracion_nombre: medidaSel.nombre, medidas: medidaSel.dimensiones ?? null, textil_nombre: `${telaSel.nombre} (${telaSel.grado}) · ${colorSel.nombre}`, precio_unitario: precioLookup, precio_cliente: precioCliente, cantidad: 1 }],
+        }, TIEMPO_FABRICACION)
+        pdfBlob = res.blob; pdfNombre = res.nombre
+      } catch (err) { pdfError = err.message }
+      setCotizResultado({
+        folio: cot.folio, modo: cotizModo, pdfBlob, pdfNombre, pdfError,
+        nombre: cotizForm.cliente_nombre.trim(), email: cotizForm.cliente_email.trim(), tel: cotizForm.cliente_telefono.trim(), precio: precioCliente,
+      })
     } catch (err) {
       alert(`Error al guardar la cotización: ${err.message}`)
     } finally {
@@ -537,20 +551,7 @@ export default function Configurador() {
         <div className="cfg-modal-overlay" onClick={e => { if (e.target === e.currentTarget && !cotizSaving) setCotizModo(null) }}>
           <div className="cfg-modal-box">
             {cotizResultado ? (
-              <>
-                <h3 className="cfg-modal-title">
-                  {cotizResultado.modo === 'emitir' ? '¡Cotización emitida!' : 'Guardada en Mi Espacio'}
-                </h3>
-                <p className="cfg-modal-text">
-                  {cotizResultado.folio
-                    ? <>Folio <b>BR-{cotizResultado.folio}</b>. Vigente 15 días. Puedes verla, descargarla y compartirla desde Mi Espacio.</>
-                    : <>Quedó guardada como borrador. Termínala y emítela cuando quieras desde Mi Espacio.</>}
-                </p>
-                <div className="cfg-buttons">
-                  <a href="/mi-espacio" className="cfg-btn cfg-btn-primary" style={{ textAlign: 'center', textDecoration: 'none' }}>Ir a Mi Espacio</a>
-                  <button type="button" className="cfg-btn cfg-btn-secondary" onClick={() => setCotizModo(null)}>Seguir configurando</button>
-                </div>
-              </>
+              <ResultadoCotizacion resultado={cotizResultado} onClose={() => setCotizModo(null)} />
             ) : (
               <>
                 <h3 className="cfg-modal-title">{cotizModo === 'emitir' ? 'Crear cotización' : 'Guardar borrador'}</h3>

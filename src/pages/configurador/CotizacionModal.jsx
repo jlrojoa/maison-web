@@ -1,5 +1,6 @@
 // src/pages/configurador/CotizacionModal.jsx
 import { fmt } from './format'
+import ResultadoCotizacion from './ResultadoCotizacion'
 
 export default function CotizacionModal({
   cotizModo, cotizResultado, cotizForm, setCotizForm, cotizSaving,
@@ -11,20 +12,7 @@ export default function CotizacionModal({
     <div className="cfg-modal-overlay" onClick={e => { if (e.target === e.currentTarget && !cotizSaving) onClose() }}>
       <div className="cfg-modal-box">
         {cotizResultado ? (
-          <>
-            <h3 className="cfg-modal-title">
-              {cotizResultado.modo === 'emitir' ? '¡Cotización emitida!' : 'Guardada en Mi Espacio'}
-            </h3>
-            <p className="cfg-modal-text">
-              {cotizResultado.folio
-                ? <>Folio <b>BR-{cotizResultado.folio}</b>. Vigente 15 días. Puedes verla, descargarla y compartirla desde Mi Espacio.</>
-                : <>Quedó guardada como borrador. Termínala y emítela cuando quieras desde Mi Espacio.</>}
-            </p>
-            <div className="cfg-buttons">
-              <a href="/mi-espacio" className="cfg-btn cfg-btn-primary" style={{ textAlign: 'center', textDecoration: 'none' }}>Ir a Mi Espacio</a>
-              <button type="button" className="cfg-btn cfg-btn-secondary" onClick={onClose}>Seguir configurando</button>
-            </div>
-          </>
+          <ResultadoCotizacion resultado={cotizResultado} onClose={onClose} />
         ) : (
           <>
             <h3 className="cfg-modal-title">{cotizModo === 'emitir' ? 'Crear cotización' : 'Guardar borrador'}</h3>

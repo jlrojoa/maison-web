@@ -9,8 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useDistribuidor } from '../contexts/DistribuidorContext'
 import Nav from '../components/Nav'
-import { generarPdfBlob, abrirBlob, descargarBlob, abrirPestanaEspera } from './configurador/cotizacionPdf/pdfActions'
-import { buildCotizacionPdfDataFromCotizacion } from './configurador/cotizacionPdf/pdfDataFromSaved'
+import { generarPdfDeCotizacion, abrirBlob, descargarBlob, abrirPestanaEspera } from './configurador/cotizacionPdf/pdfActions'
 import { TIEMPO_FABRICACION } from './configurador/ModularesConfigurador'
 
 const fmt = v => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(v)
@@ -74,12 +73,13 @@ export default function MiEspacio() {
   const contar = (key) => key === 'todas' ? cotizaciones.length : cotizaciones.filter(c => estadoDe(c) === key).length
   const visibles = filtro === 'todas' ? cotizaciones : cotizaciones.filter(c => estadoDe(c) === filtro)
 
-  const tienePdf = (cot) => !!cot.secuencia_pdf?.sequence?.length
+  const esModular = (cot) => !!cot.secuencia_pdf?.sequence?.length
+  const tienePdf = (cot) => (cot.items?.length ?? 0) > 0
 
   // Modulares (tiene secuencia_pdf): abre el configurador con la cotización
   // cargada — `editar` actualiza el borrador, `duplicar` crea una nueva.
   const irAConfigurar = (cot, modo = 'editar') => {
-    if (tienePdf(cot)) { navigate(`/configurador/modulares?cotizacion=${cot.id}&modo=${modo}`); return }
+    if (esModular(cot)) { navigate(`/configurador/modulares?cotizacion=${cot.id}&modo=${modo}`); return }
     const item = cot.items?.[0]
     const tipo = item?.producto?.categoria?.slug
     const modelo = item?.producto?.slug
@@ -100,8 +100,8 @@ export default function MiEspacio() {
       await load()
       setEmitida(fresca ?? cot)
       if (fresca && tienePdf(fresca)) {
-        const data = buildCotizacionPdfDataFromCotizacion(fresca, TIEMPO_FABRICACION)
-        abrirBlob(await generarPdfBlob(data), win)
+        const { blob } = await generarPdfDeCotizacion(fresca, TIEMPO_FABRICACION)
+        abrirBlob(blob, win)
       }
     } catch (err) {
       win?.close()
@@ -150,10 +150,9 @@ export default function MiEspacio() {
     // La pestaña se abre en el clic (antes del await) para no ser bloqueada.
     const win = accion === 'ver' ? abrirPestanaEspera() : null
     try {
-      const data = buildCotizacionPdfDataFromCotizacion(cot, TIEMPO_FABRICACION)
-      const blob = await generarPdfBlob(data)
+      const { blob, nombre } = await generarPdfDeCotizacion(cot, TIEMPO_FABRICACION)
       if (accion === 'ver') abrirBlob(blob, win)
-      else descargarBlob(blob, `cotizacion-${data.folio}.pdf`)
+      else descargarBlob(blob, nombre)
     } catch (err) {
       win?.close()
       alert(`No se pudo generar el PDF: ${err.message}`)

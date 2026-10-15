@@ -6,6 +6,8 @@
 // (emitir_cotizacion). Sin cambios de comportamiento, solo de ubicacion.
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { generarPdfDeCotizacion } from './cotizacionPdf/pdfActions'
+import { TIEMPO_FABRICACION } from './ModularesConfigurador'
 
 export function useCotizacion({ distribuidor, producto, medidaSel, telaSel, colorSel, precioLookup }) {
   const [cotizModo, setCotizModo] = useState(null) // null | 'borrador' | 'emitir'
@@ -62,7 +64,21 @@ export function useCotizacion({ distribuidor, producto, medidaSel, telaSel, colo
         if (emitErr) throw emitErr
       }
 
-      setCotizResultado({ folio: cot.folio, modo: cotizModo })
+      // PDF (producto único) con los mismos datos que se acaban de guardar;
+      // si falla, la cotización ya quedó guardada y solo se avisa.
+      let pdfBlob = null, pdfNombre = null, pdfError = null
+      try {
+        const { data: fresca } = await supabase.from('cotizaciones').select('*').eq('id', cot.id).single()
+        const res = await generarPdfDeCotizacion({
+          ...(fresca ?? cot),
+          items: [{ producto_nombre: producto.nombre, configuracion_nombre: medidaSel.nombre, medidas: medidaSel.dimensiones ?? null, textil_nombre: `${telaSel.nombre} (${telaSel.grado}) · ${colorSel.nombre}`, precio_unitario: precioLookup, precio_cliente: precioCliente, cantidad: 1 }],
+        }, TIEMPO_FABRICACION)
+        pdfBlob = res.blob; pdfNombre = res.nombre
+      } catch (err) { pdfError = err.message }
+      setCotizResultado({
+        folio: cot.folio, modo: cotizModo, pdfBlob, pdfNombre, pdfError,
+        nombre: cotizForm.cliente_nombre.trim(), email: cotizForm.cliente_email.trim(), tel: cotizForm.cliente_telefono.trim(), precio: precioCliente,
+      })
     } catch (err) {
       alert(`Error al guardar la cotización: ${err.message}`)
     } finally {
