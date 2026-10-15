@@ -9,6 +9,8 @@ import { registrarFuentesPdf } from './pdfFonts'
 import { EMPRESA } from './empresa'
 import DetallePagePdf from './DetallePagePdf'
 import PlanoPagePdf from './PlanoPagePdf'
+import { Page } from '@react-pdf/renderer'
+import { Encabezado, PasosYTerminos, Footer, s as sp } from './CotizacionSimplePdf'
 
 registrarFuentesPdf()
 
@@ -17,6 +19,11 @@ export default function ModularesCotizacionPdf({ data }) {
     <Document title={`Cotización ${data.folio} · Brendell Modular`}>
       <DetallePagePdf data={data} empresa={EMPRESA} />
       <PlanoPagePdf data={data} empresa={EMPRESA} />
+      <Page size="LETTER" style={sp.page}>
+        <Encabezado data={data} titulo="BRENDELL MODULAR" />
+        <PasosYTerminos />
+        <Footer folio={data.folio} />
+      </Page>
     </Document>
   )
 }

@@ -96,7 +96,7 @@ export function buildCotizacionPdfDataFromCotizacion(cot, tiempoFabricacion) {
 // Datos para CotizacionSimplePdf (producto único, sin armado por piezas) a
 // partir de una cotización guardada — o de una recién creada con el mismo
 // shape (`items` ya con precio_cliente congelado).
-export function buildSimplePdfDataFromCotizacion(cot) {
+export function buildSimplePdfDataFromCotizacion(cot, tiempoFabricacion) {
   const items = cot.items ?? []
   if (items.length === 0) throw new Error('Esta cotización no tiene productos guardados.')
   const filas = items.map(it => {
@@ -105,7 +105,11 @@ export function buildSimplePdfDataFromCotizacion(cot) {
       producto: it.producto_nombre ?? cot.nombre_proyecto ?? '',
       configuracion: it.configuracion_nombre ?? '',
       medidas: it.medidas ?? '',
-      textil: it.textil_nombre ?? '',
+      textilCatalogo: parseTextilNombre(it.textil_nombre).catalogo,
+      textilGrado: parseTextilNombre(it.textil_nombre).grado,
+      textilColor: parseTextilNombre(it.textil_nombre).color,
+      imagenUrl: it.imagen_url ?? null,
+      productoId: it.producto_id ?? null,
       cantidad: it.cantidad ?? 1,
       precioUnitario,
       subtotal: precioUnitario * (it.cantidad ?? 1),
@@ -118,6 +122,7 @@ export function buildSimplePdfDataFromCotizacion(cot) {
     clienteNombre: cot.cliente_nombre ?? '',
     clienteEmail: cot.cliente_email ?? '',
     clienteTelefono: cot.cliente_telefono ?? '',
+    tiempoFabricacion,
     filas,
     total: filas.reduce((sum, f) => sum + f.subtotal, 0),
   }
