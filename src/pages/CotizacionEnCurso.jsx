@@ -90,6 +90,31 @@ export default function CotizacionEnCurso() {
     nombre_comercial: distribuidor?.nombre_comercial || distribuidor?.empresa || distribuidor?.nombre || '',
     telefono: distribuidor?.telefono || '', direccion: distribuidor?.direccion || '', condiciones: distribuidor?.condiciones_venta || '',
   }
+  const [subiendoLogo, setSubiendoLogo] = useState(false)
+  const subirLogo = async (file) => {
+    if (!file) return
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return alert('El logo debe ser PNG, JPG o WEBP.')
+    if (file.size > 1024 * 1024) return alert('El logo pesa más de 1 MB. Usa una versión más ligera.')
+    setSubiendoLogo(true)
+    try {
+      const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'
+      const ruta = `${email}/logo-${Date.now()}.${ext}`
+      const { error } = await supabase.storage.from('logos-distribuidores').upload(ruta, file, { contentType: file.type, upsert: true })
+      if (error) throw error
+      const { data } = supabase.storage.from('logos-distribuidores').getPublicUrl(ruta)
+      const { error: rpcErr } = await supabase.rpc('actualizar_mi_logo', { p_logo_url: data.publicUrl })
+      if (rpcErr) throw rpcErr
+      await ctx?.refrescar?.()
+    } catch (err) { alert(`No se pudo subir el logo: ${err.message}`) } finally { setSubiendoLogo(false) }
+  }
+  const quitarLogo = async () => {
+    setSubiendoLogo(true)
+    try {
+      const { error } = await supabase.rpc('actualizar_mi_logo', { p_logo_url: '' })
+      if (error) throw error
+      await ctx?.refrescar?.()
+    } catch (err) { alert(`No se pudo quitar el logo: ${err.message}`) } finally { setSubiendoLogo(false) }
+  }
   const cambiarPerfil = (campo, valor) => setPerfil({ ...perfilActual, [campo]: valor })
 
   useEffect(() => {
@@ -288,9 +313,17 @@ export default function CotizacionEnCurso() {
                 <input style={input} value={perfilActual.direccion} onChange={e => cambiarPerfil('direccion', e.target.value)} maxLength={300} />
                 <label style={label}>Condiciones de venta (opcional; si lo dejas vacío salen los términos estándar)</label>
                 <textarea style={{ ...input, minHeight: 70, fontFamily: 'inherit' }} value={perfilActual.condiciones} onChange={e => cambiarPerfil('condiciones', e.target.value)} maxLength={2000} />
-                <div style={{ fontSize: 11, color: '#64748B', marginTop: 6 }}>
-                  {distribuidor?.logo_url ? 'Se usará tu logo registrado.' : 'Para que salga tu logo, envíalo a info@brendell.mx.'} Estos datos se guardan para tus próximas cotizaciones.
+                <label style={label}>Tu logo (PNG, JPG o WEBP, máx. 1 MB)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  {distribuidor?.logo_url && <img src={distribuidor.logo_url} alt="Tu logo" style={{ height: 40, maxWidth: 120, objectFit: 'contain', border: '1px solid #E2E8F0', borderRadius: 4, padding: 4, background: '#fff' }} />}
+                  <label style={{ ...btn(), fontSize: 12, opacity: subiendoLogo ? 0.6 : 1 }}>
+                    {subiendoLogo ? 'Subiendo…' : distribuidor?.logo_url ? 'Cambiar logo' : 'Subir logo'}
+                    <input type="file" accept="image/png,image/jpeg,image/webp" disabled={subiendoLogo} style={{ display: 'none' }}
+                      onChange={e => { subirLogo(e.target.files?.[0]); e.target.value = '' }} />
+                  </label>
+                  {distribuidor?.logo_url && <button type="button" disabled={subiendoLogo} onClick={quitarLogo} style={{ ...btn(), fontSize: 12 }}>Quitar</button>}
                 </div>
+                <div style={{ fontSize: 11, color: '#64748B', marginTop: 6 }}>Los demás datos se guardan para tus próximas cotizaciones.</div>
               </>
             )}
             <label style={label}>Tu margen (%)</label>
