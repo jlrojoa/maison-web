@@ -22,9 +22,7 @@ export default function Footer() {
           <p className="fct">Empresa</p>
           <ul className="fll">
             <li><a href="#" onClick={e => e.preventDefault()}>Nosotros</a></li>
-            <li><a href="#" onClick={e => e.preventDefault()}>Showroom</a></li>
             <li><a href="/distribuidores" onClick={e => { e.preventDefault(); navigate('/distribuidores') }}>Distribuidores</a></li>
-            <li><a href="#" onClick={e => e.preventDefault()}>Prensa</a></li>
           </ul>
         </div>
         <div>
