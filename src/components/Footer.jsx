@@ -12,19 +12,17 @@ export default function Footer() {
         <div>
           <p className="fct">Colecciones</p>
           <ul className="fll">
-            <li><a href="#" onClick={e => e.preventDefault()}>Sofás Modulares</a></li>
-            <li><a href="#" onClick={e => e.preventDefault()}>Camas Tapizadas</a></li>
-            <li><a href="#" onClick={e => e.preventDefault()}>Butacas</a></li>
-            <li><a href="#" onClick={e => e.preventDefault()}>Sillones</a></li>
+            <li><a href="/colecciones" onClick={e => { e.preventDefault(); navigate('/colecciones') }}>Sofás Modulares</a></li>
+            <li><a href="/colecciones" onClick={e => { e.preventDefault(); navigate('/colecciones') }}>Camas Tapizadas</a></li>
+            <li><a href="/colecciones" onClick={e => { e.preventDefault(); navigate('/colecciones') }}>Butacas</a></li>
+            <li><a href="/colecciones" onClick={e => { e.preventDefault(); navigate('/colecciones') }}>Sillones</a></li>
           </ul>
         </div>
         <div>
           <p className="fct">Empresa</p>
           <ul className="fll">
             <li><a href="#" onClick={e => e.preventDefault()}>Nosotros</a></li>
-            <li><a href="#" onClick={e => e.preventDefault()}>Showroom</a></li>
             <li><a href="/distribuidores" onClick={e => { e.preventDefault(); navigate('/distribuidores') }}>Distribuidores</a></li>
-            <li><a href="#" onClick={e => e.preventDefault()}>Prensa</a></li>
           </ul>
         </div>
         <div>
@@ -38,8 +36,10 @@ export default function Footer() {
         </div>
       </div>
       <div className="fb">
-        <p className="fc">© 2025 Brendell Alta Tapicería. Todos los derechos reservados.</p>
+        <p className="fc">© {new Date().getFullYear()} Brendell Alta Tapicería. Todos los derechos reservados.</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          <a href="/aviso-de-privacidad" onClick={e => { e.preventDefault(); navigate('/aviso-de-privacidad') }} className="fc" style={{ textDecoration: 'none' }}>Aviso de privacidad</a>
+          <a href="/terminos" onClick={e => { e.preventDefault(); navigate('/terminos') }} className="fc" style={{ textDecoration: 'none' }}>Términos y condiciones</a>
           <p className="fc">Diseñado y fabricado en México.</p>
           <a
             href="/admin/login"

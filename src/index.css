@@ -164,7 +164,7 @@ footer{background:var(--ink);padding:68px 52px 38px}
 .fll a{font-family:var(--sans);font-size:12px;font-weight:300;color:rgba(255,255,255,.36);text-decoration:none;transition:color .3s}
 .fll a:hover{color:var(--gold-l)}
 .fb{display:flex;justify-content:space-between}
-.fc{font-family:var(--sans);font-size:11px;font-weight:300;color:rgba(255,255,255,.17)}
+.fc{font-family:var(--sans);font-size:11px;font-weight:300;color:rgba(255,255,255,.6)}
 
 /* PRODUCT PAGE */
 #pp{display:none}

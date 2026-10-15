@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /mi-espacio
+Disallow: /cotizacion
+Disallow: /api/
+
+Sitemap: https://brendell.mx/sitemap.xml
