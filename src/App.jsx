@@ -14,6 +14,7 @@ import MiEspacio from './pages/MiEspacio'
 import CotizacionEnCurso from './pages/CotizacionEnCurso'
 import Legal from './pages/Legal'
 import AvisoCookies from './components/AvisoCookies'
+import MiPerfil from './pages/MiPerfil'
 import MiEspacioDescargas from './pages/MiEspacioDescargas'
 
 function ScrollToTop() {
@@ -64,6 +65,7 @@ export default function App() {
           <Route path="/cotizacion" element={<CotizacionEnCurso />} />
           <Route path="/aviso-de-privacidad" element={<Legal tipo="privacidad" />} />
           <Route path="/terminos" element={<Legal tipo="terminos" />} />
+          <Route path="/mi-espacio/perfil" element={<MiPerfil />} />
           <Route path="/mi-espacio/descargas" element={<MiEspacioDescargas />} />
           <Route path="/admin/login" element={<Suspense fallback={<AdminFallback />}><AdminLogin /></Suspense>} />
           <Route

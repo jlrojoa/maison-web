@@ -84,13 +84,6 @@ export default function CotizacionEnCurso() {
   const [avisoPrecios, setAvisoPrecios] = useState([])
   const muestras = useMuestrasTela(lineas)
   const cargadaRef = useRef(false)
-  // "Tus datos" para el PDF con la marca del distribuidor (se guardan en su perfil al cotizar).
-  const [perfil, setPerfil] = useState(null)
-  const perfilActual = perfil ?? {
-    nombre_comercial: distribuidor?.nombre_comercial || distribuidor?.empresa || distribuidor?.nombre || '',
-    telefono: distribuidor?.telefono || '', direccion: distribuidor?.direccion || '', condiciones: distribuidor?.condiciones_venta || '',
-  }
-  const cambiarPerfil = (campo, valor) => setPerfil({ ...perfilActual, [campo]: valor })
 
   useEffect(() => {
     if (!loading && !distribuidor) navigate('/distribuidores', { replace: true })
@@ -137,17 +130,9 @@ export default function CotizacionEnCurso() {
   const guardar = async (modo) => {
     if (lineas.length === 0) return
     if (form.con_marca && !form.cliente_nombre.trim()) return alert('Para cotizar a tu cliente con tus datos, escribe el nombre del cliente.')
-    if (form.con_marca && !perfilActual.nombre_comercial.trim()) return alert('Escribe el nombre de tu negocio: aparecerá en el PDF.')
+    if (form.con_marca && !(distribuidor?.nombre_comercial || '').trim()) return alert('Primero guarda tus datos (nombre de tu negocio) en "Editar mis datos".')
     setGuardando(modo)
     try {
-      if (form.con_marca) {
-        const { error: perfilErr } = await supabase.rpc('actualizar_mi_perfil', {
-          p_nombre_comercial: perfilActual.nombre_comercial, p_telefono: perfilActual.telefono,
-          p_direccion: perfilActual.direccion, p_condiciones: perfilActual.condiciones,
-        })
-        if (perfilErr) throw perfilErr
-        await ctx?.refrescar?.()
-      }
       const vigentes = await aplicarPrecios(lineas)
       const { cot, items, total } = await guardarCotizacionMulti({ distribuidor, lineas: vigentes, form, edicion })
       // Si algo falla de aquí en adelante, reintentar actualiza este mismo borrador (no crea otro).
@@ -160,7 +145,7 @@ export default function CotizacionEnCurso() {
       try {
         const { data: fresca } = await supabase.from('cotizaciones').select('*').eq('id', cot.id).single()
         folio = fresca?.folio ?? folio
-        const r = await generarPdfDeCotizacion({ ...(fresca ?? cot), items }, TIEMPO_FABRICACION, form.con_marca ? { ...distribuidor, nombre_comercial: perfilActual.nombre_comercial.trim(), telefono: perfilActual.telefono.trim(), direccion: perfilActual.direccion.trim(), condiciones_venta: perfilActual.condiciones.trim() } : null)
+        const r = await generarPdfDeCotizacion({ ...(fresca ?? cot), items }, TIEMPO_FABRICACION, distribuidor)
         pdfBlob = r.blob; pdfNombre = r.nombre
       } catch (err) { pdfError = err.message }
       setResultado({
@@ -278,20 +263,21 @@ export default function CotizacionEnCurso() {
             <label style={label}>Teléfono del cliente</label>
             <input style={input} value={form.cliente_telefono} onChange={e => cambiarForm('cliente_telefono', e.target.value)} />
             {form.con_marca && (
-              <>
-                <div style={{ fontSize: 14, fontWeight: 600, margin: '18px 0 4px' }}>Tus datos en el PDF</div>
-                <label style={label}>Nombre de tu negocio *</label>
-                <input style={input} value={perfilActual.nombre_comercial} onChange={e => cambiarPerfil('nombre_comercial', e.target.value)} maxLength={120} />
-                <label style={label}>Teléfono / WhatsApp</label>
-                <input style={input} value={perfilActual.telefono} onChange={e => cambiarPerfil('telefono', e.target.value)} maxLength={40} />
-                <label style={label}>Dirección</label>
-                <input style={input} value={perfilActual.direccion} onChange={e => cambiarPerfil('direccion', e.target.value)} maxLength={300} />
-                <label style={label}>Condiciones de venta (opcional; si lo dejas vacío salen los términos estándar)</label>
-                <textarea style={{ ...input, minHeight: 70, fontFamily: 'inherit' }} value={perfilActual.condiciones} onChange={e => cambiarPerfil('condiciones', e.target.value)} maxLength={2000} />
-                <div style={{ fontSize: 11, color: '#64748B', marginTop: 6 }}>
-                  {distribuidor?.logo_url ? 'Se usará tu logo registrado.' : 'Para que salga tu logo, envíalo a info@brendell.mx.'} Estos datos se guardan para tus próximas cotizaciones.
-                </div>
-              </>
+              <div style={{ marginTop: 16, padding: 12, border: '1px solid #E2E8F0', borderRadius: 6, background: '#F8FAFC' }}>
+                <div style={{ fontSize: 11, color: '#64748B', marginBottom: 6 }}>El PDF saldrá con tus datos guardados</div>
+                {distribuidor?.nombre_comercial ? (
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    {distribuidor.logo_url && <img src={distribuidor.logo_url} alt="Tu logo" style={{ height: 36, maxWidth: 90, objectFit: 'contain' }} />}
+                    <div style={{ fontSize: 13 }}>
+                      <b>{distribuidor.nombre_comercial}</b>
+                      <div style={{ fontSize: 11.5, color: '#64748B' }}>{[distribuidor.telefono, distribuidor.direccion].filter(Boolean).join(' · ') || 'Sin teléfono ni dirección'}</div>
+                    </div>
+                  </div>
+                ) : <div style={{ fontSize: 13, color: '#92400E' }}>Aún no guardas tus datos.</div>}
+                <button type="button" onClick={() => navigate('/mi-espacio/perfil')} style={{ ...btn(), fontSize: 12, marginTop: 10 }}>
+                  {distribuidor?.nombre_comercial ? 'Editar mis datos y logo' : 'Guardar mis datos y logo'}
+                </button>
+              </div>
             )}
             <label style={label}>Tu margen (%)</label>
             <input style={input} type="number" min="0" max="500" inputMode="decimal" value={form.markup_pct} onChange={e => cambiarForm('markup_pct', e.target.value)} />
