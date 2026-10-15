@@ -28,11 +28,14 @@ const s = StyleSheet.create({
 
   table: { borderRadius: 6, overflow: 'hidden' },
   tHeadRow: { flexDirection: 'row', backgroundColor: COLORS.fillNeutro, paddingVertical: 6, paddingHorizontal: 8 },
-  tRow: { flexDirection: 'row', paddingVertical: 7, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  tRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   tHeadCell: { fontSize: 7, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.5 },
   tCell: { fontSize: 8.5 },
   tCellBold: { fontSize: 8.5, fontWeight: 700 },
   colPieza: { flex: 2.6 },
+  piezaCell: { flex: 2.6, flexDirection: 'row', alignItems: 'center' },
+  piezaThumb: { width: 38, height: 32, borderRadius: 3, marginRight: 8, objectFit: 'contain', backgroundColor: COLORS.panelBg },
+  piezaThumbVacia: { width: 38, height: 32, borderRadius: 3, marginRight: 8, backgroundColor: COLORS.panelBg },
   colNum: { flex: 1, textAlign: 'right' },
 
   cards: { flexDirection: 'row', gap: 10, marginTop: 16 },
@@ -104,7 +107,10 @@ export default function DetallePagePdf({ data, empresa }) {
         </View>
         {data.filas.map((f, i) => (
           <View key={i} style={s.tRow}>
-            <Text style={[s.tCell, s.colPieza]}>{f.nombre}</Text>
+            <View style={s.piezaCell}>
+              {f.foto ? <Image src={f.foto.src} style={s.piezaThumb} /> : <View style={s.piezaThumbVacia} />}
+              <Text style={s.tCell}>{f.nombre}</Text>
+            </View>
             <Text style={[s.tCell, s.colNum]}>{f.cantidad}</Text>
             <Text style={[s.tCell, s.colNum]}>{f.anchoCm} cm</Text>
             <Text style={[s.tCell, s.colNum]}>{f.profundidadCm} cm</Text>

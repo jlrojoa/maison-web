@@ -59,3 +59,18 @@ export async function fotoProducto(imagenUrl, productoId) {
   }
   return imagenParaPdf(url, 1000)
 }
+
+// Foto de UN módulo (Brazo, Módulo Central, Esquinero, Puff…): la guardada en
+// la cotización o, si no hay, la del catálogo (producto_imagenes cuyo `alt` es
+// el nombre del módulo).
+export async function fotoPieza(imagenUrl, productoId, nombre) {
+  let url = imagenUrl
+  if (!url && productoId && nombre) {
+    try {
+      const base = nombre.replace(/\s*\(\d+\s*cm\)\s*$/, '')
+      const { data } = await supabase.from('producto_imagenes').select('url').eq('producto_id', productoId).eq('alt', base).limit(1)
+      url = data?.[0]?.url ?? null
+    } catch { /* sin foto */ }
+  }
+  return imagenParaPdf(url, 500)
+}

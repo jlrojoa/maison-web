@@ -43,6 +43,8 @@ export function buildCotizacionPdfDataFromCotizacion(cot, tiempoFabricacion) {
   const items = cot.items ?? []
   const filas = items.map(it => ({
     nombre: it.configuracion_nombre,
+    imagenUrl: it.imagen_url ?? null,
+    productoId: it.producto_id ?? null,
     cantidad: it.cantidad,
     anchoCm: Number(/(\d+)\s*cm/.exec(it.medidas ?? '')?.[1] ?? 100),
     profundidadCm: 100,
@@ -111,7 +113,7 @@ export function buildSimplePdfDataFromCotizacion(cot, tiempoFabricacion) {
       }
       g.items.push(it)
       const qty = arm.qty ?? 1
-      g.fila.piezas.push({ nombre: it.configuracion_nombre, cantidad: Math.round((it.cantidad ?? 1) / qty) })
+      g.fila.piezas.push({ nombre: it.configuracion_nombre, cantidad: Math.round((it.cantidad ?? 1) / qty), imagenUrl: it.imagen_url ?? null, productoId: it.producto_id ?? null })
       g.fila.precioUnitario += precio * Math.round((it.cantidad ?? 1) / qty)
       continue
     }
@@ -132,7 +134,6 @@ export function buildSimplePdfDataFromCotizacion(cot, tiempoFabricacion) {
       producto: `${g.items[0].producto_nombre ?? 'Modulares'} · ${nombreDelArmado(g.arm.sequence)}`,
       configuracion: 'Armado modular', medidas: `${plano.huellaAnchoCm} × ${plano.huellaProfundidadCm} cm aprox.`,
       textilCatalogo: t.catalogo, textilGrado: t.grado, textilColor: t.color,
-      imagenUrl: g.items.find(i => i.imagen_url)?.imagen_url ?? null, productoId: g.items[0].producto_id ?? null,
     })
     armados.push(plano)
   }

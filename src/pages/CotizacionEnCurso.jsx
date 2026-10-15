@@ -151,9 +151,21 @@ export default function CotizacionEnCurso() {
               </div>
             ) : lineas.map(l => (
               <div key={l.key} style={{ ...card, padding: 16, marginBottom: 12, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                <div style={{ width: 110, height: 90, background: '#F1F5F9', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                  {l.imagenUrl ? <img src={l.imagenUrl} alt={l.productoNombre} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: 10, color: '#94A3B8' }}>Sin imagen</span>}
-                </div>
+                {l.tipo === 'modular' ? (
+                  // Armado: la imagen de cada módulo pedido, no del mueble armado.
+                  <div style={{ width: 170, display: 'flex', flexWrap: 'wrap', gap: 6, alignContent: 'flex-start', flexShrink: 0 }}>
+                    {l.piezas.map((p, i) => (
+                      <div key={i} title={`${p.cantidad} × ${p.nombre}`} style={{ position: 'relative', width: 52, height: 46, background: '#F1F5F9', borderRadius: 6, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {p.imagenUrl ? <img src={p.imagenUrl} alt={p.nombre} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: 8, color: '#94A3B8', textAlign: 'center' }}>{p.nombre.slice(0, 14)}</span>}
+                        {p.cantidad > 1 && <span style={{ position: 'absolute', right: 2, bottom: 2, background: '#0F172A', color: '#fff', fontSize: 9, borderRadius: 8, padding: '0 5px' }}>×{p.cantidad}</span>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ width: 110, height: 90, background: '#F1F5F9', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                    {l.imagenUrl ? <img src={l.imagenUrl} alt={l.productoNombre} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: 10, color: '#94A3B8' }}>Sin imagen</span>}
+                  </div>
+                )}
                 <div style={{ flex: 1, minWidth: 200 }}>
                   {l.tipo === 'modular' ? (
                     <>

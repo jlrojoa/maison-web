@@ -47,6 +47,12 @@ export const s = StyleSheet.create({
   specLabel: { width: 70, fontSize: 7, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.6, paddingTop: 1 },
   specValue: { flex: 1, fontSize: 9 },
   piezaLinea: { fontSize: 8.5, marginBottom: 2 },
+  tira: { flexDirection: 'row', flexWrap: 'wrap', padding: 10, backgroundColor: COLORS.panelBg },
+  tiraTitulo: { fontSize: 7, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.8, paddingHorizontal: 10, paddingTop: 8, backgroundColor: COLORS.panelBg },
+  modulo: { width: 104, marginRight: 8, marginBottom: 6, backgroundColor: '#fff', borderWidth: 1, borderColor: COLORS.border, borderRadius: 6, padding: 5, alignItems: 'center' },
+  moduloImg: { width: 92, height: 62, objectFit: 'contain' },
+  moduloVacio: { width: 92, height: 62, backgroundColor: COLORS.panelBg, borderRadius: 3 },
+  moduloTxt: { fontSize: 7.5, textAlign: 'center', marginTop: 3, lineHeight: 1.3 },
 
   telaRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: COLORS.border, padding: 9, backgroundColor: COLORS.fillNeutro },
   telaImg: { width: 52, height: 52, borderRadius: 6, objectFit: 'cover' },
@@ -187,9 +193,11 @@ export default function CotizacionSimplePdf({ data }) {
         {data.filas.map((f, i) => (
           <View key={i} style={s.item} wrap={false}>
             <View style={s.itemTop}>
-              <View style={s.fotoBox}>
-                {f.foto ? <Image src={f.foto.src} style={s.foto} /> : <Text style={s.fotoVacia}>Imagen no disponible</Text>}
-              </View>
+              {f.esArmado ? null : (
+                <View style={s.fotoBox}>
+                  {f.foto ? <Image src={f.foto.src} style={s.foto} /> : <Text style={s.fotoVacia}>Imagen no disponible</Text>}
+                </View>
+              )}
               <View style={s.itemInfo}>
                 <Text style={s.itemNombre}>{f.producto}</Text>
                 {f.configuracion ? <Text style={s.itemConfig}>{f.configuracion}</Text> : null}
@@ -197,14 +205,21 @@ export default function CotizacionSimplePdf({ data }) {
                   <View style={s.specRow}><Text style={s.specLabel}>MEDIDAS</Text><Text style={s.specValue}>{f.medidas}</Text></View>
                 ) : null}
                 <View style={s.specRow}><Text style={s.specLabel}>CANTIDAD</Text><Text style={s.specValue}>{f.cantidad}</Text></View>
-                {f.esArmado ? (
-                  <View style={s.specRow}>
-                    <Text style={s.specLabel}>PIEZAS</Text>
-                    <View style={{ flex: 1 }}>{f.piezas.map((p, j) => <Text key={j} style={s.piezaLinea}>{p.cantidad} × {p.nombre}</Text>)}</View>
-                  </View>
-                ) : null}
               </View>
             </View>
+            {f.esArmado ? (
+              <View>
+                <Text style={s.tiraTitulo}>MÓDULOS SOLICITADOS</Text>
+                <View style={s.tira}>
+                  {f.piezas.map((p, j) => (
+                    <View key={j} style={s.modulo} wrap={false}>
+                      {p.foto ? <Image src={p.foto.src} style={s.moduloImg} /> : <View style={s.moduloVacio} />}
+                      <Text style={s.moduloTxt}>{p.cantidad} × {p.nombre}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
             {f.textilCatalogo ? <TelaFicha tela={f.tela} catalogo={f.textilCatalogo} color={f.textilColor} grado={f.textilGrado} /> : null}
             <View style={s.priceRow}>
               <Text style={s.priceMuted}>{f.cantidad} × {fmt(f.precioUnitario)}</Text>
