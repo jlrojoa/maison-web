@@ -75,16 +75,6 @@ function ButacaIcon() {
   )
 }
 
-function MesaIcon() {
-  return (
-    <svg viewBox="0 0 48 48" {...common}>
-      <path d="M8 15h32" />
-      <path d="M8 15v3M40 15v3" />
-      <path d="M13 18v18M35 18v18" />
-    </svg>
-  )
-}
-
 function DefaultIcon() {
   return (
     <svg viewBox="0 0 48 48" {...common}>
@@ -100,7 +90,6 @@ export const CATEGORY_ICONS = {
   'chaise-lounge': ChaiseIcon,
   'modulares': ModularIcon,
   'butacas': ButacaIcon,
-  'mesas': MesaIcon,
 }
 
 export function CategoryIcon({ slug }) {
@@ -109,7 +98,7 @@ export function CategoryIcon({ slug }) {
 }
 
 // Fotos reales (public/categorias, fondo transparente) para el selector del
-// Configurador. Las categorías sin foto (butacas, mesas) siguen con su icono.
+// Configurador. Las categorías sin foto (butacas) siguen con su icono.
 const CATEGORY_PHOTOS = ['sofas', 'camas', 'escuadras-l', 'chaise-lounge', 'modulares']
 export const hasCategoryPhoto = slug => CATEGORY_PHOTOS.includes(slug)
 
