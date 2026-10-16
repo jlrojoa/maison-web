@@ -107,3 +107,12 @@ export function CategoryIcon({ slug }) {
   const Icon = CATEGORY_ICONS[slug] ?? DefaultIcon
   return <Icon />
 }
+
+// Fotos reales (public/categorias, fondo transparente) para el selector del
+// Configurador. Las categorías sin foto (butacas, mesas) siguen con su icono.
+const CATEGORY_PHOTOS = ['sofas', 'camas', 'escuadras-l', 'chaise-lounge', 'modulares']
+export const hasCategoryPhoto = slug => CATEGORY_PHOTOS.includes(slug)
+
+export function CategoryPhoto({ slug, alt = '' }) {
+  return <img src={`/categorias/${slug}.webp`} alt={alt} loading="lazy" decoding="async" />
+}
