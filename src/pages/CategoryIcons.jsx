@@ -97,11 +97,12 @@ export function CategoryIcon({ slug }) {
   return <Icon />
 }
 
-// Fotos reales (public/categorias, fondo transparente) para el selector del
-// Configurador. Las categorías sin foto (butacas) siguen con su icono.
+// Fotos reales del selector del Configurador. Cada categoría puede tener la suya
+// (categorias.imagen_url, editable desde el admin); si no, se usa la que viene en
+// public/categorias. Las categorías sin foto (butacas) siguen con su icono.
 const CATEGORY_PHOTOS = ['sofas', 'camas', 'escuadras-l', 'chaise-lounge', 'modulares']
-export const hasCategoryPhoto = slug => CATEGORY_PHOTOS.includes(slug)
+export const categoryPhotoSrc = cat => cat?.imagen_url || (CATEGORY_PHOTOS.includes(cat?.slug) ? `/categorias/${cat.slug}.webp` : null)
 
-export function CategoryPhoto({ slug, alt = '' }) {
-  return <img src={`/categorias/${slug}.webp`} alt={alt} loading="lazy" decoding="async" />
+export function CategoryPhoto({ src, alt = '' }) {
+  return <img src={src} alt={alt} loading="lazy" decoding="async" />
 }
