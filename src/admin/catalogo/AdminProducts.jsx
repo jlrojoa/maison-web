@@ -106,7 +106,7 @@ function GestionCategoriasModal({ open, categorias, onClose, onChanged }) {
         </div>
         <div className="adm-modal-body">
           <div className="adm-form-hint" style={{ marginBottom: 10 }}>
-            La foto es la que ve el cliente en "¿Qué tipo buscas?". Usa el mueble completo, de frente, en tono claro y con fondo blanco o transparente.
+            La foto es la que ve el cliente en "¿Qué tipo buscas?". Usa el mueble completo, de frente, en tono claro y con fondo blanco o transparente. Para que todas se vean del mismo tamaño, usa una imagen horizontal 2:1 (ej. 800 × 400 px) con el mueble centrado, apoyado en la misma línea y sin ocupar todo el ancho.
           </div>
           <table className="adm-table">
             <thead><tr><th>Foto</th><th>Nombre</th><th>Activa</th><th></th></tr></thead>
