@@ -64,6 +64,7 @@ function Tabbar() {
 
 // ---------- Gestionar categorías (renombrar / activar-desactivar, sin salir de Productos) ----------
 function GestionCategoriasModal({ open, categorias, onClose, onChanged }) {
+  const [subiendo, setSubiendo] = useState(null)
   if (!open) return null
   const toggleActivo = async (row) => {
     await supabase.from('categorias').update({ activo: !row.activo }).eq('id', row.id)
@@ -74,6 +75,28 @@ function GestionCategoriasModal({ open, categorias, onClose, onChanged }) {
     await supabase.from('categorias').update({ nombre }).eq('id', row.id)
     onChanged()
   }
+  // Foto del selector "¿Qué tipo buscas?" del configurador (fondo blanco o transparente, mueble completo).
+  const cambiarFoto = async (row, file) => {
+    if (!file) return
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return alert('La foto debe ser PNG, JPG o WEBP.')
+    if (file.size > 4 * 1024 * 1024) return alert('La foto pesa más de 4 MB. Usa una versión más ligera.')
+    setSubiendo(row.id)
+    try {
+      const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'
+      const url = await uploadProductoImage(file, `categorias/${row.slug}-${Date.now()}.${ext}`)
+      const { error } = await supabase.from('categorias').update({ imagen_url: url }).eq('id', row.id)
+      if (error) throw error
+      onChanged()
+    } catch (err) { alert(`No se pudo subir la foto: ${err.message}`) } finally { setSubiendo(null) }
+  }
+  const restablecerFoto = async (row) => {
+    setSubiendo(row.id)
+    const { error } = await supabase.from('categorias').update({ imagen_url: null }).eq('id', row.id)
+    setSubiendo(null)
+    if (error) return alert(`No se pudo restablecer: ${error.message}`)
+    onChanged()
+  }
+  const miniatura = (c) => c.imagen_url || `/categorias/${c.slug}.webp`
   return (
     <div className="adm-modal-overlay adm-open" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="adm-modal-box">
@@ -82,13 +105,30 @@ function GestionCategoriasModal({ open, categorias, onClose, onChanged }) {
           <button type="button" className="adm-drawer-close" onClick={onClose}>✕</button>
         </div>
         <div className="adm-modal-body">
+          <div className="adm-form-hint" style={{ marginBottom: 10 }}>
+            La foto es la que ve el cliente en "¿Qué tipo buscas?". Usa el mueble completo, de frente, en tono claro y con fondo blanco o transparente. Para que todas se vean del mismo tamaño, usa una imagen horizontal 2:1 (ej. 800 × 400 px) con el mueble centrado, apoyado en la misma línea y sin ocupar todo el ancho.
+          </div>
           <table className="adm-table">
-            <thead><tr><th>Nombre</th><th>Activa</th><th></th></tr></thead>
+            <thead><tr><th>Foto</th><th>Nombre</th><th>Activa</th><th></th></tr></thead>
             <tbody>
               {categorias.length === 0 ? (
-                <tr><td colSpan={3} className="adm-empty-note">No hay categorías aún</td></tr>
+                <tr><td colSpan={4} className="adm-empty-note">No hay categorías aún</td></tr>
               ) : categorias.map(c => (
                 <tr key={c.id}>
+                  <td style={{ width: 120 }}>
+                    <div style={{ width: 100, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 4 }}>
+                      <img src={miniatura(c)} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                        onError={e => { e.currentTarget.style.display = 'none' }} />
+                    </div>
+                    <label className="adm-btn" style={{ marginTop: 6, fontSize: 11, padding: '3px 8px', display: 'inline-block', cursor: 'pointer', opacity: subiendo === c.id ? 0.6 : 1 }}>
+                      {subiendo === c.id ? 'Subiendo…' : 'Cambiar foto'}
+                      <input type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }} disabled={subiendo === c.id}
+                        onChange={e => { cambiarFoto(c, e.target.files?.[0]); e.target.value = '' }} />
+                    </label>
+                    {c.imagen_url && (
+                      <button type="button" className="adm-btn" style={{ marginTop: 6, marginLeft: 4, fontSize: 11, padding: '3px 8px' }} onClick={() => restablecerFoto(c)}>Restablecer</button>
+                    )}
+                  </td>
                   <td>
                     <input className="adm-input" style={{ width: '100%' }} defaultValue={c.nombre}
                       onBlur={e => rename(c, e.target.value)} />
@@ -353,6 +393,13 @@ function InformacionGeneral({ productos, categorias, selectedId, onSelectProduct
               <option key={p.id} value={p.id}>{p.nombre} · {categorias.find(c => c.id === p.categoria_id)?.nombre ?? '—'}</option>
             ))}
           </select>
+        </div>
+        <div className="adm-card">
+          <div className="adm-card-title" style={{ marginBottom: 4 }}>Categorías y sus fotos</div>
+          <div className="adm-card-sub" style={{ marginBottom: 14 }}>
+            Cambia la foto de cada categoría del configurador ("¿Qué tipo buscas?"), su nombre o si está activa.
+          </div>
+          <button type="button" className="adm-btn adm-btn-dark" onClick={onManageCategorias}>Gestionar categorías y fotos</button>
         </div>
       </div>
     )

@@ -4,7 +4,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useDistribuidor } from '../contexts/DistribuidorContext'
 import Nav from '../components/Nav'
-import { CategoryIcon } from './CategoryIcons'
+import { CategoryIcon, CategoryPhoto, categoryPhotoSrc } from './CategoryIcons'
 import StickyConfigurador from './configurador/StickyConfigurador'
 import ModularesConfigurador from './configurador/ModularesConfigurador'
 import { useAgregarACotizacion } from './configurador/useAgregarACotizacion'
@@ -309,11 +309,13 @@ export default function Configurador() {
                 {categorias.map((cat, i) => (
                   <div
                     key={cat.id}
-                    className={`cfg-option ${tipoSel?.id === cat.id ? 'cfg-active' : ''}`}
+                    className={`cfg-option cfg-option-foto ${tipoSel?.id === cat.id ? 'cfg-active' : ''}`}
                     style={{ '--cfg-tipo-color': colorForIndex(i) }}
                     onClick={() => selectTipo(cat)}
                   >
-                    <div className="cfg-option-icon"><CategoryIcon slug={cat.slug} /></div>
+                    {categoryPhotoSrc(cat)
+                      ? <div className="cfg-option-photo"><CategoryPhoto src={categoryPhotoSrc(cat)} /></div>
+                      : <div className="cfg-option-photo"><div className="cfg-option-icon" style={{ marginBottom: 0 }}><CategoryIcon slug={cat.slug} /></div></div>}
                     <div className="cfg-option-label">{cat.nombre}</div>
                   </div>
                 ))}
