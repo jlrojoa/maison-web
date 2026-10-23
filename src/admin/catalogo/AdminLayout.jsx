@@ -49,6 +49,22 @@ export default function AdminLayout() {
         </div>
 
         <div className="adm-nav-section">
+          <div className="adm-nav-label">COTIZACIONES</div>
+          <NavLink to="/admin/cotizaciones" end className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
+            <span className="adm-nav-icon">📄</span> Cotizaciones
+          </NavLink>
+          <NavLink to="/admin/cotizaciones/nueva" className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
+            <span className="adm-nav-icon">＋</span> Nueva cotización
+          </NavLink>
+          <NavLink to="/admin/cotizaciones/clientes" className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
+            <span className="adm-nav-icon">◔</span> Clientes
+          </NavLink>
+          <NavLink to="/admin/cotizaciones/ajustes" className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
+            <span className="adm-nav-icon">⚙</span> Ajustes de cotización
+          </NavLink>
+        </div>
+
+        <div className="adm-nav-section">
           <div className="adm-nav-label">CONTENIDO</div>
           <div className="adm-nav-item adm-disabled"><span className="adm-nav-icon">▧</span> Páginas</div>
           <div className="adm-nav-item adm-disabled"><span className="adm-nav-icon">▭</span> Banners</div>

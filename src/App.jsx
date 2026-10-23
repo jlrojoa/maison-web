@@ -35,6 +35,10 @@ const SalesProspector = lazy(() => import('./admin/sales/SalesProspector'))
 const SalesCampanas = lazy(() => import('./admin/sales/SalesCampanas'))
 const AdminDistribuidores = lazy(() => import('./admin/AdminDistribuidores'))
 const AdminCatalogos = lazy(() => import('./admin/AdminCatalogos'))
+const Cotizaciones = lazy(() => import('./admin/cotizaciones/Cotizaciones'))
+const CotizacionEditor = lazy(() => import('./admin/cotizaciones/CotizacionEditor'))
+const ClientesCotizacion = lazy(() => import('./admin/cotizaciones/Clientes'))
+const AjustesCotizacion = lazy(() => import('./admin/cotizaciones/AjustesCotizacion'))
 
 function AdminFallback() {
   return (
@@ -84,6 +88,11 @@ export default function App() {
             <Route path="sales/campanas" element={<Suspense fallback={<AdminFallback />}><SalesCampanas /></Suspense>} />
             <Route path="leads" element={<Navigate to="/admin/sales/prospectos" replace />} />
             <Route path="distribuidores" element={<Suspense fallback={<AdminFallback />}><AdminDistribuidores /></Suspense>} />
+            <Route path="cotizaciones" element={<Suspense fallback={<AdminFallback />}><Cotizaciones /></Suspense>} />
+            <Route path="cotizaciones/nueva" element={<Suspense fallback={<AdminFallback />}><CotizacionEditor /></Suspense>} />
+            <Route path="cotizaciones/clientes" element={<Suspense fallback={<AdminFallback />}><ClientesCotizacion /></Suspense>} />
+            <Route path="cotizaciones/ajustes" element={<Suspense fallback={<AdminFallback />}><AjustesCotizacion /></Suspense>} />
+            <Route path="cotizaciones/:id" element={<Suspense fallback={<AdminFallback />}><CotizacionEditor /></Suspense>} />
             <Route path="catalogos" element={<Suspense fallback={<AdminFallback />}><AdminCatalogos /></Suspense>} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
