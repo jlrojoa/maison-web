@@ -1,0 +1,62 @@
+/* Módulo de cotizaciones del admin. Usa las clases adm-* del admin y suma las cz-*. */
+.cz-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
+.cz-side { position: sticky; top: 16px; }
+.cz-main { min-width: 0; }
+.cz-seccion-titulo { font-size: 15px; font-weight: 600; margin: 4px 0 12px; }
+.cz-fieldset { border: none; padding: 0; margin: 0; min-width: 0; }
+.cz-fieldset:disabled input, .cz-fieldset:disabled select, .cz-fieldset:disabled textarea { background: #F9FAFB; color: #4B5563; }
+
+.cz-aviso { margin: 12px 32px 0; padding: 10px 14px; border-radius: 8px; font-size: 13px; background: #ECFDF5; border: 1px solid #A7F3D0; color: #047857; }
+.cz-aviso-error { background: #FEF2F2; border-color: #FECACA; color: #B91C1C; }
+.cz-banner { background: #EFF6FF; border: 1px solid #BFDBFE; color: #1E40AF; border-radius: 8px; padding: 12px 16px; font-size: 13px; margin-bottom: 16px; }
+.cz-link { background: none; border: none; color: #1D4ED8; cursor: pointer; font-size: 12px; padding: 0; text-decoration: underline; font-family: inherit; }
+.cz-sucio { margin-left: 8px; color: #B45309; }
+.cz-estado { display: inline-block; font-size: 11.5px; font-weight: 600; border-radius: 999px; padding: 3px 10px; }
+.cz-folio { font-weight: 600; color: #111827; text-decoration: none; }
+.cz-folio:hover { text-decoration: underline; }
+.cz-filtros { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.cz-tabla td { vertical-align: top; }
+.cz-peligro { color: #B91C1C; border-color: #FECACA; }
+.cz-check { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-top: 8px; }
+
+.cz-linea { background: #fff; border: 1px solid #E5E7EB; border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; }
+.cz-linea-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.cz-linea-num { width: 26px; height: 26px; border-radius: 50%; background: #111827; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+.cz-linea-titulo { flex: 1; font-size: 14.5px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cz-linea-total { font-weight: 700; font-size: 14.5px; }
+.cz-linea-acciones { display: flex; gap: 6px; }
+.cz-solo { padding: 8px 0; font-size: 14px; font-weight: 600; }
+
+.cz-colores { display: flex; flex-wrap: wrap; gap: 6px; max-height: 120px; overflow-y: auto; padding: 2px; }
+.cz-color { width: 30px; height: 30px; border-radius: 4px; border: 1px solid #E5E7EB; background-size: cover; background-position: center; cursor: pointer; padding: 0; }
+.cz-color.cz-on { outline: 2px solid #111827; outline-offset: 1px; }
+
+.cz-visuales { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 6px; }
+.cz-caja { width: 100%; background-color: #F7F5F2; border: 1px solid #E5E7EB; border-radius: 6px; background-repeat: no-repeat; background-position: center; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #9CA3AF; }
+.cz-caja-foto { height: 150px; background-size: contain; }
+.cz-caja-iso { height: 120px; background-size: contain; margin-bottom: 8px; }
+.cz-caja-tela { height: 150px; background-size: cover; }
+.cz-mini-galeria { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+.cz-mini-galeria button { width: 34px; height: 34px; border: 1px solid #E5E7EB; border-radius: 4px; background-size: contain; background-repeat: no-repeat; background-position: center; background-color: #F7F5F2; cursor: pointer; padding: 0; }
+.cz-mini-galeria button.cz-on { outline: 2px solid #111827; }
+.cz-fila-botones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.cz-medidas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.cz-medidas label { font-size: 11px; color: #6B7280; display: flex; flex-direction: column; gap: 3px; }
+.cz-medidas input { width: 100%; padding: 6px 8px; }
+
+.cz-resumen .cz-tot { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13.5px; }
+.cz-tenue { color: #6B7280; font-size: 12.5px !important; }
+.cz-gran { border-top: 1px solid #E5E7EB; margin-top: 6px; padding-top: 10px !important; font-size: 17px !important; }
+.cz-acciones { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.cz-acciones .adm-btn { justify-content: center; }
+
+.cz-termino { position: relative; display: grid; gap: 6px; padding: 12px 40px 12px 0; border-bottom: 1px solid #F3F4F6; margin-bottom: 8px; }
+.cz-termino .adm-icon-btn { position: absolute; top: 12px; right: 0; }
+.cz-logo-fila { display: flex; gap: 20px; align-items: center; margin-bottom: 16px; }
+.cz-logo-caja { width: 200px; height: 90px; border: 1px dashed #D1D5DB; border-radius: 8px; background-size: contain; background-repeat: no-repeat; background-position: center; display: flex; align-items: center; justify-content: center; color: #9CA3AF; font-size: 12.5px; flex-shrink: 0; }
+
+@media (max-width: 1100px) {
+  .cz-layout { grid-template-columns: 1fr; }
+  .cz-side { position: static; order: -1; }
+  .cz-visuales { grid-template-columns: 1fr; }
+}
