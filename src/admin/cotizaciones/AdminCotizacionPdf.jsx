@@ -28,44 +28,31 @@ const s = StyleSheet.create({
   h2Rule: { width: 28, borderBottomWidth: 2, borderBottomColor: COLORS.copperLine, marginBottom: 10 },
   proyecto: { fontSize: 13, fontWeight: 700, marginBottom: 8 },
 
-  clienteBox: { backgroundColor: COLORS.fillNeutro, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 10, marginBottom: 12 },
+  clienteBox: { backgroundColor: COLORS.fillNeutro, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 10, marginBottom: 14 },
   clienteLabel: { fontSize: 7, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.8, marginBottom: 3 },
   clienteNombre: { fontSize: 11, fontWeight: 600 },
   clienteSub: { fontSize: 8, color: COLORS.inkMuted, marginTop: 2, lineHeight: 1.4 },
 
-  item: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, marginBottom: 10, overflow: 'hidden' },
-  itemTop: { flexDirection: 'row' },
-  fotoBox: { width: 200, height: 130, backgroundColor: COLORS.panelBg, alignItems: 'center', justifyContent: 'center' },
-  foto: { width: 184, height: 118, objectFit: 'contain' },
-  fotoVacia: { fontSize: 7.5, color: COLORS.inkMuted },
-  itemInfo: { flex: 1, padding: 12 },
-  itemNombre: { fontSize: 15, fontWeight: 700 },
-  itemConfig: { fontSize: 10.5, color: COLORS.copperText, fontWeight: 600, marginTop: 2 },
-  specRow: { flexDirection: 'row', marginTop: 7 },
-  specLabel: { width: 70, fontSize: 7, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.6, paddingTop: 1 },
-  specValue: { flex: 1, fontSize: 9 },
+  // Cotización: tabla de conceptos
+  th: { flexDirection: 'row', borderBottomWidth: 1.5, borderBottomColor: COLORS.ink, paddingBottom: 4, marginBottom: 2 },
+  thTxt: { fontSize: 7, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.8 },
+  tr: { flexDirection: 'row', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  cNum: { width: 20, fontSize: 8, color: COLORS.inkMuted, paddingTop: 1 },
+  cDesc: { flex: 1, paddingRight: 8 },
+  cCant: { width: 34, textAlign: 'center' },
+  cUnit: { width: 74, textAlign: 'right' },
+  cImp: { width: 80, textAlign: 'right' },
+  prod: { fontSize: 10.5, fontWeight: 700 },
+  linea2: { fontSize: 8.5, color: COLORS.copperText, fontWeight: 600, marginTop: 1 },
+  telaLinea: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  telaMini: { width: 18, height: 18, borderWidth: 1, borderColor: COLORS.border, borderRadius: 3, marginRight: 6 },
+  telaTxt: { fontSize: 8, color: COLORS.inkMuted },
+  reqBox: { marginTop: 5, backgroundColor: COLORS.accentBg, borderRadius: 4, paddingVertical: 4, paddingHorizontal: 7 },
+  reqLabel: { fontSize: 6.5, fontWeight: 700, color: COLORS.copperText, letterSpacing: 0.8 },
+  reqTxt: { fontSize: 8.5, marginTop: 1, lineHeight: 1.35 },
+  subtle: { fontSize: 7.5, color: COLORS.inkMuted },
 
-  detalle: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: COLORS.border, backgroundColor: COLORS.fillNeutro },
-  telaCol: { width: 200, padding: 10, flexDirection: 'row', alignItems: 'center', borderRightWidth: 1, borderRightColor: COLORS.border },
-  telaRecuadro: { width: 64, height: 64, borderWidth: 1, borderColor: COLORS.border, borderRadius: 4, padding: 3, backgroundColor: '#fff' },
-  telaImg: { width: 56, height: 56, objectFit: 'cover' },
-  telaSwatch: { width: 56, height: 56 },
-  telaInfo: { flex: 1, marginLeft: 10 },
-  telaLabel: { fontSize: 6.5, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.8 },
-  telaNombre: { fontSize: 9.5, fontWeight: 600, marginTop: 2 },
-  telaSub: { fontSize: 7.5, color: COLORS.inkMuted, marginTop: 2, lineHeight: 1.4 },
-  isoCol: { flex: 1, padding: 8, alignItems: 'center', justifyContent: 'center' },
-  isoLabel: { fontSize: 6.5, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.8, alignSelf: 'flex-start' },
-
-  requisito: { borderTopWidth: 1, borderTopColor: COLORS.copperLineFaint, backgroundColor: COLORS.accentBg, paddingVertical: 8, paddingHorizontal: 12 },
-  requisitoLabel: { fontSize: 7, fontWeight: 700, color: COLORS.copperText, letterSpacing: 0.8 },
-  requisitoTexto: { fontSize: 9, marginTop: 2, lineHeight: 1.4 },
-
-  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
-  priceMuted: { fontSize: 8.5, color: COLORS.inkMuted },
-  priceBig: { fontSize: 14, fontWeight: 700 },
-
-  totalesWrap: { alignItems: 'flex-end', marginTop: 4 },
+  totalesWrap: { alignItems: 'flex-end', marginTop: 10 },
   totalesBox: { width: 270 },
   totRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
   totTxt: { fontSize: 9, color: COLORS.inkMuted },
@@ -84,15 +71,27 @@ const s = StyleSheet.create({
   firma: { width: 200, borderTopWidth: 1, borderTopColor: COLORS.ink, paddingTop: 4 },
   firmaTxt: { fontSize: 7.5, color: COLORS.inkMuted },
 
+  // Anexo: imágenes, una ficha compacta por mueble
+  anexoTitulo: { fontSize: 14, fontWeight: 700 },
+  anexoSub: { fontSize: 8, color: COLORS.inkMuted, marginTop: 2, marginBottom: 12 },
+  ficha: { flexDirection: 'row', borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, marginBottom: 10, overflow: 'hidden' },
+  fichaFoto: { width: 170, minHeight: 118, backgroundColor: COLORS.panelBg, alignItems: 'center', justifyContent: 'center' },
+  fichaFotoImg: { width: 158, height: 106, objectFit: 'contain' },
+  fichaCentro: { flex: 1, padding: 8, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderLeftColor: COLORS.border },
+  fichaTela: { width: 92, padding: 8, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderLeftColor: COLORS.border, backgroundColor: COLORS.fillNeutro },
+  fichaTelaImg: { width: 44, height: 44, borderWidth: 1, borderColor: COLORS.border, borderRadius: 3, padding: 2, backgroundColor: '#fff' },
+  fichaNum: { position: 'absolute', top: 5, left: 6, fontSize: 7.5, fontWeight: 700, color: COLORS.copperText },
+  fichaTit: { fontSize: 8, fontWeight: 700, alignSelf: 'flex-start', marginBottom: 2 },
+
   footer: { position: 'absolute', left: PAGE_PADDING, right: PAGE_PADDING, bottom: 22, borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 6, flexDirection: 'row', justifyContent: 'space-between' },
   footerTxt: { fontSize: 6.8, color: COLORS.inkMuted },
 })
 
 const Titulo = ({ children }) => (<View wrap={false}><Text style={s.h2}>{children}</Text><View style={s.h2Rule} /></View>)
 
-// Isométrico dentro de su caja, completo (nunca recortado), con cotas de ancho, alto y fondo.
+// Isométrico completo (nunca recortado) con cotas de ancho, alto y fondo.
 function IsoConCotas({ img, m }) {
-  const W = 236, H = 140, IX = 14, IY = 8, IW = 168, IH = 92
+  const W = 190, H = 112, IX = 8, IY = 4, IW = 132, IH = 72
   const ancho = num(m?.ancho), fondo = num(m?.fondo), alto = num(m?.alto)
   return (
     <View style={{ width: W, height: H }}>
@@ -103,7 +102,7 @@ function IsoConCotas({ img, m }) {
         {ancho > 0 ? <Line x1={IX} y1={IY + IH + 4} x2={IX} y2={IY + IH + 14} stroke={COLORS.copperLine} strokeWidth={0.5} strokeOpacity={0.5} /> : null}
         {ancho > 0 ? <Line x1={IX + IW} y1={IY + IH + 4} x2={IX + IW} y2={IY + IH + 14} stroke={COLORS.copperLine} strokeWidth={0.5} strokeOpacity={0.5} /> : null}
       </Svg>
-      {fondo > 0 ? <Text style={{ position: 'absolute', left: IX, width: IW, bottom: 0, textAlign: 'center', fontSize: 7.5, fontWeight: 700, color: COLORS.copperText }}>Fondo {fondo} cm</Text> : null}
+      {fondo > 0 ? <Text style={{ position: 'absolute', left: IX, width: IW, bottom: 0, textAlign: 'center', fontSize: 7, fontWeight: 700, color: COLORS.copperText }}>Fondo {fondo} cm</Text> : null}
     </View>
   )
 }
@@ -162,9 +161,20 @@ function Totales({ d }) {
   )
 }
 
+function Pie({ d }) {
+  const e = d.empresa
+  return (
+    <View style={s.footer} fixed>
+      <Text style={s.footerTxt}>{[e.razon_social, e.rfc ? `RFC ${e.rfc}` : null, e.email, e.telefono].filter(Boolean).join(' · ')}</Text>
+      <Text style={s.footerTxt} render={({ pageNumber, totalPages }) => `${d.folio} · Página ${pageNumber} de ${totalPages}`} />
+    </View>
+  )
+}
+
 export default function AdminCotizacionPdf({ data: d }) {
   const e = d.empresa, c = d.cliente ?? {}, a = d.ajustes
   const hayCliente = Object.values(c).some(v => v)
+  const conImagenes = d.filas.map((f, i) => ({ f, i })).filter(({ f }) => !f.esLibre && (f.foto || f.iso || f.textilCatalogo))
   return (
     <Document title={`Cotización ${d.folio}`} author={e.razon_social || 'Brendell'}>
       <Page size="LETTER" style={s.page}>
@@ -181,56 +191,35 @@ export default function AdminCotizacionPdf({ data: d }) {
           </View>
         ) : null}
 
-        <Titulo>Muebles cotizados</Titulo>
+        <View style={s.th} fixed>
+          <Text style={[s.thTxt, s.cNum]}>#</Text>
+          <Text style={[s.thTxt, s.cDesc]}>DESCRIPCIÓN</Text>
+          <Text style={[s.thTxt, s.cCant]}>CANT.</Text>
+          <Text style={[s.thTxt, s.cUnit]}>PRECIO UNIT.</Text>
+          <Text style={[s.thTxt, s.cImp]}>IMPORTE</Text>
+        </View>
         {d.filas.map((f, i) => (
-          <View key={i} style={s.item} wrap={false}>
-            <View style={s.itemTop}>
-              {f.esLibre ? null : (
-                <View style={s.fotoBox}>
-                  {f.foto ? <Image src={f.foto.src} style={s.foto} /> : <Text style={s.fotoVacia}>Imagen no disponible</Text>}
+          <View key={i} style={s.tr} wrap={false}>
+            <Text style={s.cNum}>{i + 1}</Text>
+            <View style={s.cDesc}>
+              <Text style={s.prod}>{f.producto}</Text>
+              {(f.configuracion || f.medidas) ? <Text style={s.linea2}>{[f.configuracion, f.medidas].filter(Boolean).join(' · ')}</Text> : null}
+              {f.textilCatalogo ? (
+                <View style={s.telaLinea}>
+                  {f.tela?.imagen ? <Image src={f.tela.imagen.src} style={[s.telaMini, { objectFit: 'cover' }]} /> : <View style={[s.telaMini, { backgroundColor: f.tela?.hex || COLORS.panelBg }]} />}
+                  <Text style={s.telaTxt}>Tela {f.textilCatalogo}{f.textilColor ? ` · ${f.textilColor}` : ''}{f.textilGrado ? ` (Cat. ${f.textilGrado})` : ''}</Text>
                 </View>
-              )}
-              <View style={s.itemInfo}>
-                <Text style={s.itemNombre}>{f.producto}</Text>
-                {f.configuracion ? <Text style={s.itemConfig}>{f.configuracion}</Text> : null}
-                {f.medidas ? <View style={s.specRow}><Text style={s.specLabel}>MEDIDAS</Text><Text style={s.specValue}>{f.medidas}</Text></View> : null}
-                <View style={s.specRow}><Text style={s.specLabel}>CANTIDAD</Text><Text style={s.specValue}>{f.cantidad}</Text></View>
-              </View>
+              ) : null}
+              {f.requisito ? (
+                <View style={s.reqBox}><Text style={s.reqLabel}>REQUISITO ESPECIAL</Text><Text style={s.reqTxt}>{f.requisito}</Text></View>
+              ) : null}
             </View>
-            {(f.textilCatalogo || f.iso) ? (
-              <View style={s.detalle}>
-                {f.textilCatalogo ? (
-                  <View style={s.telaCol}>
-                    <View style={s.telaRecuadro}>
-                      {f.tela?.imagen ? <Image src={f.tela.imagen.src} style={s.telaImg} /> : <View style={[s.telaSwatch, { backgroundColor: f.tela?.hex || COLORS.panelBg }]} />}
-                    </View>
-                    <View style={s.telaInfo}>
-                      <Text style={s.telaLabel}>TELA</Text>
-                      <Text style={s.telaNombre}>{f.textilCatalogo}{f.textilGrado ? ` · Cat. ${f.textilGrado}` : ''}</Text>
-                      <Text style={s.telaSub}>Color: {f.textilColor}{f.tela?.composicion ? `\n${f.tela.composicion}` : ''}</Text>
-                    </View>
-                  </View>
-                ) : null}
-                {f.iso ? (
-                  <View style={s.isoCol}>
-                    <Text style={s.isoLabel}>ISOMÉTRICO Y MEDIDAS</Text>
-                    <IsoConCotas img={f.iso} m={f.medidasCm} />
-                  </View>
-                ) : null}
-              </View>
-            ) : null}
-            {f.requisito ? (
-              <View style={s.requisito}>
-                <Text style={s.requisitoLabel}>REQUISITO ESPECIAL DEL CLIENTE</Text>
-                <Text style={s.requisitoTexto}>{f.requisito}</Text>
-              </View>
-            ) : null}
-            <View style={s.priceRow}>
-              <Text style={s.priceMuted}>
-                {f.cantidad} × {fmtMx(f.precioNeto)}{f.descuento > 0 ? `  (precio ${fmtMx(f.precio)} − ${f.descuento}%)` : ''}
-              </Text>
-              <Text style={s.priceBig}>{fmtMx(f.subtotal)}</Text>
+            <Text style={s.cCant}>{f.cantidad}</Text>
+            <View style={s.cUnit}>
+              <Text>{fmtMx(f.precioNeto)}</Text>
+              {f.descuento > 0 ? <Text style={s.subtle}>{fmtMx(f.precio)} − {f.descuento}%</Text> : null}
             </View>
+            <Text style={[s.cImp, { fontWeight: 700 }]}>{fmtMx(f.subtotal)}</Text>
           </View>
         ))}
 
@@ -263,12 +252,36 @@ export default function AdminCotizacionPdf({ data: d }) {
           <View style={[s.firma, { width: 120 }]}><Text style={s.firmaTxt}>Fecha</Text></View>
         </View>
         {e.notas_pie ? <Text style={[s.terminoTexto, { marginTop: 14, textAlign: 'center' }]}>{e.notas_pie}</Text> : null}
-
-        <View style={s.footer} fixed>
-          <Text style={s.footerTxt}>{[e.razon_social, e.rfc ? `RFC ${e.rfc}` : null, e.email, e.telefono].filter(Boolean).join(' · ')}</Text>
-          <Text style={s.footerTxt} render={({ pageNumber, totalPages }) => `${d.folio} · Página ${pageNumber} de ${totalPages}`} />
-        </View>
+        <Pie d={d} />
       </Page>
+
+      {conImagenes.length > 0 ? (
+        <Page size="LETTER" style={s.page}>
+          <Text style={s.anexoTitulo}>Anexo · Imágenes y medidas</Text>
+          <Text style={s.anexoSub}>Cotización {d.folio}{d.proyecto ? ` · ${d.proyecto}` : ''}. Los números corresponden a las partidas de la cotización.</Text>
+          {conImagenes.map(({ f, i }) => (
+            <View key={i} style={s.ficha} wrap={false}>
+              <View style={s.fichaFoto}>
+                {f.foto ? <Image src={f.foto.src} style={s.fichaFotoImg} /> : null}
+                <Text style={s.fichaNum}>{i + 1}</Text>
+              </View>
+              <View style={s.fichaCentro}>
+                <Text style={s.fichaTit}>{f.producto}{f.configuracion ? ` · ${f.configuracion}` : ''}</Text>
+                {f.iso ? <IsoConCotas img={f.iso} m={f.medidasCm} /> : (f.medidas ? <Text style={s.telaTxt}>{f.medidas}</Text> : null)}
+              </View>
+              {f.textilCatalogo ? (
+                <View style={s.fichaTela}>
+                  <View style={s.fichaTelaImg}>
+                    {f.tela?.imagen ? <Image src={f.tela.imagen.src} style={{ width: 38, height: 38, objectFit: 'cover' }} /> : <View style={{ width: 38, height: 38, backgroundColor: f.tela?.hex || COLORS.panelBg }} />}
+                  </View>
+                  <Text style={[s.telaTxt, { textAlign: 'center', marginTop: 4, fontSize: 7 }]}>{f.textilCatalogo}{'\n'}{f.textilColor}</Text>
+                </View>
+              ) : null}
+            </View>
+          ))}
+          <Pie d={d} />
+        </Page>
+      ) : null}
     </Document>
   )
 }
