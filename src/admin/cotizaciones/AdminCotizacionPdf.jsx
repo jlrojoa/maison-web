@@ -1,169 +1,99 @@
 // src/admin/cotizaciones/AdminCotizacionPdf.jsx
 //
-// PDF de las cotizaciones hechas desde el admin. Mismo lenguaje visual que el
-// PDF del configurador (tonos, tipografía, cotas), con: logo y datos fijos de
-// la empresa, datos del cliente, foto del mueble completa, tela en recuadro,
-// isométrico con sus medidas, requisitos especiales, totales (descuento, IVA,
-// anticipo), términos y firma de aceptación.
+// PDF de las cotizaciones hechas desde el admin. Una sola tabla: cada renglón
+// lleva modelo, descripción, foto, tela, isométrico con medidas, precio,
+// cantidad y subtotal, todo junto para que el cliente no tenga que relacionar
+// textos con imágenes. Después van las notas, los totales y los términos.
 import { Document, Page, View, Text, Image, Svg, Line, StyleSheet } from '@react-pdf/renderer'
 import { registrarFuentesPdf } from '../../pages/configurador/cotizacionPdf/pdfFonts'
-import { COLORS, PAGE_PADDING } from '../../pages/configurador/cotizacionPdf/pdfTheme'
+import { COLORS } from '../../pages/configurador/cotizacionPdf/pdfTheme'
 import { fmtFecha } from '../../pages/configurador/cotizacionPdf/fmtPdf'
 import { DimLineH, DimLineV } from '../../pages/configurador/cotizacionPdf/DimLinePdf'
 import { fmtMx, num } from './calc'
 
 registrarFuentesPdf()
 
+const PAD = 28
+// Anchos de columna (suman el ancho útil de la hoja Carta: 612 − 2 × 28 = 556)
+const COL = { n: 16, modelo: 82, desc: 92, img: 84, tela: 62, iso: 86, unit: 52, cant: 26, sub: 56 }
+
 const s = StyleSheet.create({
-  page: { padding: PAGE_PADDING, paddingBottom: 54, fontFamily: 'Poppins', fontSize: 9, color: COLORS.ink },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  brand: { fontSize: 20, fontWeight: 700, letterSpacing: 2 },
-  brandContact: { fontSize: 7.5, color: COLORS.inkMuted, marginTop: 4, lineHeight: 1.5 },
-  folioBadge: { backgroundColor: COLORS.accentBg, borderRadius: 6, paddingVertical: 6, paddingHorizontal: 14, alignItems: 'center' },
-  folioLabel: { fontSize: 6.5, color: COLORS.copperText, letterSpacing: 1.5 },
-  folioValue: { fontSize: 14, fontWeight: 700, marginTop: 2 },
-  metaRight: { fontSize: 7.5, color: COLORS.inkMuted, textAlign: 'right', marginTop: 6, lineHeight: 1.5 },
-  hr: { borderBottomWidth: 3, borderBottomColor: COLORS.accentBg, marginTop: 12, marginBottom: 14 },
-  h2: { fontSize: 11.5, fontWeight: 700, marginBottom: 4 },
-  h2Rule: { width: 28, borderBottomWidth: 2, borderBottomColor: COLORS.copperLine, marginBottom: 10 },
-  proyecto: { fontSize: 13, fontWeight: 700, marginBottom: 8 },
+  page: { padding: PAD, paddingBottom: 48, fontFamily: 'Poppins', fontSize: 8, color: COLORS.ink },
+  top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  wordmark: { fontSize: 24, fontWeight: 400, letterSpacing: 7 },
+  empresaTxt: { fontSize: 7, color: COLORS.inkMuted, marginTop: 4, lineHeight: 1.45, maxWidth: 280 },
+  titulo: { fontSize: 17, fontWeight: 500, letterSpacing: 6, textAlign: 'right' },
+  meta: { flexDirection: 'row', marginTop: 5 },
+  metaK: { width: 46, fontSize: 8, fontWeight: 600 },
+  metaV: { fontSize: 8, color: COLORS.inkMuted },
 
-  clienteBox: { backgroundColor: COLORS.fillNeutro, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 10, marginBottom: 14 },
-  clienteLabel: { fontSize: 7, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.8, marginBottom: 3 },
-  clienteNombre: { fontSize: 11, fontWeight: 600 },
-  clienteSub: { fontSize: 8, color: COLORS.inkMuted, marginTop: 2, lineHeight: 1.4 },
+  partes: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, marginBottom: 12 },
+  parteBox: { width: '48%' },
+  parteLabel: { fontSize: 9, fontWeight: 600, marginBottom: 2 },
+  parteTxt: { fontSize: 8, color: COLORS.inkMuted, lineHeight: 1.45 },
+  proyecto: { fontSize: 10, fontWeight: 700, marginBottom: 6 },
 
-  // Cotización: tabla de conceptos
-  th: { flexDirection: 'row', borderBottomWidth: 1.5, borderBottomColor: COLORS.ink, paddingBottom: 4, marginBottom: 2 },
-  thTxt: { fontSize: 7, fontWeight: 700, color: COLORS.inkMuted, letterSpacing: 0.8 },
-  tr: { flexDirection: 'row', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  cNum: { width: 20, fontSize: 8, color: COLORS.inkMuted, paddingTop: 1 },
-  cDesc: { flex: 1 },
-  cCant: { width: 34, textAlign: 'center' },
-  cUnit: { width: 74, textAlign: 'right' },
-  cImp: { width: 80, textAlign: 'right' },
-  prod: { fontSize: 10.5, fontWeight: 700 },
-  linea2: { fontSize: 8.5, color: COLORS.copperText, fontWeight: 600, marginTop: 1 },
-  telaLinea: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  telaMini: { width: 18, height: 18, borderWidth: 1, borderColor: COLORS.border, borderRadius: 3, marginRight: 6 },
-  telaTxt: { fontSize: 8, color: COLORS.inkMuted },
-  reqBox: { marginTop: 5, backgroundColor: COLORS.accentBg, borderRadius: 4, paddingVertical: 4, paddingHorizontal: 7 },
-  reqLabel: { fontSize: 6.5, fontWeight: 700, color: COLORS.copperText, letterSpacing: 0.8 },
-  reqTxt: { fontSize: 8.5, marginTop: 1, lineHeight: 1.35 },
-  subtle: { fontSize: 7.5, color: COLORS.inkMuted },
+  th: { flexDirection: 'row', backgroundColor: COLORS.panelBg, borderTopWidth: 1, borderBottomWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
+  thCell: { paddingVertical: 6, paddingHorizontal: 3, fontSize: 7, fontWeight: 600, textAlign: 'center', lineHeight: 1.25 },
+  tr: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: COLORS.border, minHeight: 66, alignItems: 'stretch' },
+  td: { paddingVertical: 5, paddingHorizontal: 4, justifyContent: 'center', borderLeftWidth: 0.5, borderLeftColor: COLORS.border },
+  modelo: { fontSize: 9, fontWeight: 700 },
+  modeloSub: { fontSize: 7, color: COLORS.inkMuted, marginTop: 1, lineHeight: 1.3 },
+  descTxt: { fontSize: 7.2, lineHeight: 1.4 },
+  req: { marginTop: 3, backgroundColor: COLORS.accentBg, borderRadius: 3, paddingVertical: 2, paddingHorizontal: 4 },
+  reqL: { fontSize: 5.5, fontWeight: 700, color: COLORS.copperText, letterSpacing: 0.6 },
+  reqT: { fontSize: 6.8, lineHeight: 1.3 },
+  imgFoto: { width: COL.img - 8, height: 56, objectFit: 'contain' },
+  telaCaja: { width: 30, height: 30, borderWidth: 1, borderColor: COLORS.border, borderRadius: 2, padding: 1.5, backgroundColor: '#fff', marginBottom: 3 },
+  telaTxt: { fontSize: 6.5, color: COLORS.ink, lineHeight: 1.3 },
+  num: { fontSize: 8.5 },
+  tachado: { fontSize: 6.5, color: COLORS.inkMuted, textDecoration: 'line-through' },
 
-  totalesWrap: { alignItems: 'flex-end', marginTop: 10 },
-  totalesBox: { width: 270 },
+  abajo: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
+  notasBox: { width: '58%' },
+  notasTit: { fontSize: 9, fontWeight: 600, marginBottom: 3 },
+  nota: { flexDirection: 'row', marginBottom: 2 },
+  notaN: { width: 12, fontSize: 7, color: COLORS.inkMuted },
+  notaT: { flex: 1, fontSize: 7, color: COLORS.inkMuted, lineHeight: 1.4 },
+  totBox: { width: '36%' },
   totRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
-  totTxt: { fontSize: 9, color: COLORS.inkMuted },
-  totVal: { fontSize: 9 },
-  totalBox: { marginTop: 4, backgroundColor: COLORS.accentBg, borderRadius: 8, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  totalLabel: { fontSize: 8, color: COLORS.copperText, letterSpacing: 1 },
-  totalValue: { fontSize: 19, fontWeight: 700 },
+  totK: { fontSize: 9, color: COLORS.inkMuted },
+  totV: { fontSize: 9 },
+  totalBox: { marginTop: 3, backgroundColor: COLORS.panelBg, paddingVertical: 8, paddingHorizontal: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  totalK: { fontSize: 11 },
+  totalV: { fontSize: 14, fontWeight: 600 },
 
-  caja: { marginTop: 10, borderWidth: 1, borderColor: COLORS.copperLineFaint, borderRadius: 8, paddingVertical: 9, paddingHorizontal: 14, backgroundColor: COLORS.panelBg },
-  cajaLabel: { fontSize: 8, fontWeight: 700, color: COLORS.copperText },
-  cajaTexto: { fontSize: 8, color: COLORS.inkMuted, marginTop: 2, lineHeight: 1.45 },
+  condiciones: { flexDirection: 'row', marginTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 8 },
+  cond: { flex: 1, paddingRight: 10 },
+  condK: { fontSize: 7.5, fontWeight: 700 },
+  condV: { fontSize: 7, color: COLORS.inkMuted, marginTop: 1, lineHeight: 1.4 },
 
-  terminoTitulo: { fontSize: 8.6, fontWeight: 700, marginTop: 7 },
-  terminoTexto: { fontSize: 8, color: COLORS.inkMuted, marginTop: 2, lineHeight: 1.45 },
-  firmas: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 34 },
-  firma: { width: 200, borderTopWidth: 1, borderTopColor: COLORS.ink, paddingTop: 4 },
-  firmaTxt: { fontSize: 7.5, color: COLORS.inkMuted },
+  h2: { fontSize: 10, fontWeight: 700, marginTop: 14, marginBottom: 3 },
+  terminoT: { fontSize: 7.5, fontWeight: 700, marginTop: 5 },
+  terminoD: { fontSize: 7, color: COLORS.inkMuted, marginTop: 1, lineHeight: 1.4 },
+  firmas: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 30 },
+  firma: { width: 200, borderTopWidth: 1, borderTopColor: COLORS.ink, paddingTop: 3 },
+  firmaTxt: { fontSize: 7, color: COLORS.inkMuted },
+  gracias: { fontSize: 8.5, textAlign: 'center', marginTop: 14, color: COLORS.inkMuted },
 
-  // Segunda fila de cada partida: foto, isométrico con medidas y tela, juntos y chicos
-  imgs: { flexDirection: 'row', alignItems: 'center', marginTop: 6, paddingTop: 6, borderTopWidth: 0.5, borderTopColor: COLORS.border },
-  imgFoto: { width: 112, height: 74, backgroundColor: COLORS.panelBg, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
-  imgFotoImg: { width: 104, height: 68, objectFit: 'contain' },
-  imgTela: { flexDirection: 'row', alignItems: 'center', marginLeft: 10 },
-  imgTelaBox: { width: 38, height: 38, borderWidth: 1, borderColor: COLORS.border, borderRadius: 3, padding: 2, backgroundColor: '#fff' },
-  imgTelaTxt: { fontSize: 7.5, color: COLORS.inkMuted, marginLeft: 6, maxWidth: 90, lineHeight: 1.35 },
-  // (anexo, sin uso)
-  anexoTitulo: { fontSize: 14, fontWeight: 700 },
-  anexoSub: { fontSize: 8, color: COLORS.inkMuted, marginTop: 2, marginBottom: 12 },
-  ficha: { flexDirection: 'row', borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, marginBottom: 10, overflow: 'hidden' },
-  fichaFoto: { width: 170, minHeight: 118, backgroundColor: COLORS.panelBg, alignItems: 'center', justifyContent: 'center' },
-  fichaFotoImg: { width: 158, height: 106, objectFit: 'contain' },
-  fichaCentro: { flex: 1, padding: 8, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderLeftColor: COLORS.border },
-  fichaTela: { width: 92, padding: 8, alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderLeftColor: COLORS.border, backgroundColor: COLORS.fillNeutro },
-  fichaTelaImg: { width: 44, height: 44, borderWidth: 1, borderColor: COLORS.border, borderRadius: 3, padding: 2, backgroundColor: '#fff' },
-  fichaNum: { position: 'absolute', top: 5, left: 6, fontSize: 7.5, fontWeight: 700, color: COLORS.copperText },
-  fichaTit: { fontSize: 8, fontWeight: 700, alignSelf: 'flex-start', marginBottom: 2 },
-
-  footer: { position: 'absolute', left: PAGE_PADDING, right: PAGE_PADDING, bottom: 22, borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 6, flexDirection: 'row', justifyContent: 'space-between' },
-  footerTxt: { fontSize: 6.8, color: COLORS.inkMuted },
+  footer: { position: 'absolute', left: PAD, right: PAD, bottom: 20, borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 5, flexDirection: 'row', justifyContent: 'space-between' },
+  footerTxt: { fontSize: 6.5, color: COLORS.inkMuted },
 })
 
-const Titulo = ({ children }) => (<View wrap={false}><Text style={s.h2}>{children}</Text><View style={s.h2Rule} /></View>)
-
-// Isométrico completo (nunca recortado) con cotas de ancho, alto y fondo.
-function IsoConCotas({ img, m }) {
-  const W = 176, H = 80, IX = 4, IY = 2, IW = 108, IH = 46
+// Isométrico completo (nunca recortado) con sus cotas, en chico.
+function IsoMini({ img, m }) {
+  const W = COL.iso - 8, H = 62, IX = 2, IY = 2, IW = 56, IH = 36
   const ancho = num(m?.ancho), fondo = num(m?.fondo), alto = num(m?.alto)
   return (
     <View style={{ width: W, height: H }}>
       {img ? <Image src={img.src} style={{ position: 'absolute', left: IX, top: IY, width: IW, height: IH, objectFit: 'contain' }} /> : null}
       <Svg width={W} height={H} style={{ position: 'absolute', left: 0, top: 0 }}>
-        {ancho > 0 ? <DimLineH x={IX} y={IY + IH + 12} width={IW} label={`${ancho} cm`} /> : null}
-        {alto > 0 ? <DimLineV x={IX + IW + 14} y={IY} height={IH} label={`${alto} cm`} /> : null}
-        {ancho > 0 ? <Line x1={IX} y1={IY + IH + 4} x2={IX} y2={IY + IH + 12} stroke={COLORS.copperLine} strokeWidth={0.5} strokeOpacity={0.5} /> : null}
-        {ancho > 0 ? <Line x1={IX + IW} y1={IY + IH + 4} x2={IX + IW} y2={IY + IH + 12} stroke={COLORS.copperLine} strokeWidth={0.5} strokeOpacity={0.5} /> : null}
+        {ancho > 0 ? <DimLineH x={IX} y={IY + IH + 11} width={IW} label={`${ancho}`} /> : null}
+        {alto > 0 ? <DimLineV x={IX + IW + 8} y={IY} height={IH} label={`${alto}`} /> : null}
+        {ancho > 0 ? <Line x1={IX} y1={IY + IH + 3} x2={IX} y2={IY + IH + 11} stroke={COLORS.copperLine} strokeWidth={0.4} strokeOpacity={0.5} /> : null}
+        {ancho > 0 ? <Line x1={IX + IW} y1={IY + IH + 3} x2={IX + IW} y2={IY + IH + 11} stroke={COLORS.copperLine} strokeWidth={0.4} strokeOpacity={0.5} /> : null}
       </Svg>
-      {fondo > 0 ? <Text style={{ position: 'absolute', left: IX, width: IW, bottom: -2, textAlign: 'center', fontSize: 6.5, fontWeight: 700, color: COLORS.copperText }}>Fondo {fondo} cm</Text> : null}
-    </View>
-  )
-}
-
-function Encabezado({ d }) {
-  const e = d.empresa
-  return (
-    <>
-      <View style={s.headerRow}>
-        <View style={{ maxWidth: 300 }}>
-          {e.logo ? <Image src={e.logo.src} style={{ height: 46, objectFit: 'contain', objectPositionX: 0, marginBottom: 6 }} /> : <Text style={s.brand}>{e.razon_social || 'BRENDELL'}</Text>}
-          <Text style={s.brandContact}>
-            {[e.logo ? e.razon_social : null, e.rfc ? `RFC ${e.rfc}` : null, e.direccion, [e.telefono, e.email, e.sitio_web].filter(Boolean).join(' · ')].filter(Boolean).join('\n')}
-          </Text>
-        </View>
-        <View>
-          <View style={s.folioBadge}>
-            <Text style={s.folioLabel}>COTIZACIÓN</Text>
-            <Text style={s.folioValue}>{d.folio}</Text>
-          </View>
-          <Text style={s.metaRight}>
-            Fecha: {fmtFecha(d.fecha)}{'\n'}
-            Vigencia: {d.vigenciaDias} días naturales{d.vence ? ` (hasta ${fmtFecha(d.vence)})` : ''}
-          </Text>
-        </View>
-      </View>
-      <View style={s.hr} />
-    </>
-  )
-}
-
-function Totales({ d }) {
-  const t = d.totales, a = d.ajustes
-  const ivaTxt = a.iva_modo === 'incluido' ? `IVA ${num(a.iva_pct)}% (incluido)` : `IVA ${num(a.iva_pct)}%`
-  return (
-    <View style={s.totalesWrap} wrap={false}>
-      <View style={s.totalesBox}>
-        <View style={s.totRow}><Text style={s.totTxt}>Subtotal</Text><Text style={s.totVal}>{fmtMx(t.subtotal)}</Text></View>
-        {t.descuento > 0 ? <View style={s.totRow}><Text style={s.totTxt}>Descuento{num(a.descuento_pct) > 0 ? ` (${num(a.descuento_pct)}%)` : ''}</Text><Text style={s.totVal}>− {fmtMx(t.descuento)}</Text></View> : null}
-        {a.iva_modo === 'sumar' ? <View style={s.totRow}><Text style={s.totTxt}>{ivaTxt}</Text><Text style={s.totVal}>{fmtMx(t.iva)}</Text></View> : null}
-        <View style={s.totalBox}>
-          <View>
-            <Text style={s.totalLabel}>TOTAL</Text>
-            {a.iva_modo === 'incluido' ? <Text style={[s.totTxt, { fontSize: 7 }]}>{ivaTxt}: {fmtMx(t.iva)}</Text> : null}
-          </View>
-          <Text style={s.totalValue}>{fmtMx(t.total)} MXN</Text>
-        </View>
-        {t.anticipo > 0 ? (
-          <View style={{ marginTop: 6 }}>
-            <View style={s.totRow}><Text style={s.totTxt}>Anticipo {num(a.anticipo_pct)}%</Text><Text style={[s.totVal, { fontWeight: 700 }]}>{fmtMx(t.anticipo)}</Text></View>
-            <View style={s.totRow}><Text style={s.totTxt}>Saldo contra entrega</Text><Text style={s.totVal}>{fmtMx(t.saldo)}</Text></View>
-          </View>
-        ) : null}
-      </View>
+      {fondo > 0 ? <Text style={{ position: 'absolute', left: IX, width: IW, bottom: 0, textAlign: 'center', fontSize: 6, color: COLORS.inkMuted }}>fondo {fondo}</Text> : null}
     </View>
   )
 }
@@ -178,104 +108,139 @@ function Pie({ d }) {
   )
 }
 
+// Notas numeradas: lo que el admin capturó para esta cotización, en un solo lugar.
+function armarNotas(d) {
+  const a = d.ajustes
+  const n = []
+  n.push(a.iva_modo === 'sumar' ? `Precios en MXN. Al subtotal se suma el IVA (${num(a.iva_pct)}%).`
+    : a.iva_modo === 'incluido' ? `Precios en MXN e incluyen IVA (${num(a.iva_pct)}%).` : 'Precios en MXN.')
+  if (a.tiempo_entrega) n.push(`Tiempo de entrega estimado: ${a.tiempo_entrega}.`)
+  n.push(`Esta cotización tiene una vigencia de ${d.vigenciaDias} días naturales${d.vence ? ` (hasta el ${fmtFecha(d.vence)})` : ''}.`)
+  if (d.totales.anticipo > 0) n.push(`Para confirmar el pedido se requiere un anticipo del ${num(a.anticipo_pct)}%.`)
+  if (a.condiciones_pago) n.push(a.condiciones_pago)
+  if (a.mostrar_datos_bancarios && a.datos_bancarios) n.push(`Datos para depósito o transferencia: ${a.datos_bancarios.replace(/\s*\n\s*/g, ' · ')}`)
+  for (const linea of (a.notas ?? '').split('\n').map(x => x.trim()).filter(Boolean)) n.push(linea)
+  return n
+}
+
+function Fila({ f, i }) {
+  const celda = (w, extra) => [s.td, { width: w }, extra]
+  return (
+    <View style={s.tr} wrap={false}>
+      <View style={celda(COL.n, { borderLeftWidth: 0, alignItems: 'center', paddingHorizontal: 0 })}><Text style={s.num}>{i + 1}</Text></View>
+      <View style={celda(COL.modelo)}>
+        <Text style={s.modelo}>{f.producto}</Text>
+        {f.configuracion ? <Text style={s.modeloSub}>{f.configuracion}</Text> : null}
+      </View>
+      <View style={celda(COL.desc)}>
+        <Text style={s.descTxt}>
+          {[f.medidas, f.textilCatalogo ? `Tela ${f.textilCatalogo}${f.textilGrado ? ` cat. ${f.textilGrado}` : ''}` : null, f.textilColor ? `Color ${f.textilColor}` : null].filter(Boolean).join('\n')}
+        </Text>
+        {f.requisito ? <View style={s.req}><Text style={s.reqL}>REQUISITO ESPECIAL</Text><Text style={s.reqT}>{f.requisito}</Text></View> : null}
+      </View>
+      <View style={celda(COL.img, { alignItems: 'center' })}>{f.foto ? <Image src={f.foto.src} style={s.imgFoto} /> : null}</View>
+      <View style={celda(COL.tela, { alignItems: 'flex-start' })}>
+        {f.textilCatalogo ? (
+          <>
+            <View style={s.telaCaja}>
+              {f.tela?.imagen ? <Image src={f.tela.imagen.src} style={{ width: 27, height: 27, objectFit: 'cover' }} /> : <View style={{ width: 27, height: 27, backgroundColor: f.tela?.hex || COLORS.panelBg }} />}
+            </View>
+            <Text style={s.telaTxt}>{f.textilCatalogo}{f.textilGrado ? `\nCategoría ${f.textilGrado}` : ''}{f.textilColor ? `\n${f.textilColor}` : ''}</Text>
+          </>
+        ) : null}
+      </View>
+      <View style={celda(COL.iso, { alignItems: 'center' })}>{!f.esLibre && (f.iso || f.medidasCm) ? <IsoMini img={f.iso} m={f.medidasCm} /> : null}</View>
+      <View style={celda(COL.unit, { alignItems: 'flex-end' })}>
+        <Text style={s.num}>{fmtMx(f.precioNeto)}</Text>
+        {f.descuento > 0 ? <Text style={s.tachado}>{fmtMx(f.precio)}</Text> : null}
+        {f.descuento > 0 ? <Text style={s.modeloSub}>−{f.descuento}%</Text> : null}
+      </View>
+      <View style={celda(COL.cant, { alignItems: 'center', paddingHorizontal: 0 })}><Text style={s.num}>{f.cantidad}</Text></View>
+      <View style={celda(COL.sub, { alignItems: 'flex-end' })}><Text style={[s.num, { fontWeight: 600 }]}>{fmtMx(f.subtotal)}</Text></View>
+    </View>
+  )
+}
+
 export default function AdminCotizacionPdf({ data: d }) {
-  const e = d.empresa, c = d.cliente ?? {}, a = d.ajustes
-  const hayCliente = Object.values(c).some(v => v)
+  const e = d.empresa, c = d.cliente ?? {}, a = d.ajustes, t = d.totales
+  const hayCliente = [c.nombre, c.empresa, c.rfc, c.email, c.telefono, c.direccion].some(v => v)
+  const notas = armarNotas(d)
+  const encabezadosTabla = [['#', COL.n], ['Modelo', COL.modelo], ['Descripción', COL.desc], ['Imagen', COL.img], ['Tela\n(Categoría)', COL.tela], ['Isométrico\n(medidas en cm)', COL.iso], ['Precio\nunitario', COL.unit], ['Cant.', COL.cant], ['Subtotal', COL.sub]]
   return (
     <Document title={`Cotización ${d.folio}`} author={e.razon_social || 'Brendell'}>
       <Page size="LETTER" style={s.page}>
-        <Encabezado d={d} />
+        <View style={s.top}>
+          <View>
+            {e.logo ? <Image src={e.logo.src} style={{ height: 40, objectFit: 'contain', objectPositionX: 0 }} /> : <Text style={s.wordmark}>BRENDELL</Text>}
+            <Text style={s.empresaTxt}>{[e.razon_social, e.rfc ? `RFC ${e.rfc}` : null, e.direccion, [e.telefono, e.email, e.sitio_web].filter(Boolean).join(' · ')].filter(Boolean).join('\n')}</Text>
+          </View>
+          <View style={{ width: 190 }}>
+            <Text style={s.titulo}>COTIZACIÓN</Text>
+            <View style={[s.meta, { marginTop: 8 }]}><Text style={s.metaK}>No.</Text><Text style={s.metaV}>{d.folio}</Text></View>
+            <View style={s.meta}><Text style={s.metaK}>Fecha</Text><Text style={s.metaV}>{fmtFecha(d.fecha)}</Text></View>
+            <View style={s.meta}><Text style={s.metaK}>Vigencia</Text><Text style={s.metaV}>{d.vigenciaDias} días</Text></View>
+          </View>
+        </View>
+
+        <View style={s.partes}>
+          <View style={s.parteBox}>
+            {hayCliente ? (
+              <>
+                <Text style={s.parteLabel}>Cliente</Text>
+                <Text style={s.parteTxt}>{[c.nombre, c.empresa, c.rfc ? `RFC ${c.rfc}` : null, c.direccion, c.email, c.telefono].filter(Boolean).join('\n')}</Text>
+              </>
+            ) : null}
+          </View>
+          <View style={s.parteBox}>
+            {c.direccion_entrega ? (
+              <>
+                <Text style={s.parteLabel}>Dirección de entrega</Text>
+                <Text style={s.parteTxt}>{c.direccion_entrega}</Text>
+              </>
+            ) : null}
+          </View>
+        </View>
         {d.proyecto ? <Text style={s.proyecto}>{d.proyecto}</Text> : null}
 
-        {hayCliente ? (
-          <View style={s.clienteBox} wrap={false}>
-            <Text style={s.clienteLabel}>COTIZACIÓN PARA</Text>
-            <Text style={s.clienteNombre}>{c.nombre}{c.empresa ? ` · ${c.empresa}` : ''}</Text>
-            <Text style={s.clienteSub}>
-              {[c.rfc ? `RFC ${c.rfc}` : null, c.direccion, [c.email, c.telefono].filter(Boolean).join(' · ')].filter(Boolean).join('\n')}
-            </Text>
-          </View>
-        ) : null}
-
         <View style={s.th} fixed>
-          <Text style={[s.thTxt, s.cNum]}>#</Text>
-          <Text style={[s.thTxt, s.cDesc, { paddingRight: 8 }]}>DESCRIPCIÓN</Text>
-          <Text style={[s.thTxt, s.cCant]}>CANT.</Text>
-          <Text style={[s.thTxt, s.cUnit]}>PRECIO UNIT.</Text>
-          <Text style={[s.thTxt, s.cImp]}>IMPORTE</Text>
+          {encabezadosTabla.map(([txt, w], i) => <Text key={i} style={[s.thCell, { width: w }]}>{txt}</Text>)}
         </View>
-        {d.filas.map((f, i) => {
-          const hayImgs = !f.esLibre && (f.foto || f.iso || f.textilCatalogo)
-          return (
-            <View key={i} style={s.tr} wrap={false}>
-              <Text style={s.cNum}>{i + 1}</Text>
-              <View style={s.cDesc}>
-                <View style={{ flexDirection: 'row' }}>
-                  <View style={{ flex: 1, paddingRight: 8 }}>
-                    <Text style={s.prod}>{f.producto}</Text>
-                    {(f.configuracion || f.medidas) ? <Text style={s.linea2}>{[f.configuracion, f.medidas].filter(Boolean).join(' · ')}</Text> : null}
-                    {f.requisito ? (
-                      <View style={s.reqBox}><Text style={s.reqLabel}>REQUISITO ESPECIAL</Text><Text style={s.reqTxt}>{f.requisito}</Text></View>
-                    ) : null}
-                  </View>
-                  <Text style={s.cCant}>{f.cantidad}</Text>
-                  <View style={s.cUnit}>
-                    <Text>{fmtMx(f.precioNeto)}</Text>
-                    {f.descuento > 0 ? <Text style={s.subtle}>{fmtMx(f.precio)} − {f.descuento}%</Text> : null}
-                  </View>
-                  <Text style={[s.cImp, { fontWeight: 700 }]}>{fmtMx(f.subtotal)}</Text>
-                </View>
-                {hayImgs ? (
-                  <View style={s.imgs}>
-                    {f.foto ? <View style={s.imgFoto}><Image src={f.foto.src} style={s.imgFotoImg} /></View> : null}
-                    {f.iso ? <IsoConCotas img={f.iso} m={f.medidasCm} /> : null}
-                    {f.textilCatalogo ? (
-                      <View style={s.imgTela}>
-                        <View style={s.imgTelaBox}>
-                          {f.tela?.imagen ? <Image src={f.tela.imagen.src} style={{ width: 32, height: 32, objectFit: 'cover' }} /> : <View style={{ width: 32, height: 32, backgroundColor: f.tela?.hex || COLORS.panelBg }} />}
-                        </View>
-                        <Text style={s.imgTelaTxt}>{f.textilCatalogo}{f.textilColor ? `\n${f.textilColor}` : ''}{f.textilGrado ? `\nCat. ${f.textilGrado}` : ''}</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                ) : null}
+        {d.filas.map((f, i) => <Fila key={i} f={f} i={i} />)}
+
+        <View style={s.abajo} wrap={false}>
+          <View style={s.notasBox}>
+            <Text style={s.notasTit}>Notas</Text>
+            {notas.map((x, i) => (<View key={i} style={s.nota}><Text style={s.notaN}>{i + 1}.</Text><Text style={s.notaT}>{x}</Text></View>))}
+          </View>
+          <View style={s.totBox}>
+            <View style={s.totRow}><Text style={s.totK}>Subtotal</Text><Text style={s.totV}>{fmtMx(t.subtotal)}</Text></View>
+            {t.descuento > 0 ? <View style={s.totRow}><Text style={s.totK}>Descuento{num(a.descuento_pct) > 0 ? ` (${num(a.descuento_pct)}%)` : ''}</Text><Text style={s.totV}>− {fmtMx(t.descuento)}</Text></View> : null}
+            {a.iva_modo === 'sumar' ? <View style={s.totRow}><Text style={s.totK}>IVA ({num(a.iva_pct)}%)</Text><Text style={s.totV}>{fmtMx(t.iva)}</Text></View> : null}
+            <View style={s.totalBox}><Text style={s.totalK}>Total</Text><Text style={s.totalV}>{fmtMx(t.total)}</Text></View>
+            {a.iva_modo === 'incluido' ? <View style={s.totRow}><Text style={[s.totK, { fontSize: 7 }]}>IVA incluido ({num(a.iva_pct)}%)</Text><Text style={[s.totV, { fontSize: 7 }]}>{fmtMx(t.iva)}</Text></View> : null}
+            {t.anticipo > 0 ? (
+              <View style={{ marginTop: 4 }}>
+                <View style={s.totRow}><Text style={s.totK}>Anticipo {num(a.anticipo_pct)}%</Text><Text style={[s.totV, { fontWeight: 600 }]}>{fmtMx(t.anticipo)}</Text></View>
+                <View style={s.totRow}><Text style={s.totK}>Saldo</Text><Text style={s.totV}>{fmtMx(t.saldo)}</Text></View>
               </View>
-            </View>
-          )
-        })}
-
-        <Totales d={d} />
-
-        {a.tiempo_entrega ? (
-          <View style={s.caja} wrap={false}><Text style={s.cajaLabel}>Tiempo estimado de entrega</Text><Text style={s.cajaTexto}>{a.tiempo_entrega}</Text></View>
-        ) : null}
-        {a.condiciones_pago ? (
-          <View style={s.caja} wrap={false}><Text style={s.cajaLabel}>Condiciones de pago</Text><Text style={s.cajaTexto}>{a.condiciones_pago}</Text></View>
-        ) : null}
-        {a.mostrar_datos_bancarios && a.datos_bancarios ? (
-          <View style={s.caja} wrap={false}><Text style={s.cajaLabel}>Datos para depósito o transferencia</Text><Text style={s.cajaTexto}>{a.datos_bancarios}</Text></View>
-        ) : null}
-        {a.notas ? (
-          <View style={s.caja} wrap={false}><Text style={s.cajaLabel}>Notas</Text><Text style={s.cajaTexto}>{a.notas}</Text></View>
-        ) : null}
+            ) : null}
+          </View>
+        </View>
 
         {(a.terminos ?? []).length > 0 ? (
-          <View style={{ marginTop: 16 }}>
-            <Titulo>Términos y condiciones</Titulo>
-            {a.terminos.map((t, i) => (
-              <View key={i} wrap={false}><Text style={s.terminoTitulo}>{t.titulo}</Text><Text style={s.terminoTexto}>{t.texto}</Text></View>
-            ))}
+          <View>
+            <Text style={s.h2}>Términos y condiciones</Text>
+            {a.terminos.map((x, i) => (<View key={i} wrap={false}><Text style={s.terminoT}>{x.titulo}</Text><Text style={s.terminoD}>{x.texto}</Text></View>))}
           </View>
         ) : null}
 
         <View style={s.firmas} wrap={false}>
           <View style={s.firma}><Text style={s.firmaTxt}>Acepto la cotización · Nombre y firma del cliente</Text></View>
-          <View style={[s.firma, { width: 120 }]}><Text style={s.firmaTxt}>Fecha</Text></View>
+          <View style={[s.firma, { width: 110 }]}><Text style={s.firmaTxt}>Fecha</Text></View>
         </View>
-        {e.notas_pie ? <Text style={[s.terminoTexto, { marginTop: 14, textAlign: 'center' }]}>{e.notas_pie}</Text> : null}
+        {e.notas_pie ? <Text style={s.gracias}>{e.notas_pie}</Text> : null}
         <Pie d={d} />
       </Page>
-
     </Document>
   )
 }

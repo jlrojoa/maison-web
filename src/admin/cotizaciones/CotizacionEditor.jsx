@@ -108,12 +108,13 @@ export default function CotizacionEditor() {
     const c = clientes.find(x => x.id === cid)
     if (!c) return
     setClienteId(c.id)
-    setCliente({ nombre: c.nombre ?? '', empresa: c.empresa ?? '', rfc: c.rfc ?? '', email: c.email ?? '', telefono: c.telefono ?? '', direccion: c.direccion ?? '', notas: c.notas ?? '' })
+    setCliente(prev => ({ nombre: c.nombre ?? '', empresa: c.empresa ?? '', rfc: c.rfc ?? '', email: c.email ?? '', telefono: c.telefono ?? '', direccion: c.direccion ?? '', notas: c.notas ?? '', direccion_entrega: prev.direccion_entrega ?? '' }))
   })
 
   const guardarEnDirectorio = async () => {
     try {
-      const guardado = await guardarCliente({ ...(clienteId ? { id: clienteId } : {}), ...cliente })
+      const { direccion_entrega, ...paraDirectorio } = cliente // eslint-disable-line no-unused-vars
+      const guardado = await guardarCliente({ ...(clienteId ? { id: clienteId } : {}), ...paraDirectorio })
       setClientes(await listarClientes()); setClienteId(guardado.id)
       mostrar(clienteId ? 'Cliente actualizado en el directorio.' : 'Cliente guardado en el directorio.')
     } catch (err) { mostrar(err.message, true) }
@@ -212,7 +213,10 @@ export default function CotizacionEditor() {
                 <Campo label="Correo"><input className="adm-input" style={W} type="email" value={cliente.email} onChange={e => setCli('email', e.target.value)} /></Campo>
                 <Campo label="Teléfono"><input className="adm-input" style={W} value={cliente.telefono} onChange={e => setCli('telefono', e.target.value)} /></Campo>
               </div>
-              <Campo label="Dirección"><input className="adm-input" style={W} value={cliente.direccion} onChange={e => setCli('direccion', e.target.value)} /></Campo>
+              <div className="adm-field-row">
+                <Campo label="Dirección del cliente"><input className="adm-input" style={W} value={cliente.direccion} onChange={e => setCli('direccion', e.target.value)} /></Campo>
+                <Campo label="Dirección de entrega" hint="Solo de esta cotización."><input className="adm-input" style={W} value={cliente.direccion_entrega ?? ''} onChange={e => setCli('direccion_entrega', e.target.value)} /></Campo>
+              </div>
               {!soloLectura && <button type="button" className="adm-btn-sm" onClick={guardarEnDirectorio} disabled={!cliente.nombre.trim()}>{clienteId ? 'Actualizar en el directorio' : 'Guardar en el directorio de clientes'}</button>}
             </fieldset>
           </div>
