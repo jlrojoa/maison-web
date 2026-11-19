@@ -6,7 +6,7 @@
 // algún día se agrega un píxel o analítica, debe cargarse SOLO después de que
 // la persona lo acepte (aquí) y actualizarse el Aviso de privacidad.
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 
 const CLAVE = 'brendell_aviso_almacenamiento_v1'
 
@@ -16,8 +16,10 @@ function yaAceptado() {
 
 export default function AvisoCookies() {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const [visible, setVisible] = useState(() => !yaAceptado())
-  if (!visible) return null
+  // El admin es de uso interno: el aviso es para quien visita el sitio, no para quien lo administra.
+  if (!visible || pathname.startsWith('/admin')) return null
 
   const aceptar = () => {
     try { localStorage.setItem(CLAVE, 'ok') } catch { /* sin storage: se vuelve a mostrar */ }

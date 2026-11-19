@@ -9,7 +9,9 @@ import { fichaTela, imagenParaPdf, fotoProducto } from '../../pages/configurador
 import { num, totales, precioNeto, totalLinea, textoMedidas } from './calc'
 
 // `lineas` en formato del editor; `cot` aporta folio y fechas (puede venir vacío en un borrador sin guardar).
-export async function generarPdfAdmin({ cot, proyecto, cliente, ajustes, fijos, lineas }) {
+export async function generarPdfAdmin({ cot, proyecto, cliente, ajustes, fijos, lineas: todas }) {
+  // Un renglón sin nombre y sin precio es uno que se agregó y no se llenó: no sale en el PDF.
+  const lineas = todas.filter(l => (l.producto_nombre ?? '').trim() || num(l.precio))
   const { default: AdminCotizacionPdf } = await import('./AdminCotizacionPdf')
   const filas = await Promise.all(lineas.map(async l => {
     const [foto, iso, tela] = await Promise.all([
