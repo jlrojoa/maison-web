@@ -57,7 +57,7 @@ export default function AdminLayout() {
             <span className="adm-nav-icon">＋</span> Nueva cotización
           </NavLink>
           <NavLink to="/admin/cotizaciones/clientes" className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
-            <span className="adm-nav-icon">◔</span> Clientes
+            <span className="adm-nav-icon">👥</span> Clientes
           </NavLink>
           <NavLink to="/admin/cotizaciones/ajustes" className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
             <span className="adm-nav-icon">⚙</span> Ajustes de cotización
@@ -68,7 +68,7 @@ export default function AdminLayout() {
           <div className="adm-nav-label">CONTENIDO</div>
           <div className="adm-nav-item adm-disabled"><span className="adm-nav-icon">▧</span> Páginas</div>
           <div className="adm-nav-item adm-disabled"><span className="adm-nav-icon">▭</span> Banners</div>
-          <div className="adm-nav-item adm-disabled"><span className="adm-nav-icon">"</span> Testimonios</div>
+          <div className="adm-nav-item adm-disabled"><span className="adm-nav-icon">💬</span> Testimonios</div>
           <div className="adm-nav-item adm-disabled"><span className="adm-nav-icon">✦</span> Inspiración</div>
         </div>
 
@@ -78,10 +78,10 @@ export default function AdminLayout() {
             <span className="adm-nav-icon">⌂</span> Dashboard
           </NavLink>
           <NavLink to="/admin/sales/prospectos" className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
-            <span className="adm-nav-icon">◔</span> Prospectos
+            <span className="adm-nav-icon">🎯</span> Prospectos
           </NavLink>
           <NavLink to="/admin/sales/prospector" className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
-            <span className="adm-nav-icon">⌖</span> Prospector
+            <span className="adm-nav-icon">🔎</span> Prospector
           </NavLink>
           <NavLink to="/admin/sales/campanas" className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
             <span className="adm-nav-icon">📣</span> Campañas
@@ -92,7 +92,7 @@ export default function AdminLayout() {
         <div className="adm-nav-section">
           <div className="adm-nav-label">CONFIGURACIÓN</div>
           <NavLink to="/admin/distribuidores" className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
-            <span className="adm-nav-icon">◔</span> Distribuidores
+            <span className="adm-nav-icon">🏪</span> Distribuidores
           </NavLink>
           <NavLink to="/admin/catalogos" className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
             <span className="adm-nav-icon">⇩</span> Descargas
