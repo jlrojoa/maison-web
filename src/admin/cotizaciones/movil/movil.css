@@ -82,3 +82,18 @@
 .mv-hoja { width: 100%; background: #fff; border-radius: 20px 20px 0 0; padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); max-height: 90dvh; overflow-y: auto; }
 .mv-hoja h3 { margin: 0 0 4px; font-size: 19px; }
 .mv-hoja .mv-grande { width: 100%; margin-top: 12px; }
+
+/* Lista: cada cotización con su botón PDF */
+.mv-item { display: flex; gap: 8px; align-items: stretch; margin-bottom: 8px; }
+.mv-item > a { flex: 1; min-width: 0; margin-bottom: 0 !important; }
+.mv-pdf { flex: none; width: 56px; border: 1px solid #D6D0C6; background: #fff; border-radius: 12px; font-size: 14px; font-weight: 600; font-family: inherit; color: #1D1A17; }
+
+/* Vista previa del PDF */
+.mv-visor { position: fixed; inset: 0; z-index: 80; background: #E9E6E0; display: flex; flex-direction: column; padding-top: env(safe-area-inset-top); }
+.mv-visor > header { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #1D1A17; color: #fff; }
+.mv-visor > header button { background: none; border: none; color: #fff; font-size: 20px; padding: 4px 8px; }
+.mv-visor > header b { flex: 1; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mv-visor > header span { font-size: 12px; color: #D6D0C6; }
+.mv-visor-cuerpo { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; padding: 10px 8px 16px; touch-action: pan-x pan-y pinch-zoom; }
+.mv-visor > footer { display: flex; gap: 10px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: #fff; border-top: 1px solid #E5E1D8; }
+.mv-visor > footer .mv-btn, .mv-visor > footer .mv-btn-sec { flex: 1; }

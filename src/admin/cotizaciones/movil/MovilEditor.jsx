@@ -13,6 +13,7 @@ import {
 import { fmtMx, num, totales } from '../calc'
 import { generarPdfAdmin } from '../generarPdf'
 import MovilLinea from './MovilLinea'
+import VisorPdf from './VisorPdf'
 import { lineaLlena } from './lineaOps'
 import { sinOrientacion } from '../orientacion'
 import { compartirPdf, descargarPdf, mensajeCliente, primerNombre, puedeCompartirArchivos, urlCorreo, urlWhatsapp } from './compartir'
@@ -34,6 +35,7 @@ export default function MovilEditor() {
   const [lineas, setLineas] = useState([])
   const [ocupado, setOcupado] = useState(null)
   const [aviso, setAviso] = useState(null)
+  const [visor, setVisor] = useState(null) // vista previa: { blob, nombre, folio, total, texto, asunto, emitida }
   const [envio, setEnvio] = useState(null) // { blob, nombre, folio, total, texto, asunto }
   const [respaldo, setRespaldo] = useState(null)
   const [masCliente, setMasCliente] = useState(false)
@@ -109,24 +111,42 @@ export default function MovilEditor() {
     try { const f = await guardar(null); if (f) mostrar(`Guardada (${folioDe(f)}).`) } catch (err) { mostrar(`No se pudo guardar: ${err.message}`, true) } finally { setOcupado(null) }
   }
 
-  const enviar = async () => {
-    if (!cliente.nombre.trim()) return mostrar('Escribe el nombre del cliente.', true)
-    if (!lineas.some(lineaLlena)) return mostrar('Agrega al menos un mueble o concepto.', true)
-    if (!lineas.filter(lineaLlena).some(l => num(l.precio) > 0) && !window.confirm('Ningún renglón tiene precio. ¿Enviar de todos modos?')) return
+  // Valida lo mínimo antes de guardar o mostrar el PDF.
+  const validar = () => {
+    if (!cliente.nombre.trim()) { mostrar('Escribe el nombre del cliente.', true); return false }
+    if (!lineas.some(lineaLlena)) { mostrar('Agrega al menos un mueble o concepto.', true); return false }
     const sinOri = sinOrientacion(lineas.filter(lineaLlena), cat.productos)
-    if (sinOri.length) return mostrar(`Falta la orientación (izquierda o derecha) en: ${sinOri.map(x => x.nombre).join(', ')}.`, true)
-    if (!cot || cot.status === 'borrador') {
-      if (!window.confirm('Al enviar se emite la cotización y empieza su vigencia. ¿Continuar?')) return
-    }
+    if (sinOri.length) { mostrar(`Falta la orientación (izquierda o derecha) en: ${sinOri.map(x => x.nombre).join(', ')}.`, true); return false }
+    return true
+  }
+  const armarPdf = async (final) => {
+    const llenas = lineas.filter(lineaLlena)
+    const { blob, nombre } = await generarPdfAdmin({ cot: final, proyecto, cliente, ajustes, fijos, lineas: llenas })
+    const tt = totales(llenas, ajustes); const folio = folioDe(final)
+    const dias = Math.max(1, Math.round(num(ajustes.vigencia_dias)) || 15)
+    return { blob, nombre, folio, total: fmtMx(tt.total), texto: mensajeCliente({ nombre: cliente.nombre, folio, total: fmtMx(tt.total), dias }), asunto: `Cotización ${folio} · Brendell`, emitida: final.status !== 'borrador' }
+  }
+
+  // "Revisar y enviar": guarda como borrador, arma el PDF y lo muestra ANTES de emitir o mandar nada.
+  const revisar = async () => {
+    if (!validar()) return
+    setOcupado('revisar')
+    try {
+      const final = await guardar(null); if (!final) return
+      setVisor(await armarPdf(final))
+    } catch (err) { mostrar(`No se pudo preparar el PDF: ${err.message}`, true) } finally { setOcupado(null) }
+  }
+
+  // Desde la vista previa: si ya estaba emitida se manda tal cual; si no, se emite (fija fecha y vigencia) y se rearma el PDF.
+  const confirmarEnvio = async () => {
+    if (visor.emitida) { setEnvio({ ...visor, dias: Math.max(1, Math.round(num(ajustes.vigencia_dias)) || 15) }); setVisor(null); return }
+    if (!window.confirm('Al enviar se emite la cotización y empieza su vigencia. ¿Continuar?')) return
     setOcupado('enviar')
     try {
       const final = await guardar('emitida'); if (!final) return
-      const llenas = lineas.filter(lineaLlena)
-      const { blob, nombre } = await generarPdfAdmin({ cot: final, proyecto, cliente, ajustes, fijos, lineas: llenas })
-      const tt = totales(llenas, ajustes); const folio = folioDe(final)
-      const dias = Math.max(1, Math.round(num(ajustes.vigencia_dias)) || 15)
-      setEnvio({ blob, nombre, folio, total: fmtMx(tt.total), dias, texto: mensajeCliente({ nombre: cliente.nombre, folio, total: fmtMx(tt.total), dias }), asunto: `Cotización ${folio} · Brendell` })
-    } catch (err) { mostrar(`No se pudo preparar el PDF: ${err.message}`, true) } finally { setOcupado(null) }
+      const pdf = await armarPdf(final)
+      setVisor(null); setEnvio({ ...pdf, dias: Math.max(1, Math.round(num(ajustes.vigencia_dias)) || 15) })
+    } catch (err) { mostrar(`No se pudo emitir: ${err.message}`, true) } finally { setOcupado(null) }
   }
 
   const duplicar = async () => {
@@ -224,9 +244,18 @@ export default function MovilEditor() {
           <b>{fmtMx(t.total)}</b>
         </div>
         <button type="button" className="mv-btn-sec" disabled={!!ocupado} onClick={soloGuardar}>{ocupado === 'guardar' ? 'Guardando…' : 'Guardar'}</button>
-        <button type="button" className="mv-btn" disabled={!!ocupado} onClick={enviar}>{ocupado === 'enviar' ? 'Preparando…' : 'Enviar'}</button>
+        <button type="button" className="mv-btn" disabled={!!ocupado} onClick={revisar}>{ocupado === 'revisar' ? 'Preparando PDF…' : 'Revisar y enviar'}</button>
       </div>
 
+      {visor && (
+        <VisorPdf blob={visor.blob} titulo={`Cotización ${visor.folio} · ${visor.total}`} onCerrar={() => setVisor(null)}
+          acciones={(
+            <>
+              <button type="button" className="mv-btn-sec" onClick={() => setVisor(null)}>Seguir editando</button>
+              <button type="button" className="mv-btn" disabled={ocupado === 'enviar'} onClick={confirmarEnvio}>{ocupado === 'enviar' ? 'Emitiendo…' : (visor.emitida ? 'Enviar' : 'Emitir y enviar')}</button>
+            </>
+          )} />
+      )}
       {envio && <HojaEnvio envio={envio} cliente={cliente} onCerrar={() => setEnvio(null)} onListo={() => navigate('/m')} />}
     </div>
   )
