@@ -15,7 +15,7 @@ export async function generarPdfAdmin({ cot, proyecto, cliente, ajustes, fijos, 
   const { default: AdminCotizacionPdf } = await import('./AdminCotizacionPdf')
   const filas = await Promise.all(lineas.map(async l => {
     const [foto, iso, tela] = await Promise.all([
-      l.es_libre ? null : (l.imagen_url ? imagenParaPdf(l.imagen_url, 1000) : fotoProducto(null, l.producto_id)),
+      l.imagen_url ? imagenParaPdf(l.imagen_url, 1000) : (l.es_libre || !l.producto_id ? null : fotoProducto(null, l.producto_id)),
       imagenParaPdf(l.isometrico_url, 800),
       l.tela_catalogo ? fichaTela({ catalogo: l.tela_catalogo, grado: l.tela_grado, color: l.tela_color }) : null,
     ])

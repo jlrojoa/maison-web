@@ -19,7 +19,7 @@ export default function AvisoCookies() {
   const { pathname } = useLocation()
   const [visible, setVisible] = useState(() => !yaAceptado())
   // El admin es de uso interno: el aviso es para quien visita el sitio, no para quien lo administra.
-  if (!visible || pathname.startsWith('/admin')) return null
+  if (!visible || (pathname.startsWith('/admin') || pathname === '/m' || pathname.startsWith('/m/'))) return null
 
   const aceptar = () => {
     try { localStorage.setItem(CLAVE, 'ok') } catch { /* sin storage: se vuelve a mostrar */ }

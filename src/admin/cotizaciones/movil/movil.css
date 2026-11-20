@@ -1,0 +1,84 @@
+/* Cotizador móvil (/m). Pensado para iPhone: textos de 16 px (evita el zoom de Safari), botones de 48 px y barra inferior fija. */
+.mv-app { min-height: 100dvh; background: #F6F5F2; color: #1D1A17; font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; -webkit-text-size-adjust: 100%; padding-bottom: env(safe-area-inset-bottom); }
+.mv-app * { box-sizing: border-box; }
+.mv-top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; padding: calc(env(safe-area-inset-top) + 8px) 12px 8px; background: #1D1A17; color: #fff; }
+.mv-logo { font-weight: 500; letter-spacing: .34em; font-size: 15px; }
+.mv-atras { width: 56px; font-size: 30px; line-height: 1; color: #fff; text-decoration: none; }
+.mv-salir { width: 56px; text-align: right; background: none; border: none; color: #D6D0C6; font-size: 14px; padding: 8px 0; }
+.mv-pad { padding: 16px 14px 40px; }
+.mv-editor { padding: 14px 12px calc(110px + env(safe-area-inset-bottom)); }
+.mv-cargando { padding: 40px 16px; text-align: center; color: #6B6760; }
+.mv-titulo { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #6B6760; margin: 22px 4px 10px; font-weight: 600; }
+.mv-mut { color: #6B6760; font-size: 14px; }
+
+.mv-btn, .mv-btn-sec { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 18px; border-radius: 12px; font-size: 16px; font-weight: 600; border: 1px solid #1D1A17; text-decoration: none; font-family: inherit; }
+.mv-btn { background: #1D1A17; color: #fff; }
+.mv-btn-sec { background: #fff; color: #1D1A17; border-color: #D6D0C6; }
+.mv-btn:disabled, .mv-btn-sec:disabled { opacity: .55; }
+.mv-grande { min-height: 56px; font-size: 17px; }
+.mv-bloque { display: flex; width: 100%; margin-top: 10px; text-align: center; }
+.mv-link { background: none; border: none; color: #1D4ED8; font-size: 15px; padding: 10px 0; text-align: left; font-family: inherit; }
+
+.mv-card, .mv-linea { background: #fff; border: 1px solid #E5E1D8; border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+.mv-card h2 { font-size: 16px; margin: 0 0 10px; }
+.mv-campo { display: block; margin-bottom: 12px; min-width: 0; flex: 1; }
+.mv-campo > span { display: block; font-size: 13px; color: #6B6760; margin-bottom: 4px; }
+.mv-campo small { display: block; font-size: 12px; color: #9A958B; margin-top: 3px; }
+.mv-campo input, .mv-campo select, .mv-campo textarea, .mv-buscar { width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid #D6D0C6; border-radius: 10px; font-size: 16px; background: #fff; color: #1D1A17; font-family: inherit; appearance: none; -webkit-appearance: none; }
+.mv-campo select { background-image: linear-gradient(45deg, transparent 50%, #6B6760 50%), linear-gradient(135deg, #6B6760 50%, transparent 50%); background-position: calc(100% - 20px) 21px, calc(100% - 15px) 21px; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 34px; }
+.mv-campo textarea { min-height: 64px; resize: vertical; }
+.mv-buscar { margin-bottom: 12px; }
+.mv-fila { display: flex; gap: 10px; }
+
+.mv-linea { padding: 0; overflow: hidden; }
+.mv-linea > header { display: flex; align-items: center; gap: 10px; padding: 14px; cursor: pointer; }
+.mv-num { width: 26px; height: 26px; border-radius: 50%; background: #1D1A17; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex: none; }
+.mv-linea-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.mv-linea-t b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+.mv-linea-t small { color: #6B6760; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mv-flecha { color: #9A958B; }
+.mv-linea-cuerpo { padding: 0 14px 14px; border-top: 1px solid #F0ECE4; padding-top: 14px; }
+.mv-colores { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 12px; margin-bottom: 4px; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; }
+.mv-colores button { flex: none; width: 74px; background: none; border: none; padding: 0; text-align: center; scroll-snap-align: start; font-family: inherit; }
+.mv-colores i { display: block; width: 74px; height: 74px; border-radius: 12px; background-size: cover; background-position: center; border: 3px solid transparent; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
+.mv-colores .sel i { border-color: #1D1A17; }
+.mv-colores span { display: block; font-size: 11.5px; line-height: 1.2; margin-top: 4px; color: #4B4740; overflow-wrap: anywhere; }
+.mv-stepper { display: flex; align-items: center; justify-content: space-between; height: 48px; border: 1px solid #D6D0C6; border-radius: 10px; overflow: hidden; }
+.mv-stepper button { width: 48px; height: 100%; border: none; background: #F6F5F2; font-size: 22px; font-family: inherit; }
+.mv-stepper b { font-size: 17px; background: none; }
+.mv-foto { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+.mv-foto img, .mv-foto-vacia { width: 92px; height: 70px; border-radius: 10px; object-fit: contain; background: #F6F5F2; flex: none; }
+.mv-foto-vacia { display: flex; align-items: center; justify-content: center; color: #9A958B; font-size: 12px; }
+.mv-foto > div:last-child { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.mv-foto .mv-btn-sec { min-height: 40px; font-size: 14px; padding: 0 12px; }
+.mv-quitar { background: none; border: none; color: #B91C1C; font-size: 14px; padding: 10px 0 0; font-family: inherit; }
+.mv-agregar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.mv-agregar .mv-btn-sec { flex: 1 1 45%; font-size: 15px; padding: 0 8px; }
+.mv-acordeon { width: 100%; background: none; border: none; text-align: left; font-size: 16px; font-weight: 600; padding: 4px 0; font-family: inherit; }
+
+.mv-barra { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; align-items: center; gap: 10px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.96); border-top: 1px solid #E5E1D8; backdrop-filter: blur(10px); }
+.mv-total { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.mv-total small { font-size: 12px; color: #6B6760; }
+.mv-total b { font-size: 20px; }
+.mv-barra .mv-btn, .mv-barra .mv-btn-sec { min-height: 46px; padding: 0 16px; }
+
+.mv-aviso { position: fixed; top: calc(env(safe-area-inset-top) + 56px); left: 12px; right: 12px; z-index: 50; padding: 12px 14px; border-radius: 12px; background: #ECFDF5; border: 1px solid #A7F3D0; color: #047857; font-size: 15px; }
+.mv-aviso.err { background: #FEF2F2; border-color: #FECACA; color: #B91C1C; }
+.mv-aviso-in { background: #F6F5F2; padding: 10px 12px; border-radius: 10px; font-size: 14px; margin: 12px 0 0; }
+.mv-banner { background: #EFF6FF; border: 1px solid #BFDBFE; color: #1E40AF; border-radius: 12px; padding: 12px 14px; font-size: 15px; margin-bottom: 14px; }
+.mv-banner div { display: flex; gap: 14px; margin-top: 8px; }
+.mv-banner button { background: none; border: none; color: #1D4ED8; font-weight: 600; font-size: 15px; padding: 6px 0; font-family: inherit; }
+.mv-banner-link { display: block; text-decoration: none; margin-top: 12px; }
+
+.mv-lista { list-style: none; margin: 0; padding: 0; }
+.mv-lista li a { display: flex; justify-content: space-between; gap: 10px; align-items: center; background: #fff; border: 1px solid #E5E1D8; border-radius: 12px; padding: 14px; margin-bottom: 8px; text-decoration: none; color: inherit; }
+.mv-lista li a > div:first-child { min-width: 0; display: flex; flex-direction: column; }
+.mv-lista li b { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mv-lista li small { color: #6B6760; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mv-der { text-align: right; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; flex: none; }
+.mv-chip { font-size: 12px; font-weight: 600; border-radius: 99px; padding: 2px 9px; }
+
+.mv-hoja-fondo { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; }
+.mv-hoja { width: 100%; background: #fff; border-radius: 20px 20px 0 0; padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); max-height: 90dvh; overflow-y: auto; }
+.mv-hoja h3 { margin: 0 0 4px; font-size: 19px; }
+.mv-hoja .mv-grande { width: 100%; margin-top: 12px; }
