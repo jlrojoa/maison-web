@@ -116,6 +116,8 @@ function armarNotas(d) {
     : a.iva_modo === 'incluido' ? `Precios en MXN e incluyen IVA (${num(a.iva_pct)}%).` : 'Precios en MXN.')
   if (a.tiempo_entrega) n.push(`Tiempo de entrega estimado: ${a.tiempo_entrega}.`)
   n.push(`Esta cotización tiene una vigencia de ${d.vigenciaDias} días naturales${d.vence ? ` (hasta el ${fmtFecha(d.vence)})` : ''}.`)
+  // La foto del catálogo es una sola por mueble: no se repinta con la tela elegida, y eso se avisa.
+  if (d.filas?.some(f => f.foto)) n.push('Las imágenes son ilustrativas: el mueble no cambia de tono según la tela elegida. El color de la tela seleccionada se muestra en su recuadro.')
   if (d.totales.anticipo > 0) n.push(`Para confirmar el pedido se requiere un anticipo del ${num(a.anticipo_pct)}%.`)
   if (a.condiciones_pago) n.push(a.condiciones_pago)
   if (a.mostrar_datos_bancarios && a.datos_bancarios) n.push(`Datos para depósito o transferencia: ${a.datos_bancarios.replace(/\s*\n\s*/g, ' · ')}`)
