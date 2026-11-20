@@ -1,0 +1,53 @@
+/* Dashboard del admin. Usa las clases adm-* y suma las dsh-*. */
+.dsh-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
+.dsh-kpi { background: #fff; display: flex; flex-direction: column; align-items: center; }
+.dsh-kpi .adm-stat-num { font-size: 22px; }
+.dsh-nota { font-size: 11.5px; color: #6B7280; margin-top: 6px; }
+.dsh-nota.sube { color: #047857; } .dsh-nota.baja { color: #B45309; }
+.dsh-periodo { min-width: 170px; }
+.dsh-aviso { margin-bottom: 16px; padding: 10px 14px; border-radius: 8px; font-size: 13px; background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; }
+.dsh-fila2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.dsh-fila3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.dsh-bloque { min-width: 0; }
+.dsh-mut { font-size: 12px; color: #9CA3AF; }
+.dsh-sub { font-size: 12px; font-weight: 600; color: #4B5563; margin-bottom: 8px; }
+
+.dsh-chart { display: flex; gap: 6px; align-items: stretch; height: 210px; margin-top: 10px; }
+.dsh-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+.dsh-col-val { font-size: 10.5px; color: #6B7280; height: 16px; white-space: nowrap; }
+.dsh-col-barra { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+.dsh-col-barra > div { width: 68%; max-width: 34px; background: #D1D5DB; border-radius: 4px 4px 0 0; min-height: 2px; }
+.dsh-col-barra > div.actual { background: #111827; }
+.dsh-col-et { font-size: 11px; color: #6B7280; margin-top: 6px; text-transform: uppercase; text-align: center; line-height: 1.1; }
+.dsh-col-et small { display: block; font-size: 9px; color: #9CA3AF; }
+
+.dsh-barras { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.dsh-fila { display: grid; grid-template-columns: minmax(70px, 130px) 1fr auto; gap: 10px; align-items: center; font-size: 12.5px; }
+.dsh-fila-et { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #374151; }
+.dsh-pista { height: 10px; background: #F3F4F6; border-radius: 99px; overflow: hidden; }
+.dsh-relleno { height: 100%; border-radius: 99px; min-width: 3px; }
+.dsh-fila-val { font-weight: 600; white-space: nowrap; }
+.dsh-extra { font-weight: 400; color: #9CA3AF; }
+
+.dsh-lista { list-style: none; margin: 8px 0 0; padding: 0; }
+.dsh-lista li { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid #F3F4F6; font-size: 13px; }
+.dsh-lista li:first-child { border-top: none; }
+.dsh-lista li > b { margin-left: auto; white-space: nowrap; }
+.dsh-lista li > span.dsh-mut { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.dsh-lista a, .dsh-tabla a { color: #111827; font-weight: 600; text-decoration: none; }
+.dsh-lista a:hover, .dsh-tabla a:hover { text-decoration: underline; }
+.dsh-chip { display: inline-block; font-size: 11px; font-weight: 600; border-radius: 99px; padding: 2px 9px; white-space: nowrap; background: #F3F4F6; color: #4B5563; }
+.dsh-chip.baja { background: #FFFBEB; color: #B45309; } .dsh-chip.rojo { background: #FEF2F2; color: #B91C1C; } .dsh-chip.gris { background: #F3F4F6; color: #6B7280; }
+.dsh-tabla td { vertical-align: top; }
+
+.dsh-salud { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 8px; }
+.dsh-salud > div { border: 1px solid #E5E7EB; border-radius: 10px; padding: 12px 14px; }
+.dsh-salud b { display: block; font-size: 22px; }
+.dsh-salud span { font-size: 12px; color: #6B7280; line-height: 1.3; display: block; margin-top: 2px; }
+.dsh-salud .mal { border-color: #FECACA; background: #FEF2F2; } .dsh-salud .mal b { color: #B91C1C; }
+.dsh-salud .aviso { border-color: #FDE68A; background: #FFFBEB; } .dsh-salud .aviso b { color: #B45309; }
+.dsh-salud .bien b { color: #047857; }
+.dsh-doble { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+@media (max-width: 1280px) { .dsh-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dsh-fila3 { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .dsh-fila2, .dsh-doble { grid-template-columns: 1fr; } .dsh-salud { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
