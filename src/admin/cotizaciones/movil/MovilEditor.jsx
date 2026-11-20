@@ -188,7 +188,8 @@ export default function MovilEditor() {
         <MovilLinea key={l.key} linea={l} index={i} cat={cat} onChange={p => cambiarLinea(l.key, p)} onDelete={() => setLineas(ls => (ls.length > 1 ? ls.filter(x => x.key !== l.key) : [LINEA_VACIA()]))} />
       ))}
       <div className="mv-agregar">
-        <button type="button" className="mv-btn-sec" onClick={() => setLineas(ls => [...ls, LINEA_VACIA()])}>+ Otro mueble</button>
+        <button type="button" className="mv-btn-sec" onClick={() => setLineas(ls => [...ls, LINEA_VACIA()])}>+ Mueble del catálogo</button>
+        <button type="button" className="mv-btn-sec" onClick={() => setLineas(ls => [...ls, { ...LINEA_VACIA(), key: nuevaClave(), a_mano: true }])}>+ Mueble a mano</button>
         <button type="button" className="mv-btn-sec" onClick={() => setLineas(ls => [...ls, { ...LINEA_VACIA(), key: nuevaClave(), es_libre: true }])}>+ Flete / concepto</button>
       </div>
 

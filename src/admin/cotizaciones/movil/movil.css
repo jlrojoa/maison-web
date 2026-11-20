@@ -52,8 +52,8 @@
 .mv-foto > div:last-child { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .mv-foto .mv-btn-sec { min-height: 40px; font-size: 14px; padding: 0 12px; }
 .mv-quitar { background: none; border: none; color: #B91C1C; font-size: 14px; padding: 10px 0 0; font-family: inherit; }
-.mv-agregar { display: flex; gap: 10px; margin-bottom: 16px; }
-.mv-agregar .mv-btn-sec { flex: 1; font-size: 15px; padding: 0 8px; }
+.mv-agregar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.mv-agregar .mv-btn-sec { flex: 1 1 45%; font-size: 15px; padding: 0 8px; }
 .mv-acordeon { width: 100%; background: none; border: none; text-align: left; font-size: 16px; font-weight: 600; padding: 4px 0; font-family: inherit; }
 
 .mv-barra { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; align-items: center; gap: 10px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.96); border-top: 1px solid #E5E1D8; backdrop-filter: blur(10px); }

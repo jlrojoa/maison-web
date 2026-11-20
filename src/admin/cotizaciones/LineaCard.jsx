@@ -174,6 +174,25 @@ export default function LineaCard({ linea: l, index, total, cat, disabled, onCha
           <Campo label="Precio unitario final"><div className="cz-solo">{fmtMx(precioNeto(l))}</div></Campo>
         </div>
 
+        {l.es_libre && (
+          <>
+            <div className="adm-field-row">
+              {[['ancho', 'Ancho (cm)'], ['fondo', 'Fondo (cm)'], ['alto', 'Alto (cm)']].map(([k, et]) => (
+                <Campo key={k} label={et}><input className="adm-input" style={{ width: '100%' }} inputMode="decimal" value={l.medidas_cm?.[k] ?? ''} onChange={e => setMedida(k, e.target.value)} /></Campo>
+              ))}
+            </div>
+            <div className="adm-field-row">
+              <Campo label="Tela (a mano)"><input className="adm-input" style={{ width: '100%' }} value={l.tela_catalogo} onChange={e => onChange({ tela_catalogo: e.target.value })} placeholder="Ej. Lino importado" /></Campo>
+              <Campo label="Color"><input className="adm-input" style={{ width: '100%' }} value={l.tela_color} onChange={e => onChange({ tela_color: e.target.value })} /></Campo>
+            </div>
+            <div className="cz-fila-botones" style={{ marginBottom: 10 }}>
+              {l.imagen_url && <img src={l.imagen_url} alt="" style={{ height: 56, borderRadius: 6, marginRight: 8 }} />}
+              <SubirImagen disabled={disabled} onUrl={url => onChange({ imagen_url: url })} texto="Subir foto" />
+              {l.imagen_url && <button type="button" className="adm-btn-sm" onClick={() => onChange({ imagen_url: null })}>Quitar</button>}
+            </div>
+          </>
+        )}
+
         {!l.es_libre && (
           <div className="cz-visuales">
             <div className="cz-visual">

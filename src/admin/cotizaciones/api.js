@@ -101,20 +101,22 @@ export const LINEA_VACIA = () => ({
 
 // Fila de cotizacion_items -> línea del editor.
 export function lineaDeItem(it) {
-  const t = parseTextil(it.textil_nombre)
+  let t = parseTextil(it.textil_nombre)
+  // Tela escrita a mano sin categoría: "Bouclé · Crema".
+  if (!t.grado) { const m = /^(.+) · (.+)$/.exec(it.textil_nombre ?? ''); if (m) t = { catalogo: m[1], grado: '', color: m[2] } }
   const mc = it.medidas_cm ?? {}
   return {
     key: nuevaClave(), es_libre: !!it.es_libre, producto_id: it.producto_id, producto_nombre: it.producto_nombre ?? '',
     configuracion_id: null, configuracion_nombre: it.configuracion_nombre ?? '',
     medidas_cm: { ancho: mc.ancho ?? '', fondo: mc.fondo ?? '', alto: mc.alto ?? '' },
     imagen_url: it.imagen_url, isometrico_url: it.isometrico_url,
-    tela_catalogo: t.catalogo && t.grado ? t.catalogo : '', tela_grado: t.grado, tela_color: t.color,
+    tela_catalogo: t.catalogo && (t.grado || t.color) ? t.catalogo : '', tela_grado: t.grado, tela_color: t.color,
     precio_lista: it.precio_unitario ?? '', precio: it.precio_cliente ?? it.precio_unitario ?? '', precio_manual: true,
     cantidad: it.cantidad ?? 1, descuento_pct: it.descuento_pct || '', requisito_especial: it.requisito_especial ?? '', notas: it.notas ?? null,
   }
 }
 
-export const textilDe = (l) => (l.tela_catalogo && l.tela_color ? `${l.tela_catalogo} (${l.tela_grado}) · ${l.tela_color}` : (l.tela_catalogo || null))
+export const textilDe = (l) => (l.tela_catalogo && l.tela_color ? `${l.tela_catalogo}${l.tela_grado ? ` (${l.tela_grado})` : ''} · ${l.tela_color}` : (l.tela_catalogo || null))
 
 export function itemDeLinea(l, i, cotizacionId) {
   return {
