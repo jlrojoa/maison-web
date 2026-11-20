@@ -35,6 +35,9 @@ const SalesProspector = lazy(() => import('./admin/sales/SalesProspector'))
 const SalesCampanas = lazy(() => import('./admin/sales/SalesCampanas'))
 const AdminDistribuidores = lazy(() => import('./admin/AdminDistribuidores'))
 const AdminCatalogos = lazy(() => import('./admin/AdminCatalogos'))
+const MovilLayout = lazy(() => import('./admin/cotizaciones/movil/MovilLayout'))
+const MovilInicio = lazy(() => import('./admin/cotizaciones/movil/MovilInicio'))
+const MovilEditor = lazy(() => import('./admin/cotizaciones/movil/MovilEditor'))
 const Cotizaciones = lazy(() => import('./admin/cotizaciones/Cotizaciones'))
 const CotizacionEditor = lazy(() => import('./admin/cotizaciones/CotizacionEditor'))
 const ClientesCotizacion = lazy(() => import('./admin/cotizaciones/Clientes'))
@@ -71,6 +74,11 @@ export default function App() {
           <Route path="/terminos" element={<Legal tipo="terminos" />} />
           <Route path="/mi-espacio/perfil" element={<MiPerfil />} />
           <Route path="/mi-espacio/descargas" element={<MiEspacioDescargas />} />
+          <Route path="/m" element={<Suspense fallback={<AdminFallback />}><MovilLayout /></Suspense>}>
+            <Route index element={<Suspense fallback={<AdminFallback />}><MovilInicio /></Suspense>} />
+            <Route path="nueva" element={<Suspense fallback={<AdminFallback />}><MovilEditor key="nueva" /></Suspense>} />
+            <Route path="c/:id" element={<Suspense fallback={<AdminFallback />}><MovilEditor /></Suspense>} />
+          </Route>
           <Route path="/admin/login" element={<Suspense fallback={<AdminFallback />}><AdminLogin /></Suspense>} />
           <Route
             path="/admin"
