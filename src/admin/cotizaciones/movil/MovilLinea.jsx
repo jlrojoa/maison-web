@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { precioDeLista, useDetalleProducto } from '../useCatalogo'
 import { uploadProductoImage } from '../../catalogo/ProductoImageUpload'
 import { fmtMx, num, totalLinea } from '../calc'
+import { opcionesOrientacion, requiereOrientacion } from '../orientacion'
 import { alElegirProducto, alElegirMedida, alElegirTela, GRADOS_ORDEN } from './lineaOps'
 
 const Campo = ({ label, children, hint }) => (
@@ -131,6 +132,14 @@ export default function MovilLinea({ linea: l, index, cat, onChange, onDelete })
                       {det && <option value="__otra">Otra medida (escribirla)…</option>}
                     </select>
                   </Campo>
+                  {requiereOrientacion(producto, det) && (
+                    <Campo label="Orientación" hint={!l.orientacion ? 'Falta elegir: izquierda o derecha' : null}>
+                      <select value={l.orientacion ?? ''} onChange={e => onChange({ orientacion: e.target.value })} style={l.orientacion ? undefined : { borderColor: '#F59E0B' }}>
+                        <option value="">Elige…</option>
+                        {opcionesOrientacion(det).map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </Campo>
+                  )}
                   {medidaAMano && (
                     <>
                       <Campo label="Nombre de la medida"><input value={l.configuracion_nombre} onChange={e => onChange({ configuracion_nombre: e.target.value })} /></Campo>

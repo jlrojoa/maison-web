@@ -24,7 +24,7 @@ export async function generarPdfAdmin({ cot, proyecto, cliente, ajustes, fijos, 
       cantidad: Math.max(1, Math.round(num(l.cantidad)) || 1), precio: num(l.precio), descuento: num(l.descuento_pct),
       precioNeto: precioNeto(l), subtotal: totalLinea(l),
       textilCatalogo: l.tela_catalogo, textilGrado: l.tela_grado, textilColor: l.tela_color,
-      requisito: l.requisito_especial?.trim() || '', foto, iso, tela,
+      requisito: l.requisito_especial?.trim() || '', orientacion: l.orientacion?.trim() || '', foto, iso, tela,
     }
   }))
   const fecha = cot?.emitida_at ? new Date(cot.emitida_at) : new Date(cot?.created_at ?? Date.now())

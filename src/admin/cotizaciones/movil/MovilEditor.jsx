@@ -14,6 +14,7 @@ import { fmtMx, num, totales } from '../calc'
 import { generarPdfAdmin } from '../generarPdf'
 import MovilLinea from './MovilLinea'
 import { lineaLlena } from './lineaOps'
+import { sinOrientacion } from '../orientacion'
 import { compartirPdf, descargarPdf, mensajeCliente, primerNombre, puedeCompartirArchivos, urlCorreo, urlWhatsapp } from './compartir'
 import { borrarRespaldo, guardarRespaldo, leerRespaldo } from './respaldo'
 
@@ -112,6 +113,8 @@ export default function MovilEditor() {
     if (!cliente.nombre.trim()) return mostrar('Escribe el nombre del cliente.', true)
     if (!lineas.some(lineaLlena)) return mostrar('Agrega al menos un mueble o concepto.', true)
     if (!lineas.filter(lineaLlena).some(l => num(l.precio) > 0) && !window.confirm('Ningún renglón tiene precio. ¿Enviar de todos modos?')) return
+    const sinOri = sinOrientacion(lineas.filter(lineaLlena), cat.productos)
+    if (sinOri.length) return mostrar(`Falta la orientación (izquierda o derecha) en: ${sinOri.map(x => x.nombre).join(', ')}.`, true)
     if (!cot || cot.status === 'borrador') {
       if (!window.confirm('Al enviar se emite la cotización y empieza su vigencia. ¿Continuar?')) return
     }

@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { precioDeLista, useDetalleProducto } from './useCatalogo'
 import { uploadProductoImage } from '../catalogo/ProductoImageUpload'
 import { fmtMx, medidasDeTexto, num, precioNeto, totalLinea } from './calc'
+import { opcionesOrientacion, requiereOrientacion } from './orientacion'
 
 const Campo = ({ label, children, hint, style }) => (
   <div className="adm-field" style={{ marginBottom: 10, ...style }}>
@@ -135,6 +136,18 @@ export default function LineaCard({ linea: l, index, total, cat, disabled, onCha
                 </select>
               </Campo>
             </div>
+
+            {l.producto_id && requiereOrientacion(producto, det) && (
+              <div className="adm-field-row">
+                <Campo label="Orientación" hint={!l.orientacion ? 'Falta elegir: izquierda o derecha' : null}>
+                  <select className="adm-select" style={{ width: '100%', minWidth: 0, ...(l.orientacion ? {} : { borderColor: '#F59E0B' }) }} value={l.orientacion ?? ''} onChange={e => onChange({ orientacion: e.target.value })}>
+                    <option value="">Elige…</option>
+                    {opcionesOrientacion(det).map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </Campo>
+                <Campo label=" " />
+              </div>
+            )}
 
             <div className="adm-field-row">
               <Campo label="Tela">

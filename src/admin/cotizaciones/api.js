@@ -96,7 +96,7 @@ export const LINEA_VACIA = () => ({
   key: nuevaClave(), es_libre: false, producto_id: null, producto_nombre: '', configuracion_id: null, configuracion_nombre: '',
   medidas_cm: { ancho: '', fondo: '', alto: '' }, imagen_url: null, isometrico_url: null,
   tela_catalogo: '', tela_grado: '', tela_color: '', precio_lista: '', precio: '', precio_manual: false,
-  cantidad: 1, descuento_pct: '', requisito_especial: '', notas: null,
+  cantidad: 1, descuento_pct: '', requisito_especial: '', notas: null, orientacion: '',
 })
 
 // Fila de cotizacion_items -> línea del editor.
@@ -113,6 +113,7 @@ export function lineaDeItem(it) {
     tela_catalogo: t.catalogo && (t.grado || t.color) ? t.catalogo : '', tela_grado: t.grado, tela_color: t.color,
     precio_lista: it.precio_unitario ?? '', precio: it.precio_cliente ?? it.precio_unitario ?? '', precio_manual: true,
     cantidad: it.cantidad ?? 1, descuento_pct: it.descuento_pct || '', requisito_especial: it.requisito_especial ?? '', notas: it.notas ?? null,
+    orientacion: it.orientacion ?? '',
   }
 }
 
@@ -126,7 +127,7 @@ export function itemDeLinea(l, i, cotizacionId) {
     imagen_url: l.imagen_url ?? null, isometrico_url: l.isometrico_url ?? null,
     textil_nombre: textilDe(l), precio_unitario: num(l.precio_lista) || num(l.precio), precio_cliente: num(l.precio),
     cantidad: Math.max(1, Math.round(num(l.cantidad)) || 1), descuento_pct: num(l.descuento_pct),
-    requisito_especial: l.requisito_especial?.trim() || null, es_libre: !!l.es_libre, notas: l.notas ?? null, orden: i,
+    requisito_especial: l.requisito_especial?.trim() || null, orientacion: l.orientacion?.trim() || null, es_libre: !!l.es_libre, notas: l.notas ?? null, orden: i,
   }
 }
 
