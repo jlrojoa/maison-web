@@ -13,6 +13,7 @@ import {
   folioDe, guardarCliente, guardarCotizacion, leerAjustes, leerCotizacion, lineaDeItem, listarClientes, nuevaClave,
 } from './api'
 import { fmtMx, num, totales } from './calc'
+import { sinOrientacion } from './orientacion'
 import { abrirBlob, abrirPestanaEspera, descargarBlob } from '../../pages/configurador/cotizacionPdf/pdfActions'
 import './cotizaciones.css'
 
@@ -138,6 +139,8 @@ export default function CotizacionEditor() {
     if (lineas.length === 0) return mostrar('Agrega al menos un mueble.', true)
     const sinPrecio = lineas.findIndex(l => !(num(l.precio) > 0))
     if (sinPrecio >= 0) return mostrar(`La línea ${sinPrecio + 1} no tiene precio.`, true)
+    const sinOri = sinOrientacion(lineas, cat.productos)
+    if (sinOri.length) return mostrar(`Falta la orientación (izquierda o derecha) en: ${sinOri.map(x => `${x.nombre} (línea ${x.posicion})`).join(', ')}.`, true)
     if (!window.confirm('Al emitir se fija la fecha y empieza la vigencia. Después puedes seguir editándola. ¿Emitir?')) return
     await guardar('emitida')
   }

@@ -39,6 +39,7 @@ const s = StyleSheet.create({
   td: { paddingVertical: 5, paddingHorizontal: 4, justifyContent: 'center', borderLeftWidth: 0.5, borderLeftColor: COLORS.border },
   modelo: { fontSize: 9, fontWeight: 700 },
   modeloSub: { fontSize: 7, color: COLORS.inkMuted, marginTop: 1, lineHeight: 1.3 },
+  modeloOri: { fontSize: 7.5, fontWeight: 700, color: COLORS.ink, marginTop: 2, lineHeight: 1.3 },
   descTxt: { fontSize: 7.2, lineHeight: 1.4 },
   req: { marginTop: 3, backgroundColor: COLORS.accentBg, borderRadius: 3, paddingVertical: 2, paddingHorizontal: 4 },
   reqL: { fontSize: 5.5, fontWeight: 700, color: COLORS.copperText, letterSpacing: 0.6 },
@@ -133,6 +134,7 @@ function Fila({ f, i }) {
       <View style={celda(COL.modelo)}>
         <Text style={s.modelo}>{f.producto}</Text>
         {f.configuracion ? <Text style={s.modeloSub}>{f.configuracion}</Text> : null}
+        {f.orientacion ? <Text style={s.modeloOri}>Orientación: {f.orientacion}</Text> : null}
       </View>
       <View style={celda(COL.desc)}>
         <Text style={s.descTxt}>

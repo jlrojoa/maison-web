@@ -31,15 +31,16 @@ export function useCatalogo() {
   }, [])
 
   const cargarProducto = (id) => {
-    if (!id) return Promise.resolve({ configuraciones: [], precios: [], imagenes: [] })
+    if (!id) return Promise.resolve({ configuraciones: [], precios: [], imagenes: [], orientaciones: [] })
     if (!detalle.current.has(id)) {
       detalle.current.set(id, (async () => {
-        const [cfg, pre, img] = await Promise.all([
+        const [cfg, pre, img, ori] = await Promise.all([
           supabase.from('producto_configuraciones').select('id, nombre, dimensiones, isometrico_url, orden').eq('producto_id', id).eq('activo', true).order('orden'),
           supabase.from('producto_precios').select('configuracion_id, grado, precio').eq('producto_id', id),
           supabase.from('producto_imagenes').select('url, alt, orden').eq('producto_id', id).order('orden'),
+          supabase.from('producto_orientaciones').select('nombre, orden').eq('producto_id', id).order('orden'),
         ])
-        return { configuraciones: cfg.data ?? [], precios: pre.data ?? [], imagenes: img.data ?? [] }
+        return { configuraciones: cfg.data ?? [], precios: pre.data ?? [], imagenes: img.data ?? [], orientaciones: (ori.data ?? []).map(o => o.nombre).filter(Boolean) }
       })())
     }
     return detalle.current.get(id)
