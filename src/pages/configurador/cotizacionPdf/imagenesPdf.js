@@ -9,9 +9,10 @@ import { imagenDePieza } from '../modularesNombre'
 
 const cache = new Map()
 
-export function imagenParaPdf(url, maxPx = 900) {
+// `espejo`: voltea la imagen de izquierda a derecha (para mostrar la orientación contraria a la de la foto).
+export function imagenParaPdf(url, maxPx = 900, espejo = false) {
   if (!url) return Promise.resolve(null)
-  const key = `${url}|${maxPx}`
+  const key = `${url}|${maxPx}|${espejo ? 'e' : ''}`
   if (!cache.has(key)) {
     cache.set(key, (async () => {
       try {
@@ -23,6 +24,7 @@ export function imagenParaPdf(url, maxPx = 900) {
         canvas.width = Math.round(bmp.width * k); canvas.height = Math.round(bmp.height * k)
         const ctx = canvas.getContext('2d')
         ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height)
+        if (espejo) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1) }
         ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height)
         return { src: canvas.toDataURL('image/jpeg', 0.88), w: canvas.width, h: canvas.height }
       } catch { return null }
@@ -50,7 +52,7 @@ export async function fichaTela({ catalogo, grado, color }) {
 }
 
 // Foto del producto: la guardada en la cotización o, si no hay, la portada del catálogo.
-export async function fotoProducto(imagenUrl, productoId) {
+export async function fotoProducto(imagenUrl, productoId, espejo = false) {
   let url = imagenUrl
   if (!url && productoId) {
     try {
@@ -58,7 +60,7 @@ export async function fotoProducto(imagenUrl, productoId) {
       url = data?.imagen_portada_url ?? data?.isometrico_url ?? null
     } catch { /* sin foto */ }
   }
-  return imagenParaPdf(url, 1000)
+  return imagenParaPdf(url, 1000, espejo)
 }
 
 // Foto de UN módulo (Brazo, Módulo Central, Esquinero, Puff…): la guardada en

@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { precioDeLista, useDetalleProducto } from '../useCatalogo'
 import { uploadProductoImage } from '../../catalogo/ProductoImageUpload'
 import { fmtMx, num, totalLinea } from '../calc'
-import { opcionesOrientacion, requiereOrientacion } from '../orientacion'
+import { debeEspejar, opcionesOrientacion, requiereOrientacion } from '../orientacion'
 import { alElegirProducto, alElegirMedida, alElegirTela, GRADOS_ORDEN } from './lineaOps'
 
 const Campo = ({ label, children, hint }) => (
@@ -58,6 +58,7 @@ export default function MovilLinea({ linea: l, index, cat, onChange, onDelete })
   const [subiendo, setSubiendo] = useState(false)
   const [abierta, setAbierta] = useState(true)
   // "A mano": mueble que no está en el catálogo, o medida / tela que no están en la lista.
+  const espejo = debeEspejar(l, cat.productos)
   const muebleAMano = !l.es_libre && (!!l.a_mano || (!l.producto_id && !!(l.producto_nombre ?? '').trim()))
   const medidaAMano = !!l.producto_id && !l.configuracion_id && !!(l.configuracion_nombre ?? '').trim() && !!det
   const [telaAMano, setTelaAMano] = useState(false)
@@ -133,7 +134,7 @@ export default function MovilLinea({ linea: l, index, cat, onChange, onDelete })
                     </select>
                   </Campo>
                   {requiereOrientacion(producto, det) && (
-                    <Campo label="Orientación" hint={!l.orientacion ? 'Falta elegir: izquierda o derecha' : null}>
+                    <Campo label="Orientación" hint={!l.orientacion ? 'Falta elegir: izquierda o derecha' : (espejo ? 'La imagen se voltea para mostrar esta orientación.' : null)}>
                       <select value={l.orientacion ?? ''} onChange={e => onChange({ orientacion: e.target.value })} style={l.orientacion ? undefined : { borderColor: '#F59E0B' }}>
                         <option value="">Elige…</option>
                         {opcionesOrientacion(det).map(o => <option key={o} value={o}>{o}</option>)}
@@ -195,7 +196,7 @@ export default function MovilLinea({ linea: l, index, cat, onChange, onDelete })
 
           {(muebleAMano || l.es_libre || l.producto_id) && (
             <div className="mv-foto">
-              {l.imagen_url ? <img src={l.imagen_url} alt="" /> : <div className="mv-foto-vacia">Sin foto</div>}
+              {l.imagen_url ? <img src={l.imagen_url} alt="" style={espejo ? { transform: 'scaleX(-1)' } : undefined} /> : <div className="mv-foto-vacia">Sin foto</div>}
               <div>
                 <input ref={fotoRef} type="file" accept="image/*" hidden onChange={e => subirFoto(e.target.files?.[0])} />
                 <button type="button" className="mv-btn-sec" disabled={subiendo} onClick={() => fotoRef.current?.click()}>{subiendo ? 'Subiendo…' : '📷 Usar mi foto'}</button>

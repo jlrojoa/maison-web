@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { precioDeLista, useDetalleProducto } from './useCatalogo'
 import { uploadProductoImage } from '../catalogo/ProductoImageUpload'
 import { fmtMx, medidasDeTexto, num, precioNeto, totalLinea } from './calc'
-import { opcionesOrientacion, requiereOrientacion } from './orientacion'
+import { debeEspejar, opcionesOrientacion, requiereOrientacion } from './orientacion'
 
 const Campo = ({ label, children, hint, style }) => (
   <div className="adm-field" style={{ marginBottom: 10, ...style }}>
@@ -89,7 +89,9 @@ export default function LineaCard({ linea: l, index, total, cat, disabled, onCha
   }
   const setMedida = (k, v) => onChange({ medidas_cm: { ...l.medidas_cm, [k]: v } })
   const galeria = (det?.imagenes ?? []).slice(0, 12)
-  const fotoEstilo = { backgroundImage: l.imagen_url ? `url(${l.imagen_url})` : 'none' }
+  const espejo = debeEspejar(l, cat.productos)
+  const volteo = espejo ? { transform: 'scaleX(-1)' } : {}
+  const fotoEstilo = { backgroundImage: l.imagen_url ? `url(${l.imagen_url})` : 'none', ...volteo }
 
   return (
     <div className="cz-linea">
@@ -139,7 +141,7 @@ export default function LineaCard({ linea: l, index, total, cat, disabled, onCha
 
             {l.producto_id && requiereOrientacion(producto, det) && (
               <div className="adm-field-row">
-                <Campo label="Orientación" hint={!l.orientacion ? 'Falta elegir: izquierda o derecha' : null}>
+                <Campo label="Orientación" hint={!l.orientacion ? 'Falta elegir: izquierda o derecha' : (espejo ? 'La imagen se voltea para mostrar esta orientación.' : null)}>
                   <select className="adm-select" style={{ width: '100%', minWidth: 0, ...(l.orientacion ? {} : { borderColor: '#F59E0B' }) }} value={l.orientacion ?? ''} onChange={e => onChange({ orientacion: e.target.value })}>
                     <option value="">Elige…</option>
                     {opcionesOrientacion(det).map(o => <option key={o} value={o}>{o}</option>)}
@@ -232,7 +234,7 @@ export default function LineaCard({ linea: l, index, total, cat, disabled, onCha
 
             <div className="cz-visual">
               <div className="adm-label">Isométrico y medidas (cm)</div>
-              <div className="cz-caja cz-caja-iso" style={{ backgroundImage: l.isometrico_url ? `url(${l.isometrico_url})` : 'none' }}>{!l.isometrico_url && <span>Sin isométrico</span>}</div>
+              <div className="cz-caja cz-caja-iso" style={{ backgroundImage: l.isometrico_url ? `url(${l.isometrico_url})` : 'none', ...volteo }}>{!l.isometrico_url && <span>Sin isométrico</span>}</div>
               <div className="cz-medidas">
                 {[['ancho', 'Ancho'], ['fondo', 'Fondo'], ['alto', 'Alto']].map(([k, t]) => (
                   <label key={k}><span>{t}</span><input className="adm-input" type="number" min="0" step="0.5" value={l.medidas_cm?.[k] ?? ''} onChange={e => setMedida(k, e.target.value)} /></label>
