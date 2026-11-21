@@ -9,6 +9,7 @@ import { precioDeLista, useDetalleProducto } from './useCatalogo'
 import { uploadProductoImage } from '../catalogo/ProductoImageUpload'
 import { fmtMx, medidasDeTexto, num, precioNeto, totalLinea } from './calc'
 import { debeEspejar, opcionesOrientacion, requiereOrientacion } from './orientacion'
+import { useAdminAuth } from '../catalogo/AdminAuthContext'
 
 const Campo = ({ label, children, hint, style }) => (
   <div className="adm-field" style={{ marginBottom: 10, ...style }}>
@@ -38,6 +39,7 @@ function SubirImagen({ onUrl, disabled, texto = 'Subir otra imagen' }) {
 }
 
 export default function LineaCard({ linea: l, index, total, cat, disabled, onChange, onDelete, onDuplicate, onMove }) {
+  const { descuentoMax } = useAdminAuth() // solo un vendedor tiene tope de descuento
   const det = useDetalleProducto(cat, l.es_libre ? null : l.producto_id)
   const producto = useMemo(() => cat.productos.find(p => p.id === l.producto_id), [cat.productos, l.producto_id])
   const [catFiltro, setCatFiltro] = useState(null)
@@ -185,7 +187,7 @@ export default function LineaCard({ linea: l, index, total, cat, disabled, onCha
               ? <button type="button" className="cz-link" onClick={() => onChange({ precio: l.precio_lista, precio_manual: false })}>Volver al precio de lista</button> : null}
           </Campo>
           <Campo label="Cantidad"><input className="adm-input" style={{ width: '100%' }} type="number" min="1" step="1" value={l.cantidad} onChange={e => onChange({ cantidad: e.target.value })} /></Campo>
-          <Campo label="Descuento %"><input className="adm-input" style={{ width: '100%' }} type="number" min="0" max="100" step="0.5" value={l.descuento_pct} onChange={e => onChange({ descuento_pct: e.target.value })} /></Campo>
+          <Campo label={descuentoMax != null ? `Descuento % (máx. ${descuentoMax})` : 'Descuento %'}><input className="adm-input" style={{ width: '100%' }} type="number" min="0" max={descuentoMax ?? 100} step="0.5" value={l.descuento_pct} onChange={e => onChange({ descuento_pct: descuentoMax != null && Number(e.target.value) > descuentoMax ? String(descuentoMax) : e.target.value })} /></Campo>
           <Campo label="Precio unitario final"><div className="cz-solo">{fmtMx(precioNeto(l))}</div></Campo>
         </div>
 
