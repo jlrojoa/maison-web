@@ -3,11 +3,15 @@ import { useAdminAuth } from './AdminAuthContext'
 import './AdminLayout.css'
 
 export default function AdminLayout() {
-  const { email, loading, signOut } = useAdminAuth()
+  const { email, esDueno, loading, signOut } = useAdminAuth()
   const location = useLocation()
 
   if (loading) return null
   if (!email) return <Navigate to="/admin/login" replace state={{ from: location.pathname }} />
+  // El vendedor solo trabaja en cotizaciones (la base también se lo impide; esto evita pantallas vacías).
+  const p = location.pathname
+  const permitidoVendedor = p.startsWith('/admin/cotizaciones') && !p.startsWith('/admin/cotizaciones/ajustes')
+  if (!esDueno && !permitidoVendedor) return <Navigate to="/admin/cotizaciones" replace />
 
   return (
     <div className="adm-app">
@@ -17,13 +21,13 @@ export default function AdminLayout() {
           <div className="adm-sidebar-sub">Admin</div>
         </div>
 
-        <div className="adm-nav-section">
+        {esDueno && <div className="adm-nav-section">
           <NavLink to="/admin" end className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
             <span className="adm-nav-icon">⌂</span> Dashboard
           </NavLink>
-        </div>
+        </div>}
 
-        <div className="adm-nav-section">
+        {esDueno && <div className="adm-nav-section">
           <div className="adm-nav-label">CATÁLOGO</div>
           <NavLink to="/admin/productos" end className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
             <span className="adm-nav-icon">▤</span> Productos
@@ -46,7 +50,7 @@ export default function AdminLayout() {
           <NavLink to="/admin/productos/precios" className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
             <span className="adm-nav-icon">$</span> Precios
           </NavLink>
-        </div>
+        </div>}
 
         <div className="adm-nav-section">
           <div className="adm-nav-label">COTIZACIONES</div>
@@ -59,12 +63,13 @@ export default function AdminLayout() {
           <NavLink to="/admin/cotizaciones/clientes" className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
             <span className="adm-nav-icon">👥</span> Clientes
           </NavLink>
-          <NavLink to="/admin/cotizaciones/ajustes" className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
+          {esDueno && <NavLink to="/admin/cotizaciones/ajustes" className={({ isActive }) => `adm-nav-item ${isActive ? 'adm-active' : ''}`}>
             <span className="adm-nav-icon">⚙</span> Ajustes de cotización
-          </NavLink>
+          </NavLink>}
+          <NavLink to="/m" className="adm-nav-item"><span className="adm-nav-icon">📱</span> Cotizador del celular</NavLink>
         </div>
 
-        <div className="adm-nav-section">
+        {esDueno && <><div className="adm-nav-section">
           <div className="adm-nav-label">CONTENIDO</div>
           <div className="adm-nav-item adm-disabled"><span className="adm-nav-icon">▧</span> Páginas</div>
           <div className="adm-nav-item adm-disabled"><span className="adm-nav-icon">▭</span> Banners</div>
@@ -99,7 +104,7 @@ export default function AdminLayout() {
           </NavLink>
           <div className="adm-nav-item adm-disabled"><span className="adm-nav-icon">⚙</span> Ajustes</div>
           <div className="adm-nav-item adm-disabled"><span className="adm-nav-icon">▣</span> Roles</div>
-        </div>
+        </div></>}
 
         <NavLink to="/" className="adm-sidebar-footer">← Volver al sitio</NavLink>
         <button type="button" className="adm-sidebar-footer" onClick={signOut}>⏻ Cerrar sesión ({email})</button>
