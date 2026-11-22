@@ -17,6 +17,14 @@ export function aPedidoMaestro(cot) {
   const c = cot.cliente_datos ?? {}
   const aj = cot.ajustes ?? {}
   const items = [...(cot.items ?? [])].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
+  // Precio neto de cada línea (después de su propio descuento).
+  const netos = items.map((it) => r2((Number(it.precio_cliente ?? it.precio_unitario) || 0) * (1 - Math.min(100, Math.max(0, Number(it.descuento_pct) || 0)) / 100)))
+  const cantidades = items.map((it) => Math.max(1, Math.round(Number(it.cantidad)) || 1))
+  // Para comparar marcas parejo, cada línea lleva su parte del descuento general y del IVA: así la suma de los
+  // artículos es lo que paga el cliente, igual que en Min y Veka (precios al público con IVA).
+  const sumaLineas = netos.reduce((s, n, i) => s + n * cantidades[i], 0)
+  const total = r2(cot.total)
+  const factor = sumaLineas > 0 && total > 0 ? total / sumaLineas : 1
   const folio = cot.folio ?? String(cot.id ?? '').slice(0, 8)
   // El Maestro exige un cliente: sin nombre se usa la empresa, el proyecto o el folio, para que el pedido no se pierda.
   const cliente = txt(c.nombre) ?? txt(cot.cliente_nombre) ?? txt(c.empresa) ?? txt(cot.nombre_proyecto) ?? `Cotización BR-${folio}`
@@ -31,19 +39,18 @@ export function aPedidoMaestro(cot) {
     subtotal: r2(cot.subtotal),
     descuento: r2(cot.descuento),
     iva: r2(cot.iva),
-    total: r2(cot.total),
+    total,
     anticipo: 0, // el cotizador no registra pagos: nada se da por cobrado hasta que se capture en el Maestro
-    notas: [`Cotización BR-${folio}`, txt(cot.nombre_proyecto), txt(cot.distribuidor_email) && `Vendedor: ${cot.distribuidor_email}`, txt(aj.condiciones_pago) && `Pago: ${aj.condiciones_pago}`, txt(aj.tiempo_entrega) && `Entrega: ${aj.tiempo_entrega}`].filter(Boolean).join(' · '),
-    items: items.map((it) => {
+    notas: [`Cotización BR-${folio}`, txt(cot.nombre_proyecto), txt(cot.distribuidor_email) && `Vendedor: ${cot.distribuidor_email}`, txt(aj.condiciones_pago) && `Pago: ${aj.condiciones_pago}`, txt(aj.tiempo_entrega) && `Entrega: ${aj.tiempo_entrega}`, factor !== 1 && 'Precios por línea con descuento general e IVA repartidos'].filter(Boolean).join(' · '),
+    items: items.map((it, i) => {
       const t = parseTextil(it.textil_nombre)
-      const neto = r2((Number(it.precio_cliente ?? it.precio_unitario) || 0) * (1 - Math.min(100, Math.max(0, Number(it.descuento_pct) || 0)) / 100))
       return {
         descripcion: [it.producto_nombre, it.configuracion_nombre].filter(Boolean).join(' · ') || 'Concepto',
-        cantidad: Math.max(1, Math.round(Number(it.cantidad)) || 1),
+        cantidad: cantidades[i],
         tela: [t.catalogo, t.grado && `(${t.grado})`].filter(Boolean).join(' ') || null,
         color: t.color || null,
         observaciones: [txt(it.medidas) && `Medidas ${it.medidas}`, txt(it.orientacion) && `Orientación ${it.orientacion}`, txt(it.requisito_especial), txt(it.notas)].filter(Boolean).join(' · ') || null,
-        precio_unitario: neto,
+        precio_unitario: r2(netos[i] * factor),
       }
     }),
   }
