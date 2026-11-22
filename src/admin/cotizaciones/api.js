@@ -187,7 +187,19 @@ export async function cambiarEstado(cot, status) {
   }
   const { data, error } = await supabase.from('cotizaciones').update(campos).eq('id', cot.id).select().single()
   if (error) throw error
+  if (status === 'orden') avisarAlMaestro(cot.id)
   return data
+}
+
+// Al pasar a "Pedido" se manda una copia al sistema Maestro (ventas de todas las marcas). Va en segundo plano y nunca
+// interrumpe ni retrasa el cambio de estado: si falla, solo queda un aviso en la consola.
+async function avisarAlMaestro(id) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) return
+    const r = await fetch('/api/pedido-al-maestro', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ id }), keepalive: true })
+    if (!r.ok) console.warn('[maestro] no se pudo avisar', r.status)
+  } catch (e) { console.warn('[maestro] no se pudo avisar', e?.message) }
 }
 
 export async function borrarCotizacion(id) {
