@@ -13,11 +13,20 @@ const Ctx = createContext(null)
 
 export function AdminAuthProvider({ children }) {
   const [email, setEmail] = useState(null)
+  // 'dueno' ve todo; 'vendedor' solo cotiza lo suyo. Si la base aún no tiene la columna `rol`, todos son dueño (como antes).
+  const [rol, setRol] = useState('dueno')
+  const [descuentoMax, setDescuentoMax] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  const aplicarFila = (fila) => {
+    setRol(fila?.rol === 'vendedor' ? 'vendedor' : 'dueno')
+    setDescuentoMax(fila?.rol === 'vendedor' ? Number(fila.descuento_max_pct ?? 0) : null)
+  }
+
   const checkAdmin = async (candidateEmail) => {
-    if (!candidateEmail) { setEmail(null); return }
-    const { data } = await supabase.from('admin_users').select('email').eq('email', candidateEmail).maybeSingle()
+    if (!candidateEmail) { setEmail(null); aplicarFila(null); return }
+    const { data } = await supabase.from('admin_users').select('*').eq('email', candidateEmail).maybeSingle()
+    aplicarFila(data)
     setEmail(data ? candidateEmail : null)
   }
 
@@ -35,11 +44,12 @@ export function AdminAuthProvider({ children }) {
     const { error: authError } = await supabase.auth.signInWithPassword({ email: inputEmail, password })
     if (authError) return { error: 'Correo o contraseña incorrectos.' }
 
-    const { data } = await supabase.from('admin_users').select('email').eq('email', inputEmail).maybeSingle()
+    const { data } = await supabase.from('admin_users').select('*').eq('email', inputEmail).maybeSingle()
     if (!data) {
       await supabase.auth.signOut()
       return { error: 'Esta cuenta no tiene acceso al admin.' }
     }
+    aplicarFila(data)
     setEmail(inputEmail)
     return { error: null }
   }
@@ -47,10 +57,11 @@ export function AdminAuthProvider({ children }) {
   const signOut = async () => {
     await supabase.auth.signOut()
     setEmail(null)
+    aplicarFila(null)
   }
 
   return (
-    <Ctx.Provider value={{ email, loading, signIn, signOut }}>
+    <Ctx.Provider value={{ email, rol, esDueno: rol === 'dueno', descuentoMax, loading, signIn, signOut }}>
       {children}
     </Ctx.Provider>
   )

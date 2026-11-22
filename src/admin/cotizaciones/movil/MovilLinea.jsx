@@ -7,6 +7,7 @@ import { precioDeLista, useDetalleProducto } from '../useCatalogo'
 import { uploadProductoImage } from '../../catalogo/ProductoImageUpload'
 import { fmtMx, num, totalLinea } from '../calc'
 import { debeEspejar, opcionesOrientacion, requiereOrientacion } from '../orientacion'
+import { useAdminAuth } from '../../catalogo/AdminAuthContext'
 import { alElegirProducto, alElegirMedida, alElegirTela, GRADOS_ORDEN } from './lineaOps'
 
 const Campo = ({ label, children, hint }) => (
@@ -51,6 +52,7 @@ function TelaAMano({ l, onChange, det }) {
 }
 
 export default function MovilLinea({ linea: l, index, cat, onChange, onDelete }) {
+  const { descuentoMax } = useAdminAuth() // solo un vendedor tiene tope de descuento
   const det = useDetalleProducto(cat, l.es_libre ? null : l.producto_id)
   const producto = useMemo(() => cat.productos.find(p => p.id === l.producto_id), [cat.productos, l.producto_id])
   const tela = cat.telas.find(t => t.nombre === l.tela_catalogo && t.grado === l.tela_grado)
@@ -187,7 +189,7 @@ export default function MovilLinea({ linea: l, index, cat, onChange, onDelete })
             <Campo label="Precio unitario" hint={!l.es_libre && !muebleAMano ? (l.precio_lista === '' ? 'Sin precio en catálogo: escríbelo' : `Lista ${fmtMx(l.precio_lista)}`) : null}>
               <input inputMode="decimal" value={l.precio} onChange={e => onChange({ precio: e.target.value, precio_manual: true })} placeholder="$0" />
             </Campo>
-            <Campo label="Desc. %"><input inputMode="decimal" value={l.descuento_pct} onChange={e => onChange({ descuento_pct: e.target.value })} placeholder="0" /></Campo>
+            <Campo label={descuentoMax != null ? `Desc. % (máx. ${descuentoMax})` : 'Desc. %'}><input inputMode="decimal" value={l.descuento_pct} onChange={e => onChange({ descuento_pct: descuentoMax != null && Number(e.target.value) > descuentoMax ? String(descuentoMax) : e.target.value })} placeholder="0" /></Campo>
           </div>
 
           <Campo label="Requisito especial del cliente">
