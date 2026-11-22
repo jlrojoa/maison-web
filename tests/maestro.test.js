@@ -10,7 +10,7 @@ const cot = (o = {}) => ({
   subtotal: 100000, descuento: 5000, iva: 15200, total: 110200, ajustes: { iva_modo: 'sumar', condiciones_pago: '50% anticipo', tiempo_entrega: '8 semanas', anticipo_pct: 50 },
   items: [
     { orden: 1, producto_nombre: 'Sofá Milan', configuracion_nombre: 'Chaise izquierda', medidas: '320 × 160 cm', textil_nombre: 'Bouclé (Grado B) · Crema', precio_unitario: 60000, precio_cliente: 60000, descuento_pct: 10, cantidad: 1, orientacion: 'Izquierda', requisito_especial: null, notas: null },
-    { orden: 0, producto_nombre: 'Mesa de centro', configuracion_nombre: null, medidas: null, textil_nombre: null, precio_unitario: 46000, precio_cliente: 46000, descuento_pct: 0, cantidad: 2, es_libre: false },
+    { orden: 0, producto_nombre: 'Mesa de centro', configuracion_nombre: null, medidas: null, textil_nombre: null, precio_unitario: 23000, precio_cliente: 23000, descuento_pct: 0, cantidad: 2, es_libre: false },
   ],
   ...o,
 })
@@ -23,10 +23,20 @@ test('convierte la cotización al formato del Maestro', () => {
   assert.equal(p.subtotal, 100000); assert.equal(p.descuento, 5000); assert.equal(p.iva, 15200); assert.equal(p.total, 110200); assert.equal(p.anticipo, 0)
   assert.match(p.notas, /BR-214/); assert.match(p.notas, /Sala Lomas/); assert.match(p.notas, /Vendedor: ventas@brendell.mx/); assert.match(p.notas, /Entrega: 8 semanas/)
 })
-test('las líneas salen en orden, con el precio neto después del descuento de la línea', () => {
+test('las líneas salen en orden y suman lo que paga el cliente (descuento de línea, descuento general e IVA)', () => {
+  // Líneas netas: mesa 23,000 × 2 + sofá 60,000 −10 % = 100,000; menos 5,000 de descuento general, más 16 % de IVA = 110,200.
   const p = aPedidoMaestro(cot())
-  assert.equal(p.items[0].descripcion, 'Mesa de centro'); assert.equal(p.items[0].cantidad, 2); assert.equal(p.items[0].precio_unitario, 46000); assert.equal(p.items[0].tela, null)
-  assert.deepEqual(p.items[1], { descripcion: 'Sofá Milan · Chaise izquierda', cantidad: 1, tela: 'Bouclé (Grado B)', color: 'Crema', observaciones: 'Medidas 320 × 160 cm · Orientación Izquierda', precio_unitario: 54000 })
+  assert.equal(p.items[0].descripcion, 'Mesa de centro'); assert.equal(p.items[0].cantidad, 2); assert.equal(p.items[0].precio_unitario, 25346); assert.equal(p.items[0].tela, null)
+  assert.deepEqual(p.items[1], { descripcion: 'Sofá Milan · Chaise izquierda', cantidad: 1, tela: 'Bouclé (Grado B)', color: 'Crema', observaciones: 'Medidas 320 × 160 cm · Orientación Izquierda', precio_unitario: 59508 })
+  const suma = p.items.reduce((s, i) => s + i.precio_unitario * i.cantidad, 0)
+  assert.equal(Math.round(suma * 100) / 100, 110200); assert.match(p.notas, /repartidos/)
+})
+test('sin descuento general ni IVA los precios quedan igual y no se anota nada', () => {
+  const p = aPedidoMaestro(cot({ subtotal: 100000, descuento: 0, iva: 0, total: 100000 }))
+  assert.equal(p.items[0].precio_unitario, 23000); assert.equal(p.items[1].precio_unitario, 54000); assert.doesNotMatch(p.notas, /repartidos/)
+})
+test('total en cero no deja precios en cero', () => {
+  assert.equal(aPedidoMaestro(cot({ total: 0 })).items[1].precio_unitario, 54000)
 })
 test('sin datos del cliente en cliente_datos usa las columnas de respaldo; de distribuidor cambia el canal', () => {
   const p = aPedidoMaestro(cot({ cliente_datos: null, cliente_nombre: 'Ana', cliente_email: 'ana@x.mx', cliente_telefono: '55', origen: 'distribuidor' }))
