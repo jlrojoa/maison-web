@@ -54,3 +54,13 @@ test('si el Maestro tarda de más, se corta a los 4 s', async () => {
     assert.equal(r.ok, false); assert.ok(Date.now() - t0 < 6000)
   } finally { console.error = mudo }
 })
+
+test('sin nombre de cliente no se pierde el pedido: usa empresa, proyecto o folio', () => {
+  assert.equal(aPedidoMaestro(cot({ cliente_datos: { empresa: 'Ruiz Interiores' }, cliente_nombre: null })).cliente, 'Ruiz Interiores')
+  assert.equal(aPedidoMaestro(cot({ cliente_datos: null, cliente_nombre: null })).cliente, 'Sala Lomas')
+  assert.equal(aPedidoMaestro(cot({ cliente_datos: null, cliente_nombre: null, nombre_proyecto: null })).cliente, 'Cotización BR-214')
+})
+test('sin folio usa el inicio del id, nunca "BR-null"', () => {
+  const p = aPedidoMaestro(cot({ folio: null }))
+  assert.equal(p.externo_id, 'BR-11111111'); assert.doesNotMatch(p.notas, /null/)
+})

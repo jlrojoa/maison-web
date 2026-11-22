@@ -17,10 +17,12 @@ export function aPedidoMaestro(cot) {
   const c = cot.cliente_datos ?? {}
   const aj = cot.ajustes ?? {}
   const items = [...(cot.items ?? [])].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
-  const cliente = txt(c.nombre) ?? txt(cot.cliente_nombre) ?? txt(c.empresa)
+  const folio = cot.folio ?? String(cot.id ?? '').slice(0, 8)
+  // El Maestro exige un cliente: sin nombre se usa la empresa, el proyecto o el folio, para que el pedido no se pierda.
+  const cliente = txt(c.nombre) ?? txt(cot.cliente_nombre) ?? txt(c.empresa) ?? txt(cot.nombre_proyecto) ?? `Cotización BR-${folio}`
   return {
     origen: 'brendell',
-    externo_id: `BR-${cot.folio}`,
+    externo_id: `BR-${folio}`,
     cliente,
     telefono: txt(c.telefono) ?? txt(cot.cliente_telefono),
     email: txt(c.email) ?? txt(cot.cliente_email),
@@ -31,7 +33,7 @@ export function aPedidoMaestro(cot) {
     iva: r2(cot.iva),
     total: r2(cot.total),
     anticipo: 0, // el cotizador no registra pagos: nada se da por cobrado hasta que se capture en el Maestro
-    notas: [`Cotización BR-${cot.folio}`, txt(cot.nombre_proyecto), txt(cot.distribuidor_email) && `Vendedor: ${cot.distribuidor_email}`, txt(aj.condiciones_pago) && `Pago: ${aj.condiciones_pago}`, txt(aj.tiempo_entrega) && `Entrega: ${aj.tiempo_entrega}`].filter(Boolean).join(' · '),
+    notas: [`Cotización BR-${folio}`, txt(cot.nombre_proyecto), txt(cot.distribuidor_email) && `Vendedor: ${cot.distribuidor_email}`, txt(aj.condiciones_pago) && `Pago: ${aj.condiciones_pago}`, txt(aj.tiempo_entrega) && `Entrega: ${aj.tiempo_entrega}`].filter(Boolean).join(' · '),
     items: items.map((it) => {
       const t = parseTextil(it.textil_nombre)
       const neto = r2((Number(it.precio_cliente ?? it.precio_unitario) || 0) * (1 - Math.min(100, Math.max(0, Number(it.descuento_pct) || 0)) / 100))
@@ -59,7 +61,7 @@ export async function enviarAlMaestro(cot, { env = process.env, fetchFn = global
     return { ok: true }
   } catch (e) {
     const error = e instanceof Error ? e.message : String(e)
-    console.error('[maestro] no se pudo enviar', cot && cot.folio, error)
+    console.error('[maestro] no se pudo enviar', cot && (cot.folio ?? cot.id), error)
     return { ok: false, error }
   } finally { clearTimeout(t) }
 }

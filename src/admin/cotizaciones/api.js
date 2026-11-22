@@ -197,7 +197,7 @@ async function avisarAlMaestro(id) {
   try {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.access_token) return
-    const r = await fetch('/api/pedido-al-maestro', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ id }) })
+    const r = await fetch('/api/pedido-al-maestro', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ id }), keepalive: true })
     if (!r.ok) console.warn('[maestro] no se pudo avisar', r.status)
   } catch (e) { console.warn('[maestro] no se pudo avisar', e?.message) }
 }
